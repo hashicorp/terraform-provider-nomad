@@ -185,7 +185,7 @@ func testResourceJob_initialCheck(s *terraform.State) error {
 		return fmt.Errorf("error reading back job: %s", err)
 	}
 
-	if got, want := job.ID, jobID; got != want {
+	if got, want := *job.ID, jobID; got != want {
 		return fmt.Errorf("jobID is %q; want %q", got, want)
 	}
 
@@ -213,8 +213,8 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 			return nil
 		}
 
-		if job.Status != "dead" {
-			return fmt.Errorf("Job %q has not been stopped. Status: %s", jobID, job.Status)
+		if *job.Status != "dead" {
+			return fmt.Errorf("Job %q has not been stopped. Status: %s", jobID, *job.Status)
 		}
 
 		return nil
@@ -224,7 +224,7 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 func testResourceJob_deregister(t *testing.T, jobID string) func() {
 	return func() {
 		client := testProvider.Meta().(*api.Client)
-		_, _, err := client.Jobs().Deregister(jobID, nil)
+		_, _, err := client.Jobs().Deregister(jobID, false, nil)
 		if err != nil {
 			t.Fatalf("error deregistering job: %s", err)
 		}
@@ -280,7 +280,7 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("error reading back job: %s", err)
 	}
 
-	if got, want := job.ID, jobID; got != want {
+	if got, want := *job.ID, jobID; got != want {
 		return fmt.Errorf("jobID is %q; want %q", got, want)
 	}
 
@@ -294,7 +294,8 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 			}
 			return nil
 		}
-		if job.Status != "dead" {
+
+		if *job.Status != "dead" {
 			return fmt.Errorf("%q job is not dead. Status: %q", "foo", job.Status)
 		}
 	}

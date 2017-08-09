@@ -1,8 +1,6 @@
 package nomad
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"log"
 	"reflect"
@@ -10,7 +8,6 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
-	"github.com/hashicorp/nomad/nomad/structs"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -54,16 +51,13 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	jobspecRaw := d.Get("jobspec").(string)
 
 	// Parse it
-	jobspecStruct, err := jobspec.Parse(strings.NewReader(jobspecRaw))
+	job, err := jobspec.Parse(strings.NewReader(jobspecRaw))
 	if err != nil {
 		return fmt.Errorf("error parsing jobspec: %s", err)
 	}
 
-	// Initialize and validate
-	jobspecStruct.Canonicalize()
-	if err := jobspecStruct.Validate(); err != nil {
-		return fmt.Errorf("Error validating job: %v", err)
-	}
+	// Initialize
+	job.Canonicalize()
 
 	// If we have an ID and its not equal to this jobspec, then we
 	// have to deregister the old job before we register the new job.
@@ -73,37 +67,32 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		// don't have a prior ID.
 		prevId = ""
 	}
-	if prevId != "" && prevId != jobspecStruct.ID {
+
+	if prevId != "" && prevId != *job.ID {
 		log.Printf(
 			"[INFO] Deregistering %q before registering %q",
-			prevId, jobspecStruct.ID)
+			prevId, job.ID)
 
 		log.Printf("[DEBUG] Deregistering job: %q", prevId)
-		_, _, err := client.Jobs().Deregister(prevId, nil)
+		_, _, err := client.Jobs().Deregister(prevId, false, nil)
 		if err != nil {
 			return fmt.Errorf(
 				"error deregistering previous job %q "+
 					"before registering new job %q: %s",
-				prevId, jobspecStruct.ID, err)
+				prevId, job.ID, err)
 		}
 
 		// Success! Clear our state.
 		d.SetId("")
 	}
 
-	// Convert it so that we can use it with the API
-	jobspecAPI, err := convertStructJob(jobspecStruct)
-	if err != nil {
-		return fmt.Errorf("error converting jobspec: %s", err)
-	}
-
 	// Register the job
-	_, _, err = client.Jobs().Register(jobspecAPI, nil)
+	_, _, err = client.Jobs().Register(job, nil)
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}
 
-	d.SetId(jobspecAPI.ID)
+	d.SetId(*job.ID)
 
 	return nil
 }
@@ -121,7 +110,7 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 	log.Printf("[DEBUG] Deregistering job: %q", id)
-	_, _, err := client.Jobs().Deregister(id, nil)
+	_, _, err := client.Jobs().Deregister(id, false, nil)
 	if err != nil {
 		return fmt.Errorf("error deregistering job: %s", err)
 	}
@@ -152,24 +141,6 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	// We don't do anything at the moment. Exists is used to
 	// remove non-existent jobs but read doesn't have to do anything.
 	return nil
-}
-
-// convertStructJob is used to take a *structs.Job and convert it to an *api.Job.
-//
-// This is unfortunate but it is how Nomad itself does it (this is copied
-// line for line from Nomad). We'll mimic them exactly to get this done.
-func convertStructJob(in *structs.Job) (*api.Job, error) {
-	gob.Register([]map[string]interface{}{})
-	gob.Register([]interface{}{})
-	var apiJob *api.Job
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(in); err != nil {
-		return nil, err
-	}
-	if err := gob.NewDecoder(buf).Decode(&apiJob); err != nil {
-		return nil, err
-	}
-	return apiJob, nil
 }
 
 // jobspecDiffSuppress is the DiffSuppressFunc used by the schema to
