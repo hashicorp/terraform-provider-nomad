@@ -113,6 +113,8 @@ job "foo" {
     type = "service"
     group "foo" {
         task "foo" {
+            leader = true ## new in Nomad 0.5.6
+            
             driver = "raw_exec"
             config {
                 command = "/bin/sleep"
