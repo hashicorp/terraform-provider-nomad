@@ -3,7 +3,8 @@ layout: "nomad"
 page_title: "Nomad: nomad_job"
 sidebar_current: "docs-nomad-resource-job"
 description: |-
-  Manages a job registered in Nomad.
+  Manages the lifecycle of registering and deregistering Nomad jobs
+  (applications).
 ---
 
 # nomad_job
@@ -11,11 +12,11 @@ description: |-
 Manages a job registered in Nomad.
 
 This can be used to initialize your cluster with system jobs, common services,
-and more. In day to day Nomad use it is common for developers to submit
-jobs to Nomad directly, such as for general app deployment. In addition to
-these apps, a Nomad cluster often runs core system services that are ideally
-setup during infrastructure creation. This resource is ideal for the latter
-type of job, but can be used to manage any job within Nomad.
+and more. In day to day Nomad use it is common for developers to submit jobs to
+Nomad directly, such as for general app deployment. In addition to these apps, a
+Nomad cluster often runs core system services that are ideally setup during
+infrastructure creation. This resource is ideal for the latter type of job, but
+can be used to manage any job within Nomad.
 
 ## Example Usage
 
@@ -67,10 +68,10 @@ EOT
 
 The following arguments are supported:
 
-* `jobspec` - (Required) The contents of the jobspec to register.
+- `jobspec` `(string: <required>)` - The contents of the jobspec to register.
 
-* `deregister_on_destroy` - (Optional) If true, the job will be deregistered
-  when this resource is destroyed in Terraform. Defaults to true.
+- `deregister_on_destroy` `(bool: true)` - Determines if the job will be
+  deregistered when this resource is destroyed in Terraform.
 
-* `deregister_on_id_change` - (Optional) If true, the job will be deregistered
-  if the ID of the job in the jobspec changes. Defaults to true.
+- `deregister_on_id_change` `(bool: true)` - Determines if the job will be
+  deregistered if the ID of the job in the jobspec changes.
