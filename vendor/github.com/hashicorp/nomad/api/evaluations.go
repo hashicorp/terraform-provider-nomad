@@ -54,23 +54,29 @@ func (e *Evaluations) Allocations(evalID string, q *QueryOptions) ([]*Allocation
 
 // Evaluation is used to serialize an evaluation.
 type Evaluation struct {
-	ID                string
-	Priority          int
-	Type              string
-	TriggeredBy       string
-	JobID             string
-	JobModifyIndex    uint64
-	NodeID            string
-	NodeModifyIndex   uint64
-	Status            string
-	StatusDescription string
-	Wait              time.Duration
-	NextEval          string
-	PreviousEval      string
-	BlockedEval       string
-	FailedTGAllocs    map[string]*AllocationMetric
-	CreateIndex       uint64
-	ModifyIndex       uint64
+	ID                   string
+	Priority             int
+	Type                 string
+	TriggeredBy          string
+	JobID                string
+	JobModifyIndex       uint64
+	NodeID               string
+	NodeModifyIndex      uint64
+	DeploymentID         string
+	Status               string
+	StatusDescription    string
+	Wait                 time.Duration
+	NextEval             string
+	PreviousEval         string
+	BlockedEval          string
+	FailedTGAllocs       map[string]*AllocationMetric
+	ClassEligibility     map[string]bool
+	EscapedComputedClass bool
+	AnnotatePlan         bool
+	QueuedAllocations    map[string]int
+	SnapshotIndex        uint64
+	CreateIndex          uint64
+	ModifyIndex          uint64
 }
 
 // EvalIndexSort is a wrapper to sort evaluations by CreateIndex.
