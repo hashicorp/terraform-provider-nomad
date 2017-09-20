@@ -1,4 +1,9 @@
 ## 0.1.1 (Unreleased)
+
+IMPROVEMENTS:
+
+* provider: Update Nomad to v0.6.0 [GH-7]
+
 ## 0.1.0 (June 21, 2017)
 
 NOTES:
