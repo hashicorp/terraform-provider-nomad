@@ -1,8 +1,8 @@
-## 1.0.0 (Unreleased)
+## 1.0.0 (September 27, 2017)
 
 IMPROVEMENTS:
 
-* provider: Update Nomad to v0.6.0 [GH-7]
+* provider: Update Nomad to v0.6.0 ([#7](https://github.com/terraform-providers/terraform-provider-nomad/issues/7))
 
 ## 0.1.0 (June 21, 2017)
 
