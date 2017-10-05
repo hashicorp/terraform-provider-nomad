@@ -8,8 +8,6 @@ import (
 
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-
-	"github.com/hashicorp/nomad/api"
 )
 
 func TestResourceJob_basic(t *testing.T) {
@@ -181,7 +179,8 @@ func testResourceJob_initialCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 
-	client := testProvider.Meta().(*api.Client)
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -197,7 +196,8 @@ func testResourceJob_initialCheck(s *terraform.State) error {
 func testResourceJob_checkExists(s *terraform.State) error {
 	jobID := "foo"
 
-	client := testProvider.Meta().(*api.Client)
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
 	_, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -208,7 +208,8 @@ func testResourceJob_checkExists(s *terraform.State) error {
 
 func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 	return func(*terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
 		job, _, err := client.Jobs().Info(jobID, nil)
 		// This should likely never happen, due to how nomad caches jobs
 		if err != nil && strings.Contains(err.Error(), "404") || job == nil {
@@ -225,7 +226,8 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 
 func testResourceJob_deregister(t *testing.T, jobID string) func() {
 	return func() {
-		client := testProvider.Meta().(*api.Client)
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
 		_, _, err := client.Jobs().Deregister(jobID, false, nil)
 		if err != nil {
 			t.Fatalf("error deregistering job: %s", err)
@@ -276,7 +278,8 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 
-	client := testProvider.Meta().(*api.Client)
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -330,6 +333,70 @@ job "bar" {
                 max_files = 3
                 max_file_size = 10
             }
+        }
+    }
+}
+EOT
+}
+`
+
+func TestResourceJob_vault(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_vaultConfig,
+				Check:  testResourceJob_checkVaultToken,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
+	})
+}
+
+func testResourceJob_checkVaultToken(s *terraform.State) error {
+	jobID := "foo"
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	_, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	return nil
+}
+
+var testResourceJob_vaultConfig = `
+resource "nomad_job" "test" {
+    jobspec = <<EOT
+job "foo" {
+    datacenters = ["dc1"]
+    type = "service"
+    group "foo" {
+        task "foo" {
+            leader = true ## new in Nomad 0.5.6
+            
+            driver = "raw_exec"
+            config {
+                command = "/bin/sleep"
+                args = ["1"]
+            }
+
+            resources {
+                cpu = 20
+                memory = 10
+            }
+
+            logs {
+                max_files = 3
+                max_file_size = 10
+			}
+			
+			vault {
+				policies = ["default"]
+			}
         }
     }
 }

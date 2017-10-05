@@ -52,3 +52,7 @@ The following arguments are supported:
 - `key_file` `(string: "")` - A local file path to a PEM-encoded private key.
   This is required if `cert_file` is specified. This can also be specified via
   the `NOMAD_CLIENT_KEY` environment variable.
+
+- `vault_token` `(string: "")` - A vault token to be inserted in the job file.
+  This can also be specified as the `VAULT_TOKEN` environment variable or in
+  the `$HOME/.vault-token` file.

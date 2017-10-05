@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -45,7 +44,8 @@ func resourceJob() *schema.Resource {
 }
 
 func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	// Get the jobspec itself
 	jobspecRaw := d.Get("jobspec").(string)
@@ -54,6 +54,11 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	job, err := jobspec.Parse(strings.NewReader(jobspecRaw))
 	if err != nil {
 		return fmt.Errorf("error parsing jobspec: %s", err)
+	}
+
+	// Inject the Vault token if provided
+	if providerConfig.vaultToken != nil {
+		job.VaultToken = providerConfig.vaultToken
 	}
 
 	// Initialize
@@ -98,7 +103,8 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	// If deregistration is disabled, then do nothing
 	if !d.Get("deregister_on_destroy").(bool) {
@@ -119,7 +125,8 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	id := d.Id()
 	log.Printf("[DEBUG] Checking if job exists: %q", id)
