@@ -97,11 +97,70 @@ func TestResourceJob_parameterizedJob(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_parameterizedJob,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_parameterizedCheck,
 			},
 		},
 	})
 }
+
+func testResourceJob_parameterizedCheck(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["nomad_job.parameterized"]
+	if resourceState == nil {
+		return errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return errors.New("resource has no primary instance")
+	}
+
+	jobID := instanceState.ID
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	return nil
+}
+
+var testResourceJob_parameterizedJob = `
+resource "nomad_job" "parameterized" {
+    jobspec = <<EOT
+job "parameterized" {
+    datacenters = ["dc1"]
+    type = "batch"
+    parameterized {
+      payload = "required"
+    }
+    group "foo" {
+        task "foo" {
+            driver = "raw_exec"
+            config {
+                command = "/bin/sleep"
+                args = ["1"]
+            }
+            resources {
+                cpu = 20
+                memory = 10
+            }
+
+            logs {
+                max_files = 3
+                max_file_size = 10
+            }
+        }
+    }
+}
+EOT
+}
+`
 
 var testResourceJob_initialConfig = `
 resource "nomad_job" "test" {
@@ -307,38 +366,6 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 
 	return nil
 }
-
-var testResourceJob_parameterizedJob = `
-resource "nomad_job" "test" {
-    jobspec = <<EOT
-job "bar" {
-    datacenters = ["dc1"]
-    type = "batch"
-    parameterized {
-      payload = "required"
-    }
-    group "foo" {
-        task "foo" {
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
-            resources {
-                cpu = 20
-                memory = 10
-            }
-
-            logs {
-                max_files = 3
-                max_file_size = 10
-            }
-        }
-    }
-}
-EOT
-}
-`
 
 func TestResourceJob_vault(t *testing.T) {
 	r.Test(t, r.TestCase{
