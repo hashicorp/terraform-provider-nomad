@@ -14,6 +14,11 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
+testintegration: fmtcheck
+	scripts/run-nomad.sh
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	scripts/stop-nomad.sh
+
 vet:
 	@echo "go vet ."
 	@go vet $$(go list ./... | grep -v vendor/) ; if [ $$? -eq 1 ]; then \

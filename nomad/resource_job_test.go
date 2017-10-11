@@ -374,31 +374,21 @@ func TestResourceJob_vault(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_vaultConfig,
-				Check:  testResourceJob_checkVaultToken,
+				Check:  testResourceJob_initialCheck,
 			},
 		},
-
-		CheckDestroy: testResourceJob_checkDestroy("foo"),
+		CheckDestroy: testResourceJob_checkDestroy("test"),
 	})
 }
 
-func testResourceJob_checkVaultToken(s *terraform.State) error {
-	jobID := "foo"
-
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-	_, _, err := client.Jobs().Info(jobID, nil)
-	if err != nil {
-		return fmt.Errorf("error reading back job: %s", err)
-	}
-
-	return nil
+var testResourceJob_vaultConfig = `
+provider "nomad" {
+	vault_token = "terraform-provider-nomad-token"
 }
 
-var testResourceJob_vaultConfig = `
 resource "nomad_job" "test" {
     jobspec = <<EOT
-job "foo" {
+job "test" {
     datacenters = ["dc1"]
     type = "service"
     group "foo" {
