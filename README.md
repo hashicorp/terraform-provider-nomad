@@ -54,10 +54,18 @@ In order to test the provider, you can simply run `make test`.
 $ make test
 ```
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+In order to run the full suite of Acceptance tests:
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+1. setup test environment
+  ```sh
+  nomad agent -dev
+  ```
 
-```sh
-$ make testacc
-```
+2. set nomad agent address (if differs from `http://localhost:4646`) and run tests
+  ```sh
+  NOMAD_ADDR=http://<host>:<port> make testacc
+  ```
+
+Acceptance tests expect fresh instance of nomad agent, so all steps must be performed every time tests are executed. 
+
+*Note:* Acceptance tests create real resources, and may cost money to run.
