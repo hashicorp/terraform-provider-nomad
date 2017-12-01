@@ -42,6 +42,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", ""),
 				Description: "A path to a PEM-encoded private key, required if cert_file is specified.",
 			},
+			"secret_id": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NOMAD_TOKEN", ""),
+				Description: "ACL token secret for API requests.",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -59,6 +65,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config.TLSConfig.CACert = d.Get("ca_file").(string)
 	config.TLSConfig.ClientCert = d.Get("cert_file").(string)
 	config.TLSConfig.ClientKey = d.Get("key_file").(string)
+	config.SecretID = d.Get("secret_id").(string)
 
 	client, err := api.NewClient(config)
 	if err != nil {

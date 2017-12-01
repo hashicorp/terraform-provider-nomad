@@ -58,7 +58,7 @@ In order to run the full suite of Acceptance tests:
 
 1. setup test environment
   ```sh
-  nomad agent -dev
+  nomad agent -dev -acl-enabled
   ```
 
 2. set nomad agent address (if differs from `http://localhost:4646`) and run tests

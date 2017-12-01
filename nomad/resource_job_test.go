@@ -10,7 +10,21 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 
 	"github.com/hashicorp/nomad/api"
+	"regexp"
 )
+
+func TestResourceJob_basic_anonymous(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheckAnonymous(t) },
+		Steps: []r.TestStep{
+			{
+				Config:      testResourceJob_initialConfig,
+				ExpectError: regexp.MustCompile(".* 403 .*"),
+			},
+		},
+	})
+}
 
 func TestResourceJob_basic(t *testing.T) {
 	r.Test(t, r.TestCase{
