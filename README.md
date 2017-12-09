@@ -61,9 +61,14 @@ In order to run the full suite of Acceptance tests:
   nomad agent -dev -acl-enabled
   ```
 
-2. set nomad agent address (if differs from `http://localhost:4646`) and run tests
+2. obtain a management token
   ```sh
-  NOMAD_ADDR=http://<host>:<port> make testacc
+  nomad acl bootstrap
+  ```
+
+4. set nomad agent address (if differs from `http://localhost:4646`) and token secret ID and run tests
+  ```sh
+  NOMAD_TOKEN=<output of nomad acl bootstrap's Secret ID> NOMAD_ADDR=http://<host>:<port> make testacc
   ```
 
 Acceptance tests expect fresh instance of nomad agent, so all steps must be performed every time tests are executed. 
