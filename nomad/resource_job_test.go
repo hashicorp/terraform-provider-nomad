@@ -243,8 +243,7 @@ job "bar" {
         task "foo" {
             driver = "raw_exec"
             config {
-                command = "/bin/sleep"
-                args = ["1"]
+                command = "/bin/true"
             }
 
             resources {
@@ -308,7 +307,7 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 var testResourceJob_parameterizedJob = `
 resource "nomad_job" "test" {
     jobspec = <<EOT
-job "bar" {
+job "parameterized" {
     datacenters = ["dc1"]
     type = "batch"
     parameterized {
