@@ -1,4 +1,9 @@
-## 1.0.1 (Unreleased)
+## 1.1.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add support for ACL tokens [GH-17]
+
 ## 1.0.0 (September 27, 2017)
 
 IMPROVEMENTS:
