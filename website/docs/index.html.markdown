@@ -52,3 +52,7 @@ The following arguments are supported:
 - `key_file` `(string: "")` - A local file path to a PEM-encoded private key.
   This is required if `cert_file` is specified. This can also be specified via
   the `NOMAD_CLIENT_KEY` environment variable.
+
+- `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
+  for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
+  environment variable.
