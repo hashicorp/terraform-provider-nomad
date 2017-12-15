@@ -1,8 +1,8 @@
-## 1.1.0 (Unreleased)
+## 1.1.0 (December 15, 2017)
 
 IMPROVEMENTS:
 
-* Add support for ACL tokens [GH-17]
+* Add support for ACL tokens ([#17](https://github.com/terraform-providers/terraform-provider-nomad/issues/17))
 
 ## 1.0.0 (September 27, 2017)
 
