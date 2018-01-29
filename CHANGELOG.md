@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* **New Resource**: `nomad_acl_tokens` allows management of ACL tokens [GCP-20]
+* **New Resource**: `nomad_acl_tokens` allows management of ACL tokens [GH-20]
 
 ## 1.1.0 (December 15, 2017)
 
