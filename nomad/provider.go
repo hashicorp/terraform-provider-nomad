@@ -53,7 +53,8 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		ResourcesMap: map[string]*schema.Resource{
-			"nomad_job": resourceJob(),
+			"nomad_acl_policy": resourceACLPolicy(),
+			"nomad_job":        resourceJob(),
 		},
 	}
 }
