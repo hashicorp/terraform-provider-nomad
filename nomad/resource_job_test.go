@@ -122,7 +122,7 @@ job "foo" {
             }
 
             resources {
-                cpu = 20
+                cpu = 100
                 memory = 10
             }
 
@@ -153,7 +153,7 @@ job "foo" {
             }
 
             resources {
-                cpu = 20
+                cpu = 100
                 memory = 10
             }
 
@@ -247,7 +247,7 @@ job "bar" {
             }
 
             resources {
-                cpu = 20
+                cpu = 100
                 memory = 10
             }
 
@@ -321,7 +321,7 @@ job "parameterized" {
                 args = ["1"]
             }
             resources {
-                cpu = 20
+                cpu = 100
                 memory = 10
             }
 
