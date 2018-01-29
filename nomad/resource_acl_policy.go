@@ -104,7 +104,7 @@ func resourceACLPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	name := d.Id()
 
-	// retrie the policy
+	// retrieve the policy
 	log.Printf("[DEBUG] Reading ACL policy %q", name)
 	policy, _, err := client.ACLPolicies().Info(name, nil)
 	if err != nil {
