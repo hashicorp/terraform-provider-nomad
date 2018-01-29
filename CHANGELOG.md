@@ -1,4 +1,9 @@
-## 1.1.1 (Unreleased)
+## 1.2.0 (Unreleased)
+
+FEATURES:
+
+* **New Resource**: `nomad_acl_tokens` allows management of ACL tokens [GH-20]
+
 ## 1.1.0 (December 15, 2017)
 
 IMPROVEMENTS:
