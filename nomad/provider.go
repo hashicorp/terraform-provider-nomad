@@ -1,16 +1,12 @@
 package nomad
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
-	"strings"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/mitchellh/go-homedir"
+	"github.com/hashicorp/vault/command"
 )
 
 type ProviderConfig struct {
@@ -68,34 +64,17 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
-// populateTokenPath figures out the token path using homedir to get the user's
-// home directory
-func populateTokenPath() string {
-	homePath, err := homedir.Dir()
-	if err != nil {
-		panic(fmt.Errorf("error getting user's home directory: %v", err))
-	}
-	return homePath + "/.vault-token"
-}
-
 // Get gets the value of the stored token, if any
 func getToken() (string, error) {
-	tokenPath := populateTokenPath()
-	f, err := os.Open(tokenPath)
-	if os.IsNotExist(err) {
-		return "", nil
-	}
+	helper, err := command.DefaultTokenHelper()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error getting token helper: %s", err)
 	}
-	defer f.Close()
-
-	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, f); err != nil {
-		return "", err
+	token, err := helper.Get()
+	if err != nil {
+		return "", fmt.Errorf("Error getting token helper: %s", err)
 	}
-
-	return strings.TrimSpace(buf.String()), nil
+	return token, nil
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
@@ -111,7 +90,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	var err error
 	vaultToken := d.Get("vault_token").(string)
 	if vaultToken == "" {
-		vaultToken, err = getToken()
+		vaultToken, _ = getToken()
 	}
 
 	client, err := api.NewClient(config)
