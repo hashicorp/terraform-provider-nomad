@@ -106,7 +106,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config.TLSConfig.ClientCert = d.Get("cert_file").(string)
 	config.TLSConfig.ClientKey = d.Get("key_file").(string)
 
-	// Get the vault token from the config, VAULT_ADDR
+	// Get the vault token from the config, VAULT_TOKEN
 	// or ~/.vault-token (in that order)
 	var err error
 	vaultToken := d.Get("vault_token").(string)
