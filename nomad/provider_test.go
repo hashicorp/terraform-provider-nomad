@@ -14,7 +14,12 @@ import (
 //   and extract the "nomad" binary
 //
 // - Run the following to start the Nomad agent in development mode:
-//       nomad agent -dev
+//       nomad agent -dev -acl-enabled
+//
+// - Bootstrap the cluster and get a management token:
+//       nomad acl bootstrap
+//
+// - Set NOMAD_TOKEN to the Secret ID returned from the bootstrap
 //
 // - Run the Terraform acceptance tests as usual:
 //       make testacc TEST=./builtin/providers/nomad

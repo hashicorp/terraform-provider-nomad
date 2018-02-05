@@ -1,4 +1,16 @@
-## 1.0.1 (Unreleased)
+## 1.2.0 (Unreleased)
+
+FEATURES:
+
+* **New Resource**: `nomad_acl_token` allows management of ACL tokens [GH-20]
+* **New Resource**: `nomad_acl_policy` allows management of ACL policies [GH-22]
+
+## 1.1.0 (December 15, 2017)
+
+IMPROVEMENTS:
+
+* Add support for ACL tokens ([#17](https://github.com/terraform-providers/terraform-provider-nomad/issues/17))
+
 ## 1.0.0 (September 27, 2017)
 
 IMPROVEMENTS:

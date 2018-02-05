@@ -180,7 +180,7 @@ resource "nomad_job" "test" {
 					}
 
 					resources {
-						cpu = 20
+						cpu = 100
 						memory = 10
 					}
 
@@ -211,7 +211,7 @@ resource "nomad_job" "test" {
 					}
 
 					resources {
-						cpu = 20
+						cpu = 100
 						memory = 10
 					}
 
@@ -305,12 +305,11 @@ resource "nomad_job" "test" {
 				task "foo" {
 					driver = "raw_exec"
 					config {
-						command = "/bin/sleep"
-						args = ["1"]
+						command = "/bin/true"
 					}
 
 					resources {
-						cpu = 20
+						cpu = 100
 						memory = 10
 					}
 
@@ -402,16 +401,13 @@ resource "nomad_job" "test" {
 			type = "batch"
 			group "foo" {
 				task "foo" {
-					leader = true ## new in Nomad 0.5.6
-
 					driver = "raw_exec"
 					config {
-						command = "/bin/sleep"
-						args = ["1"]
+						command = "/bin/true"
 					}
 
 					resources {
-						cpu = 20
+						cpu = 100
 						memory = 10
 					}
 
@@ -446,12 +442,11 @@ resource "nomad_job" "test" {
 
 					driver = "raw_exec"
 					config {
-						command = "/bin/sleep"
-						args = ["1"]
+						command = "/bin/true"
 					}
 
 					resources {
-						cpu = 20
+						cpu = 100
 						memory = 10
 					}
 

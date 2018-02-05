@@ -54,12 +54,20 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Vault token if policies are specified in the job file.",
 			},
+			"secret_id": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NOMAD_TOKEN", ""),
+				Description: "ACL token secret for API requests.",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
 
 		ResourcesMap: map[string]*schema.Resource{
-			"nomad_job": resourceJob(),
+			"nomad_acl_policy": resourceACLPolicy(),
+			"nomad_acl_token":  resourceACLToken(),
+			"nomad_job":        resourceJob(),
 		},
 	}
 }
@@ -84,6 +92,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config.TLSConfig.CACert = d.Get("ca_file").(string)
 	config.TLSConfig.ClientCert = d.Get("cert_file").(string)
 	config.TLSConfig.ClientKey = d.Get("key_file").(string)
+	config.SecretID = d.Get("secret_id").(string)
 
 	// Get the vault token from the config, VAULT_TOKEN
 	// or ~/.vault-token (in that order)
