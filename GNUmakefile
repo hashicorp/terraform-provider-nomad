@@ -14,6 +14,7 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
+localtestacc: fmtcheck
 	scripts/start-nomad.sh
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 	scripts/stop-nomad.sh
