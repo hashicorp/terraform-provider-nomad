@@ -132,96 +132,96 @@ func testResourceJob_parameterizedCheck(s *terraform.State) error {
 
 var testResourceJob_parameterizedJob = `
 resource "nomad_job" "parameterized" {
-    jobspec = <<EOT
-job "parameterized" {
-    datacenters = ["dc1"]
-    type = "batch"
-    parameterized {
-      payload = "required"
-    }
-    group "foo" {
-        task "foo" {
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
-            resources {
-                cpu = 20
-                memory = 10
-            }
+	jobspec = <<EOT
+		job "parameterized" {
+			datacenters = ["dc1"]
+			type = "batch"
+			parameterized {
+				payload = "required"
+			}
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+					resources {
+						cpu = 20
+						memory = 10
+					}
 
-            logs {
-                max_files = 3
-                max_file_size = 10
-            }
-        }
-    }
-}
-EOT
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
 }
 `
 
 var testResourceJob_initialConfig = `
 resource "nomad_job" "test" {
-    jobspec = <<EOT
-job "foo" {
-    datacenters = ["dc1"]
-    type = "service"
-    group "foo" {
-        task "foo" {
-            leader = true ## new in Nomad 0.5.6
-            
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
 
-            resources {
-                cpu = 20
-                memory = 10
-            }
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
 
-            logs {
-                max_files = 3
-                max_file_size = 10
-            }
-        }
-    }
-}
-EOT
+					resources {
+						cpu = 20
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
 }
 `
 
 var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
-    deregister_on_destroy = false
-    jobspec = <<EOT
-job "foo" {
-    datacenters = ["dc1"]
-    type = "service"
-    group "foo" {
-        task "foo" {
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
+	deregister_on_destroy = false
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
 
-            resources {
-                cpu = 20
-                memory = 10
-            }
+					resources {
+						cpu = 20
+						memory = 10
+					}
 
-            logs {
-                max_files = 3
-                max_file_size = 10
-            }
-        }
-    }
-}
-EOT
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
 }
 `
 
@@ -296,31 +296,31 @@ func testResourceJob_deregister(t *testing.T, jobID string) func() {
 
 var testResourceJob_updateConfig = `
 resource "nomad_job" "test" {
-    jobspec = <<EOT
-job "bar" {
-    datacenters = ["dc1"]
-    type = "service"
-    group "foo" {
-        task "foo" {
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
+	jobspec = <<EOT
+		job "bar" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
 
-            resources {
-                cpu = 20
-                memory = 10
-            }
+					resources {
+						cpu = 20
+						memory = 10
+					}
 
-            logs {
-                max_files = 3
-                max_file_size = 10
-            }
-        }
-    }
-}
-EOT
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
 }
 `
 
@@ -387,36 +387,36 @@ provider "nomad" {
 }
 
 resource "nomad_job" "test" {
-    jobspec = <<EOT
-job "test" {
-    datacenters = ["dc1"]
-    type = "service"
-    group "foo" {
-        task "foo" {
-            leader = true ## new in Nomad 0.5.6
-            
-            driver = "raw_exec"
-            config {
-                command = "/bin/sleep"
-                args = ["1"]
-            }
+	jobspec = <<EOT
+		job "test" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
 
-            resources {
-                cpu = 20
-                memory = 10
-            }
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
 
-            logs {
-                max_files = 3
-                max_file_size = 10
+					resources {
+						cpu = 20
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+
+					vault {
+						policies = ["default"]
+					}
+				}
 			}
-			
-			vault {
-				policies = ["default"]
-			}
-        }
-    }
-}
-EOT
+		}
+	EOT
 }
 `
