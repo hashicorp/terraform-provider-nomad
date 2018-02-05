@@ -3,6 +3,7 @@ package nomad
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -368,12 +369,21 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 }
 
 func TestResourceJob_vault(t *testing.T) {
+	re, err := regexp.Compile("bad token")
+	if err != nil {
+		t.Errorf("Error compiling regex: %s", err)
+	}
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
-				Config: testResourceJob_vaultConfig,
+				Config:      testResourceJob_invalidVaultConfig,
+				Check:       testResourceJob_initialCheck,
+				ExpectError: re,
+			},
+			{
+				Config: testResourceJob_validVaultConfig,
 				Check:  testResourceJob_initialCheck,
 			},
 		},
@@ -381,16 +391,55 @@ func TestResourceJob_vault(t *testing.T) {
 	})
 }
 
-var testResourceJob_vaultConfig = `
+var testResourceJob_validVaultConfig = `
 provider "nomad" {
-	vault_token = "terraform-provider-nomad-token"
 }
 
 resource "nomad_job" "test" {
 	jobspec = <<EOT
 		job "test" {
 			datacenters = ["dc1"]
-			type = "service"
+			type = "batch"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+
+					resources {
+						cpu = 20
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+
+					vault {
+						policies = ["default"]
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_invalidVaultConfig = `
+provider "nomad" {
+	vault_token = "bad-token"
+}
+
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "test" {
+			datacenters = ["dc1"]
+			type = "batch"
 			group "foo" {
 				task "foo" {
 					leader = true ## new in Nomad 0.5.6
