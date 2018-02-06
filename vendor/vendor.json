@@ -603,6 +603,18 @@
 			"versionExact": "v0.10.0"
 		},
 		{
+			"checksumSHA1": "NYw7K8ZaCZ7g6n7B5vVBtJ9tAPM=",
+			"path": "github.com/hashicorp/vault/command",
+			"revision": "7d73ac4c967b3b8726c71e00c017129e1d36ad3c",
+			"revisionTime": "2018-02-05T19:26:31Z"
+		},
+		{
+			"checksumSHA1": "6ExIL9N9QzNfRfUlefGhfmjJ/+g=",
+			"path": "github.com/hashicorp/vault/command/token",
+			"revision": "7d73ac4c967b3b8726c71e00c017129e1d36ad3c",
+			"revisionTime": "2018-02-05T19:26:31Z"
+		},
+		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "d1caa6c97c9fc1cc9e83bbe34d0603f9ff0ce8bd",
