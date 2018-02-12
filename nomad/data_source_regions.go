@@ -10,7 +10,7 @@ import (
 
 func dataSourceRegions() *schema.Resource {
 	return &schema.Resource{
-		Read: genericSecretDataSourceRead,
+		Read: regionsDataSourceRead,
 
 		Schema: map[string]*schema.Schema{
 			"regions": {
@@ -22,7 +22,7 @@ func dataSourceRegions() *schema.Resource {
 	}
 }
 
-func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func regionsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	log.Printf("[DEBUG] Reading regions from Nomad")
