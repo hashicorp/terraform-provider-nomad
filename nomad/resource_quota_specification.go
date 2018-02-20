@@ -11,8 +11,8 @@ import (
 
 func resourceQuotaSpecification() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceQuotaSpecificationCreate,
-		Update: resourceQuotaSpecificationUpdate,
+		Create: resourceQuotaSpecificationWrite,
+		Update: resourceQuotaSpecificationWrite,
 		Delete: resourceQuotaSpecificationDelete,
 		Read:   resourceQuotaSpecificationRead,
 		Exists: resourceQuotaSpecificationExists,
@@ -79,7 +79,7 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 	}
 }
 
-func resourceQuotaSpecificationCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceQuotaSpecificationWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	spec := api.QuotaSpec{
@@ -92,38 +92,13 @@ func resourceQuotaSpecificationCreate(d *schema.ResourceData, meta interface{}) 
 	}
 	spec.Limits = limits
 
-	// upsert our quota spec
-	log.Printf("[DEBUG] Creating quota specification %q", spec.Name)
+	log.Printf("[DEBUG] Upserting quota specification %q", spec.Name)
 	_, err = client.Quotas().Register(&spec, nil)
 	if err != nil {
-		return fmt.Errorf("error registering quota specification %q: %s", spec.Name, err.Error())
+		return fmt.Errorf("error upserting quota specification %q: %s", spec.Name, err.Error())
 	}
-	log.Printf("[DEBUG] Created quota specification %q", spec.Name)
+	log.Printf("[DEBUG] Upserted quota specification %q", spec.Name)
 	d.SetId(spec.Name)
-
-	return resourceQuotaSpecificationRead(d, meta)
-}
-
-func resourceQuotaSpecificationUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	spec := api.QuotaSpec{
-		Name:        d.Get("name").(string),
-		Description: d.Get("description").(string),
-	}
-	limits, err := expandQuotaLimits(d)
-	if err != nil {
-		return err
-	}
-	spec.Limits = limits
-
-	// upsert our quota spec
-	log.Printf("[DEBUG] Updating quota specification %q", spec.Name)
-	_, err = client.Quotas().Register(&spec, nil)
-	if err != nil {
-		return fmt.Errorf("error registering quota specification %q: %s", spec.Name, err.Error())
-	}
-	log.Printf("[DEBUG] Updated quota specification %q", spec.Name)
 
 	return resourceQuotaSpecificationRead(d, meta)
 }
@@ -183,6 +158,7 @@ func resourceQuotaSpecificationExists(d *schema.ResourceData, meta interface{}) 
 	}
 	// just to be safe
 	if resp == nil {
+		log.Printf("[DEBUG] Response was nil, so assuming quota specification %q doesn't exist", name)
 		return false, nil
 	}
 
