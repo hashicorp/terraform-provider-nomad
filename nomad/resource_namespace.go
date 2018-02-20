@@ -11,8 +11,8 @@ import (
 
 func resourceNamespace() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceNamespaceCreate,
-		Update: resourceNamespaceUpdate,
+		Create: resourceNamespaceWrite,
+		Update: resourceNamespaceWrite,
 		Delete: resourceNamespaceDelete,
 		Read:   resourceNamespaceRead,
 		Exists: resourceNamespaceExists,
@@ -44,7 +44,7 @@ func resourceNamespace() *schema.Resource {
 	}
 }
 
-func resourceNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	namespace := api.Namespace{
@@ -53,8 +53,7 @@ func resourceNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
 		Quota:       d.Get("quota").(string),
 	}
 
-	// upsert our namespace
-	log.Printf("[DEBUG] Creating namespace %q", namespace.Name)
+	log.Printf("[DEBUG] Upserting namespace %q", namespace.Name)
 	_, err := client.Namespaces().Register(&namespace, nil)
 	if err != nil {
 		return fmt.Errorf("error inserting namespace %q: %s", namespace.Name, err.Error())
@@ -65,31 +64,10 @@ func resourceNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
 	return resourceNamespaceRead(d, meta)
 }
 
-func resourceNamespaceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	namespace := api.Namespace{
-		Name:        d.Get("name").(string),
-		Description: d.Get("description").(string),
-		Quota:       d.Get("quota").(string),
-	}
-
-	// upsert our namespace
-	log.Printf("[DEBUG] Updating namespace %q", namespace.Name)
-	_, err := client.Namespaces().Register(&namespace, nil)
-	if err != nil {
-		return fmt.Errorf("error inserting namespace %q: %s", namespace.Name, err.Error())
-	}
-	log.Printf("[DEBUG] Updated namespace %q", namespace.Name)
-
-	return resourceNamespaceRead(d, meta)
-}
-
 func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	name := d.Id()
 
-	// delete the namespace
 	log.Printf("[DEBUG] Deleting namespace %q", name)
 	_, err := client.Namespaces().Delete(name, nil)
 	if err != nil {
@@ -104,7 +82,6 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	name := d.Id()
 
-	// retrieve the namespace
 	log.Printf("[DEBUG] Reading namespace %q", name)
 	namespace, _, err := client.Namespaces().Info(name, nil)
 	if err != nil {
@@ -137,6 +114,7 @@ func resourceNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, er
 	}
 	if resp == nil {
 		// just to be sure
+		log.Printf("[DEBUG] Response was nil, namespace %q doesn't exist", name)
 		return false, nil
 	}
 
