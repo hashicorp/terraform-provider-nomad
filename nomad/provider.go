@@ -80,7 +80,7 @@ func getToken() (string, error) {
 	}
 	token, err := helper.Get()
 	if err != nil {
-		return "", fmt.Errorf("Error getting token helper: %s", err)
+		return "", fmt.Errorf("Error getting token: %s", err)
 	}
 	return token, nil
 }
@@ -99,7 +99,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	var err error
 	vaultToken := d.Get("vault_token").(string)
 	if vaultToken == "" {
-		vaultToken, _ = getToken()
+		vaultToken, err = getToken()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client, err := api.NewClient(config)
