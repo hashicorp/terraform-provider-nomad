@@ -56,10 +56,8 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error parsing jobspec: %s", err)
 	}
 
-	// Inject the Vault token if provided
-	if providerConfig.vaultToken != nil {
-		job.VaultToken = providerConfig.vaultToken
-	}
+	// Inject the Vault token
+	job.VaultToken = providerConfig.vaultToken
 
 	// Initialize
 	job.Canonicalize()
