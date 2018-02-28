@@ -45,7 +45,8 @@ func resourceACLPolicy() *schema.Resource {
 }
 
 func resourceACLPolicyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	policy := api.ACLPolicy{
 		Name:        d.Get("name").(string),
@@ -66,7 +67,8 @@ func resourceACLPolicyCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceACLPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	policy := api.ACLPolicy{
 		Name:        d.Get("name").(string),
@@ -86,7 +88,8 @@ func resourceACLPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceACLPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 	name := d.Id()
 
 	// delete the policy
@@ -101,7 +104,8 @@ func resourceACLPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceACLPolicyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 	name := d.Id()
 
 	// retrieve the policy
@@ -121,7 +125,8 @@ func resourceACLPolicyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceACLPolicyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
 
 	name := d.Id()
 	log.Printf("[DEBUG] Checking if ACL policy %q exists", name)

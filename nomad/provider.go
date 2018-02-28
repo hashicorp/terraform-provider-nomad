@@ -6,7 +6,13 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/command"
 )
+
+type ProviderConfig struct {
+	client     *api.Client
+	vaultToken *string
+}
 
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
@@ -42,6 +48,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", ""),
 				Description: "A path to a PEM-encoded private key, required if cert_file is specified.",
 			},
+			"vault_token": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				Description: "Vault token if policies are specified in the job file.",
+			},
 			"secret_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -61,6 +73,19 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+// Get gets the value of the stored token, if any
+func getToken() (string, error) {
+	helper, err := command.DefaultTokenHelper()
+	if err != nil {
+		return "", fmt.Errorf("Error getting token helper: %s", err)
+	}
+	token, err := helper.Get()
+	if err != nil {
+		return "", fmt.Errorf("Error getting token: %s", err)
+	}
+	return token, nil
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config := api.DefaultConfig()
 	config.Address = d.Get("address").(string)
@@ -70,10 +95,26 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	config.TLSConfig.ClientKey = d.Get("key_file").(string)
 	config.SecretID = d.Get("secret_id").(string)
 
+	// Get the vault token from the config, VAULT_TOKEN
+	// or ~/.vault-token (in that order)
+	var err error
+	vaultToken := d.Get("vault_token").(string)
+	if vaultToken == "" {
+		vaultToken, err = getToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
 	}
 
-	return client, nil
+	res := ProviderConfig{
+		client:     client,
+		vaultToken: &vaultToken,
+	}
+
+	return res, nil
 }
