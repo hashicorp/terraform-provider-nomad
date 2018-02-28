@@ -4,6 +4,7 @@ FEATURES:
 
 * **New Resource**: `nomad_acl_token` allows management of ACL tokens [GH-20]
 * **New Resource**: `nomad_acl_policy` allows management of ACL policies [GH-22]
+* **New Resource**: `nomad_quota_specification` allows management of quotas (Nomad Enterprise only) [GH-25]
 
 ## 1.1.0 (December 15, 2017)
 
