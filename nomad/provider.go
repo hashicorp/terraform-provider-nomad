@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/hashicorp/vault/command"
+	"github.com/hashicorp/vault/command/config"
 )
 
 type ProviderConfig struct {
@@ -75,7 +75,7 @@ func Provider() terraform.ResourceProvider {
 
 // Get gets the value of the stored token, if any
 func getToken() (string, error) {
-	helper, err := command.DefaultTokenHelper()
+	helper, err := config.DefaultTokenHelper()
 	if err != nil {
 		return "", fmt.Errorf("Error getting token helper: %s", err)
 	}
@@ -87,15 +87,15 @@ func getToken() (string, error) {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config := api.DefaultConfig()
-	config.Address = d.Get("address").(string)
-	config.Region = d.Get("region").(string)
-	config.TLSConfig.CACert = d.Get("ca_file").(string)
-	config.TLSConfig.ClientCert = d.Get("cert_file").(string)
-	config.TLSConfig.ClientKey = d.Get("key_file").(string)
-	config.SecretID = d.Get("secret_id").(string)
+	conf := api.DefaultConfig()
+	conf.Address = d.Get("address").(string)
+	conf.Region = d.Get("region").(string)
+	conf.TLSConfig.CACert = d.Get("ca_file").(string)
+	conf.TLSConfig.ClientCert = d.Get("cert_file").(string)
+	conf.TLSConfig.ClientKey = d.Get("key_file").(string)
+	conf.SecretID = d.Get("secret_id").(string)
 
-	// Get the vault token from the config, VAULT_TOKEN
+	// Get the vault token from the conf, VAULT_TOKEN
 	// or ~/.vault-token (in that order)
 	var err error
 	vaultToken := d.Get("vault_token").(string)
@@ -106,7 +106,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
-	client, err := api.NewClient(config)
+	client, err := api.NewClient(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
 	}
