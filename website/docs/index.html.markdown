@@ -53,6 +53,11 @@ The following arguments are supported:
   This is required if `cert_file` is specified. This can also be specified via
   the `NOMAD_CLIENT_KEY` environment variable.
 
+- `vault_token` `(string: "")` - A vault token to be inserted in the job file.
+  This can also be specified as the `VAULT_TOKEN` environment variable or using a
+  vault token helper (see [Vault's documentation](https://www.vaultproject.io/docs/commands/token-helper.html)
+  for more details).
+
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
   environment variable.
