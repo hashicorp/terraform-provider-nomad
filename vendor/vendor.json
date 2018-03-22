@@ -21,6 +21,13 @@
 			"revisionTime": "2017-08-09T01:16:44Z"
 		},
 		{
+			"checksumSHA1": "GCTVJ1J/SGZstNZauuLAnTFOhGA=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/armon/go-radix",
+			"path": "github.com/armon/go-radix",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
 			"checksumSHA1": "fFU9OeM0pKWGL3D+Fa3PmHSjjLg=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "be4fa13e47938e4801fada8c8ca3d1867ad3dcb3",
@@ -225,6 +232,13 @@
 			"path": "github.com/bgentry/go-netrc/netrc",
 			"revision": "9fd32a8b3d3d3f9d43c341bfe098430e07609480",
 			"revisionTime": "2014-04-22T17:41:19Z"
+		},
+		{
+			"checksumSHA1": "oTmBS67uxM6OXB/+OJUAG9LK4jw=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/bgentry/speakeasy",
+			"path": "github.com/bgentry/speakeasy",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
 		},
 		{
 			"checksumSHA1": "OT4XN9z5k69e2RsMSpwW74B+yk4=",
@@ -615,6 +629,18 @@
 			"versionExact": "v0.10.0"
 		},
 		{
+			"checksumSHA1": "93JSUqQQCAapgopAacRAzkgOf78=",
+			"path": "github.com/hashicorp/vault/command/config",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
+			"checksumSHA1": "6ExIL9N9QzNfRfUlefGhfmjJ/+g=",
+			"path": "github.com/hashicorp/vault/command/token",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "d1caa6c97c9fc1cc9e83bbe34d0603f9ff0ce8bd",
@@ -632,6 +658,20 @@
 			"path": "github.com/kardianos/osext",
 			"revision": "ae77be60afb1dcacde03767a8c37337fad28ac14",
 			"revisionTime": "2017-05-10T13:15:34Z"
+		},
+		{
+			"checksumSHA1": "AZO2VGorXTMDiSVUih3k73vORHY=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/mattn/go-isatty",
+			"path": "github.com/mattn/go-isatty",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
+			"checksumSHA1": "GTwA+0jQnOqTHsVaBIMvTKaE5eI=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/mitchellh/cli",
+			"path": "github.com/mitchellh/cli",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
 		},
 		{
 			"checksumSHA1": "guxbLo8KHHBeM0rzou4OTzzpDNs=",
@@ -661,6 +701,34 @@
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "92573fe8d000a145bfebc03a16bc22b34945867f",
 			"revisionTime": "2016-10-03T17:45:16Z"
+		},
+		{
+			"checksumSHA1": "eKclqCehbe7JsvlemLF7TfjMWf0=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/posener/complete",
+			"path": "github.com/posener/complete",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
+			"checksumSHA1": "NB7uVS0/BJDmNu68vPAlbrq4TME=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/posener/complete/cmd",
+			"path": "github.com/posener/complete/cmd",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
+			"checksumSHA1": "/HKxX422GpzWV56uW87cwXEWYV8=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/posener/complete/cmd/install",
+			"path": "github.com/posener/complete/cmd/install",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
+		},
+		{
+			"checksumSHA1": "DMo94FwJAm9ZCYCiYdJU2+bh4no=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/posener/complete/match",
+			"path": "github.com/posener/complete/match",
+			"revision": "0cd6c833fe0df3fe6ff4a949321325745b586a5a",
+			"revisionTime": "2018-03-01T01:09:21Z"
 		},
 		{
 			"checksumSHA1": "u5s2PZ7fzCOqQX7bVPf9IJ+qNLQ=",
