@@ -59,6 +59,7 @@ func resourceSentinelPolicy() *schema.Resource {
 				Required:    true,
 				Type:        schema.TypeString,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					// TODO: this should probably parse the AST to avoid false positives
 					return strings.TrimSpace(old) == strings.TrimSpace(new)
 				},
 			},
