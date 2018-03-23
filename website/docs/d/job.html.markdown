@@ -42,9 +42,9 @@ The following attributes are exported:
 * `status`: Job status.
 * `status_description`: Job Status Description.
 * `submit_time`: Job submission date.
-* `create_index`: Job creation date.
-* `modify_index`: Job modification date.
-* `job_modify_index`: job.JobModifyIndex)
+* `create_index`: Creation Index.
+* `modify_index`: Modification Index.
+* `job_modify_index`: Job modification index.
 * `stop`: Job enabled status.
 * `priority`: Job priority.
 * `parent_id`: Job's parent ID.
