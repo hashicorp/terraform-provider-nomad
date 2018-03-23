@@ -10,6 +10,15 @@
           <a href="/docs/providers/nomad/index.html">Nomad Provider</a>
         </li>
 
+        <li<%= sidebar_current("docs-nomad-datasource") %>>
+          <a href="#">Data Sources</a>
+          <ul class="nav nav-visible">
+            <li<%= sidebar_current("docs-nomad-datasource-regions") %>>
+              <a href="/docs/providers/nomad/d/regions.html">nomad_regions</a>
+            </li>
+          </ul>
+        </li>
+
         <li<%= sidebar_current("docs-nomad-resource") %>>
           <a href="#">Resources</a>
           <ul class="nav nav-visible">
@@ -21,6 +30,9 @@
             </li>
             <li<%= sidebar_current("docs-nomad-resource-job") %>>
               <a href="/docs/providers/nomad/r/job.html">nomad_job</a>
+            </li>
+            <li<%= sidebar_current("docs-nomad-resource-namespace") %>>
+              <a href="/docs/providers/nomad/r/namespace.html">nomad_namespace</a>
             </li>
             <li<%= sidebar_current("docs-nomad-resource-quota-specification") %>>
               <a href="/docs/providers/nomad/r/quota_specification.html">nomad_quota_specification</a>
