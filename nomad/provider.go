@@ -65,7 +65,8 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"nomad_job": dataSourceJob(),
+			"nomad_job":     dataSourceJob(),
+			"nomad_regions": dataSourceRegions(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -73,10 +74,6 @@ func Provider() terraform.ResourceProvider {
 			"nomad_acl_token":           resourceACLToken(),
 			"nomad_job":                 resourceJob(),
 			"nomad_quota_specification": resourceQuotaSpecification(),
-		},
-
-		DataSourcesMap: map[string]*schema.Resource{
-			"nomad_regions": dataSourceRegions(),
 		},
 	}
 }
