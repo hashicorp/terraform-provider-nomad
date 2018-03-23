@@ -27,6 +27,12 @@ func resourceJob() *schema.Resource {
 				DiffSuppressFunc: jobspecDiffSuppress,
 			},
 
+			"policy_override": {
+				Description: "Override any soft-mandatory Sentinel policies that fail.",
+				Optional:    true,
+				Type:        schema.TypeBool,
+			},
+
 			"deregister_on_destroy": {
 				Description: "If true, the job will be deregistered on destroy.",
 				Optional:    true,
@@ -87,7 +93,9 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Register the job
-	_, _, err = client.Jobs().Register(job, nil)
+	_, _, err = client.Jobs().RegisterOpts(job, &api.RegisterOptions{
+		PolicyOverride: d.Get("policy_override").(bool),
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}
