@@ -6,7 +6,13 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/command/config"
 )
+
+type ProviderConfig struct {
+	client     *api.Client
+	vaultToken *string
+}
 
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
@@ -42,6 +48,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", ""),
 				Description: "A path to a PEM-encoded private key, required if cert_file is specified.",
 			},
+			"vault_token": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				Description: "Vault token if policies are specified in the job file.",
+			},
 			"secret_id": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -53,27 +65,57 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		ResourcesMap: map[string]*schema.Resource{
-			"nomad_acl_policy":      resourceACLPolicy(),
-			"nomad_acl_token":       resourceACLToken(),
-			"nomad_job":             resourceJob(),
-			"nomad_sentinel_policy": resourceSentinelPolicy(),
+			"nomad_acl_policy":          resourceACLPolicy(),
+			"nomad_acl_token":           resourceACLToken(),
+			"nomad_job":                 resourceJob(),
+			"nomad_quota_specification": resourceQuotaSpecification(),
+			"nomad_sentinel_policy":     resourceSentinelPolicy(),
 		},
 	}
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config := api.DefaultConfig()
-	config.Address = d.Get("address").(string)
-	config.Region = d.Get("region").(string)
-	config.TLSConfig.CACert = d.Get("ca_file").(string)
-	config.TLSConfig.ClientCert = d.Get("cert_file").(string)
-	config.TLSConfig.ClientKey = d.Get("key_file").(string)
-	config.SecretID = d.Get("secret_id").(string)
+// Get gets the value of the stored token, if any
+func getToken() (string, error) {
+	helper, err := config.DefaultTokenHelper()
+	if err != nil {
+		return "", fmt.Errorf("Error getting token helper: %s", err)
+	}
+	token, err := helper.Get()
+	if err != nil {
+		return "", fmt.Errorf("Error getting token: %s", err)
+	}
+	return token, nil
+}
 
-	client, err := api.NewClient(config)
+func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+	conf := api.DefaultConfig()
+	conf.Address = d.Get("address").(string)
+	conf.Region = d.Get("region").(string)
+	conf.TLSConfig.CACert = d.Get("ca_file").(string)
+	conf.TLSConfig.ClientCert = d.Get("cert_file").(string)
+	conf.TLSConfig.ClientKey = d.Get("key_file").(string)
+	conf.SecretID = d.Get("secret_id").(string)
+
+	// Get the vault token from the conf, VAULT_TOKEN
+	// or ~/.vault-token (in that order)
+	var err error
+	vaultToken := d.Get("vault_token").(string)
+	if vaultToken == "" {
+		vaultToken, err = getToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	client, err := api.NewClient(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
 	}
 
-	return client, nil
+	res := ProviderConfig{
+		client:     client,
+		vaultToken: &vaultToken,
+	}
+
+	return res, nil
 }
