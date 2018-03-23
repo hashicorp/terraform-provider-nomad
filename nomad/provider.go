@@ -74,6 +74,10 @@ func Provider() terraform.ResourceProvider {
 			"nomad_job":                 resourceJob(),
 			"nomad_quota_specification": resourceQuotaSpecification(),
 		},
+
+		DataSourcesMap: map[string]*schema.Resource{
+			"nomad_regions": dataSourceRegions(),
+		},
 	}
 }
 
