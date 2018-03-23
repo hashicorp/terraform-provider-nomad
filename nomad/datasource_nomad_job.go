@@ -13,106 +13,90 @@ func dataSourceJob() *schema.Resource {
 		Read: dataSourceJobRead,
 		Schema: map[string]*schema.Schema{
 
-			"id": &schema.Schema{
+			"id": {
 				Description: "Job ID",
 				Type:        schema.TypeString,
 				Required:    true,
 			},
 			// computed attributes
-			"name": &schema.Schema{
+			"name": {
 				Description: "Job Name",
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 			},
 			"namepsace": {
 				Description: "Job Namespace",
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 			},
-			"type": &schema.Schema{
+			"type": {
 				Description: "Job Type",
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 			},
 			"version": {
 				Description: "Job Version",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
-			"region": &schema.Schema{
+			"region": {
 				Description: "Job Region",
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 			},
 			"datacenters": &schema.Schema{
 				Description: "Job Datacenters",
 				Type:        schema.TypeList,
-				Optional:    true,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"status": {
 				Description: "Deployment Status",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
 			"status_description": {
 				Description: "Deployment Status Description",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
 			"submit_time": {
 				Description: "Job Submit Time",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
 			"create_index": {
 				Description: "Create Index",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
 			"modify_index": {
 				Description: "Modify Index",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
 			"job_modify_index": {
 				Description: "Job Modify Index",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
-			"stop": &schema.Schema{
+			"stop": {
 				Description: "Job Stopped",
 				Type:        schema.TypeBool,
-				Optional:    true,
 				Computed:    true,
 			},
 			"priority": {
 				Description: "Job Priority",
 				Type:        schema.TypeInt,
-				Optional:    true,
 				Computed:    true,
 			},
 			"parent_id": {
 				Description: "Job Parent ID",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
 			"task_groups": {
 				Description: "Job Task Groups",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
@@ -155,18 +139,15 @@ func dataSourceJob() *schema.Resource {
 			"stable": &schema.Schema{
 				Description: "Job Stable",
 				Type:        schema.TypeBool,
-				Optional:    true,
 				Computed:    true,
 			},
 			"all_at_once": &schema.Schema{
 				Description: "Job All At Once",
 				Type:        schema.TypeBool,
-				Optional:    true,
 				Computed:    true,
 			},
 			"constraints": {
 				Description: "Job Constraints",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
@@ -188,7 +169,6 @@ func dataSourceJob() *schema.Resource {
 			},
 			"update_strategy": {
 				Description: "Job Update Policy",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
@@ -226,7 +206,6 @@ func dataSourceJob() *schema.Resource {
 			},
 			"periodic_config": {
 				Description: "Job Periodic Configuration",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
@@ -256,7 +235,6 @@ func dataSourceJob() *schema.Resource {
 			},
 			"vault_token": {
 				Description: "Vault Token",
-				Optional:    true,
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
@@ -268,7 +246,7 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	id := d.Id()
+	id := d.Get("id").(string)
 	log.Printf("[DEBUG] Getting job status: %q", id)
 	job, _, err := client.Jobs().Info(id, nil)
 	if err != nil {
@@ -281,7 +259,7 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error checking for job: %#v", err)
 	}
 
-	d.Set("id", job.ID)
+	d.SetId(*job.ID)
 	d.Set("name", job.Name)
 	d.Set("type", job.Type)
 	d.Set("version", job.Version)

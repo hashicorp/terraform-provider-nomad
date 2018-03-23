@@ -113,7 +113,7 @@ data "nomad_job" "foobar" {
 func testAccCheckNomadJobConfig_nonexisting(str string) string {
 	return fmt.Sprintf(`
 data "nomad_job" "foobar" {
-  id               = "snap-%s-nonexisting"
+  id               = "%s-nonexisting"
 }
 `, str)
 }
