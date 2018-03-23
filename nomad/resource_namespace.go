@@ -106,6 +106,8 @@ func resourceNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, er
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
+		// there's an open issue to resolve this situation:
+		// https://github.com/hashicorp/nomad/issues/1849
 		if strings.Contains(err.Error(), "404") {
 			return false, nil
 		}
