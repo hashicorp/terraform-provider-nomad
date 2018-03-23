@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/terraform/helper/schema"
 )
