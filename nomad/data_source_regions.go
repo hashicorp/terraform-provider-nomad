@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -23,7 +22,7 @@ func dataSourceRegions() *schema.Resource {
 }
 
 func regionsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(ProviderConfig).client
 
 	log.Printf("[DEBUG] Reading regions from Nomad")
 	resp, err := client.Regions().List()
