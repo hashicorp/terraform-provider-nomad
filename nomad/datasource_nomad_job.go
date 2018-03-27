@@ -103,35 +103,35 @@ func dataSourceJob() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"placed_canaries": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"auto_revert": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"promoted": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"desired_canaries": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"desired_total": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"placed_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"healthy_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"unhealthy_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -154,15 +154,15 @@ func dataSourceJob() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ltarget": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"rtarget": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"operand": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
