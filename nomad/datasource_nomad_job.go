@@ -13,7 +13,7 @@ func dataSourceJob() *schema.Resource {
 		Read: dataSourceJobRead,
 		Schema: map[string]*schema.Schema{
 
-			"id": {
+			"job_id": {
 				Description: "Job ID",
 				Type:        schema.TypeString,
 				Required:    true,
@@ -24,7 +24,7 @@ func dataSourceJob() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"namepsace": {
+			"namespace": {
 				Description: "Job Namespace",
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -175,31 +175,31 @@ func dataSourceJob() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"stagger": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"max_parallel": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"health_check": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"min_healthy_time": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"healthy_deadline": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"auto_revert": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"canary": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -212,31 +212,26 @@ func dataSourceJob() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"enabled": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"spec": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"spec_type": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"prohibit_overlap": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"timezone": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
-			},
-			"vault_token": {
-				Description: "Vault Token",
-				Computed:    true,
-				Type:        schema.TypeString,
 			},
 		},
 	}
@@ -246,7 +241,7 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	id := d.Get("id").(string)
+	id := d.Get("job_id").(string)
 	log.Printf("[DEBUG] Getting job status: %q", id)
 	job, _, err := client.Jobs().Info(id, nil)
 	if err != nil {
@@ -281,7 +276,6 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("contraints", job.Constraints)
 	d.Set("update_strategy", job.Update)
 	d.Set("periodic_config", job.Periodic)
-	d.Set("vault_token", job.VaultToken)
 
 	return nil
 }

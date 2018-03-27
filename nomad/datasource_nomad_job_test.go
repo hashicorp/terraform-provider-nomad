@@ -25,13 +25,9 @@ func TestAccNomadJob_Basic(t *testing.T) {
 				Config: testAccCheckNomadJobConfig_basic(jobId),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckNomadJobExists("nomad_job.foobar", &testJob),
-				),
-			},
-			{
-				Config: testAccCheckNomadJobConfig_basic(jobId),
-				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.foobar", "id", fmt.Sprintf("%s", jobId)),
+						"data.nomad_job.foobar", "job_id", fmt.Sprintf("%s", jobId),
+					),
 				),
 			},
 			{
@@ -105,7 +101,7 @@ func testAccCheckNomadJobDestroy(s *terraform.State) error {
 func testAccCheckNomadJobConfig_basic(str string) string {
 	return fmt.Sprintf(`
 data "nomad_job" "foobar" {
-  id               = "%s"
+  job_id               = "%s"
 }
 `, str)
 }
@@ -113,7 +109,7 @@ data "nomad_job" "foobar" {
 func testAccCheckNomadJobConfig_nonexisting(str string) string {
 	return fmt.Sprintf(`
 data "nomad_job" "foobar" {
-  id               = "%s-nonexisting"
+  job_id               = "%s-nonexisting"
 }
 `, str)
 }
