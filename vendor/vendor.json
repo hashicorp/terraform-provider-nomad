@@ -488,12 +488,6 @@
 			"revisionTime": "2015-06-09T07:04:31Z"
 		},
 		{
-			"checksumSHA1": "zRx4nYtDhor4fIy+lE2MBkJ6poU=",
-			"path": "github.com/hashicorp/nomad",
-			"revision": "2f245ac7fc9b916eb4af8a62a471dcd0b468a8c8",
-			"revisionTime": "2017-12-20T01:06:39Z"
-		},
-		{
 			"checksumSHA1": "VQKxpGw3rsGOqWTedM/4YVds8PE=",
 			"path": "github.com/hashicorp/nomad/api",
 			"revision": "1292569ac11aacfe8555a6bd94c0faedae2138e7",
