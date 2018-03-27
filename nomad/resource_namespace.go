@@ -45,7 +45,7 @@ func resourceNamespace() *schema.Resource {
 }
 
 func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(ProviderConfig).client
 
 	namespace := api.Namespace{
 		Name:        d.Get("name").(string),
@@ -65,7 +65,7 @@ func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(ProviderConfig).client
 	name := d.Id()
 
 	log.Printf("[DEBUG] Deleting namespace %q", name)
@@ -79,7 +79,7 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(ProviderConfig).client
 	name := d.Id()
 
 	log.Printf("[DEBUG] Reading namespace %q", name)
@@ -98,7 +98,7 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(ProviderConfig).client
 
 	name := d.Id()
 	log.Printf("[DEBUG] Checking if namespace %q exists", name)
