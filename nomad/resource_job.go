@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -24,6 +25,12 @@ func resourceJob() *schema.Resource {
 				Required:         true,
 				Type:             schema.TypeString,
 				DiffSuppressFunc: jobspecDiffSuppress,
+			},
+
+			"policy_override": {
+				Description: "Override any soft-mandatory Sentinel policies that fail.",
+				Optional:    true,
+				Type:        schema.TypeBool,
 			},
 
 			"deregister_on_destroy": {
@@ -90,7 +97,9 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Register the job
-	_, _, err = client.Jobs().Register(job, nil)
+	_, _, err = client.Jobs().RegisterOpts(job, &api.RegisterOptions{
+		PolicyOverride: d.Get("policy_override").(bool),
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}

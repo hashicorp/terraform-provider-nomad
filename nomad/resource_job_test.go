@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform/helper/acctest"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -91,6 +92,19 @@ func TestResourceJob_idChange(t *testing.T) {
 	})
 }
 
+func TestResourceJob_policyOverride(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_policyOverrideConfig(),
+				Check:  testResourceJob_initialCheck,
+			},
+		},
+	})
+}
+
 func TestResourceJob_parameterizedJob(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -162,7 +176,6 @@ resource "nomad_job" "parameterized" {
 	EOT
 }
 `
-
 var testResourceJob_initialConfig = `
 resource "nomad_job" "test" {
 	jobspec = <<EOT
@@ -464,3 +477,47 @@ resource "nomad_job" "test" {
 	EOT
 }
 `
+
+func testResourceJob_policyOverrideConfig() string {
+	return fmt.Sprintf(`
+resource "nomad_sentinel_policy" "policy" {
+  name = "%s"
+  policy = "main = rule { false }"
+  scope = "submit-job"
+  enforcement_level = "soft-mandatory"
+  description = "Fail all jobs for testing policy overrides in terraform acctests"
+}
+
+resource "nomad_job" "test" {
+    depends_on = ["nomad_sentinel_policy.policy"]
+    policy_override = true
+    jobspec = <<EOT
+job "foo" {
+    datacenters = ["dc1"]
+    type = "service"
+    group "foo" {
+        task "foo" {
+            leader = true ## new in Nomad 0.5.6
+            
+            driver = "raw_exec"
+            config {
+                command = "/bin/sleep"
+                args = ["1"]
+            }
+
+            resources {
+                cpu = 100
+                memory = 10
+            }
+
+            logs {
+                max_files = 3
+                max_file_size = 10
+            }
+        }
+    }
+}
+EOT
+}
+`, acctest.RandomWithPrefix("tf-nomad-test"))
+}
