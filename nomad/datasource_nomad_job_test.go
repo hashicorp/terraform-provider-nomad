@@ -3,43 +3,45 @@ package nomad
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 
-	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccNomadJob_Basic(t *testing.T) {
-	var testJob api.Job
-	jobId := acctest.RandString(8)
-
+func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckNomadJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckNomadJobConfig_basic(jobId),
+				Config: testAccCheckDataSourceNomadJobConfig,
+				Check:  testAccCheckDataSourceNomadJobExists("data.nomad_job.foobaz"),
+			},
+			{
+				Config: testAccCheckDataSourceNomadJobConfig,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckNomadJobExists("nomad_job.foobar", &testJob),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.foobar", "job_id", fmt.Sprintf("%s", jobId),
-					),
+						"data.nomad_job.foobaz", "name", "foo"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.foobaz", "type", "service"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.foobaz", "status", "running"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.foobaz", "priority", "50"),
 				),
 			},
 			{
-				Config:      testAccCheckNomadJobConfig_nonexisting(jobId),
+				Config:      testAccCheckDataSourceNomadJobConfigErr,
 				Destroy:     false,
-				ExpectError: regexp.MustCompile(`.*no job found with that id`),
+				ExpectError: regexp.MustCompile(`.*job not found`),
 			},
 		},
 	})
 }
 
-func testAccCheckNomadJobExists(n string, job *api.Job) resource.TestCheckFunc {
+func testAccCheckDataSourceNomadJobExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -66,8 +68,6 @@ func testAccCheckNomadJobExists(n string, job *api.Job) resource.TestCheckFunc {
 			return fmt.Errorf("Job not found")
 		}
 
-		*job = *test_job
-
 		return nil
 	}
 }
@@ -83,33 +83,83 @@ func testAccCheckNomadJobDestroy(s *terraform.State) error {
 
 		id := rs.Primary.ID
 
-		// Try to find the Droplet
-		_, _, err := client.Jobs().Info(id, nil)
-
-		// Wait
-
-		if err != nil && !strings.Contains(err.Error(), "404") {
-			return fmt.Errorf(
-				"Error waiting for job (%s) to be deregistered: %s",
-				rs.Primary.ID, err)
+		_, _, err := client.Jobs().Deregister(id, false, nil)
+		if err != nil {
+			return fmt.Errorf("error deregistering job: %s", err)
 		}
 	}
 
 	return nil
 }
 
-func testAccCheckNomadJobConfig_basic(str string) string {
-	return fmt.Sprintf(`
-data "nomad_job" "foobar" {
-  job_id               = "%s"
-}
-`, str)
+var testAccCheckDataSourceNomadJobConfig = `
+resource "nomad_job" "foobar" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
 }
 
-func testAccCheckNomadJobConfig_nonexisting(str string) string {
-	return fmt.Sprintf(`
+data "nomad_job" "foobaz" {
+  job_id               = "foo"
+}
+`
+
+var testAccCheckDataSourceNomadJobConfigErr = `
+resource "nomad_job" "foobar" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+
 data "nomad_job" "foobar" {
-  job_id               = "%s-nonexisting"
+  job_id               = "foo-mia"
 }
-`, str)
-}
+`
