@@ -38,7 +38,7 @@ The following attributes are exported:
 * `version`: `(integer)` Version of the specified job.
 * `namespace`: `(string)` Namespace of the specified job.
 * `region`: `(string)` Region where the Nomad cluster resides.
-* `datacenters`: `(list of strings)` Allowed datacenters that can run the specified job.
+* `datacenters`: `(list of strings)` Datacenters allowed to run the specified job.
 * `status`: `(string)` Execution status of the specified job.
 * `status_description`: `(string)` Status description of the specified job.
 * `submit_time`: `(integer)` Job submission date.
@@ -46,11 +46,34 @@ The following attributes are exported:
 * `modify_index`: `(integer)` Modification Index.
 * `job_modify_index`: `(integer)` Job modify index (used for version verification).
 * `stop`: `(boolean)` Job enabled status.
-* `priority`: `(integer)` Job priority.
+* `priority`: `(integer)` Priority used for scheduling and resource access.
 * `parent_id`: `(string)` Job's parent ID.
-* `task_groups`: `(list of maps)` Job's Task Groups.
+* `task_groups`: `(list of maps)` A list of of the job's task groups.
+  * `placed_canaries`: `(string)`
+  * `auto_revert`: `(boolean)`
+  * `promoted`: `(boolean)`
+  * `desired_canaries`: `(integer)`
+  * `desired_total`: `(integer)`
+  * `placed_alloc`: `(integer)`
+  * `healthy_alloc`: `(integer)`
+  * `unhealthy_alloc`: `(integer)`
 * `stable`: `(boolean)` Job stability status.
-* `all_at_once`: `(boolean)` All-at-once setting status.
+* `all_at_once`: `(boolean)`  If the scheduler can make partial placements on oversubscribed nodes.
 * `contraints`: `(list of maps)` Job constraints.
-* `update_strategy`: `(list of maps)` Job's update strategy.
-* `periodic_config`: `(list of maps)` Job's periodic configuration.
+  * `ltarget`: `(string)` Attribute being constrained.
+  * `rtarget`: `(string)` Constraint value.
+  * `operand`: `(string)` Operator used to compare the attribute to the constraint.
+* `update_strategy`: `(list of maps)` Job's update strategy which controls rolling updates and canary deployments.
+  * `stagger`: `(string)` Delay between migrating job allocations off cluster nodes marked for draining.
+  * `max_parallel`: `(integer)` Number of task groups that can be updated at the same time.
+  * `health_check`: `(string)` Type of mechanism in which allocations health is determined.
+  * `min_healthy_time`: `(string)` Minimum time the job allocation must be in the healthy state.
+  * `healthy_deadline`: `(string)` Deadline in which the allocation must be marked as healthy after which the allocation is automatically transitioned to unhealthy.
+  * `auto_revert`: `(boolean)` Specifies if the job should auto-revert to the last stable job on deployment failure.
+  * `canary`: `(integer)` Number of canary jobs that need to reach healthy status before unblocking rolling updates.
+* `periodic_config`: `(list of maps)` Job's periodic configuration (time based scheduling).
+  * `enabled`: `(boolean)` If periodic scheduling is enabled for the specified job.
+  * `spec`: `(string)`
+  * `spec_type`: `(string)`
+  * `prohibit_overlap`: `(boolean)`  If the specified job should wait until previous instances of the job have completed.
+  * `timezone`: `(string)` Time zone to evaluate the next launch interval against.
