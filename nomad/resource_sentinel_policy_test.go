@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-
-	"github.com/hashicorp/nomad/api"
 )
 
 func TestResourceSentinelPolicy_import(t *testing.T) {
@@ -165,7 +163,7 @@ func testResourceSentinelPolicy_checkAttrs(name, description, sentinelPolicy, sc
 			return fmt.Errorf("expected policy to be %q, is %q in state", sentinelPolicy, strings.TrimSpace(instanceState.Attributes["policy"]))
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(ProviderConfig).client
 		policy, _, err := client.SentinelPolicies().Info(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back policy %q: %s", name, err)
@@ -193,7 +191,7 @@ func testResourceSentinelPolicy_checkAttrs(name, description, sentinelPolicy, sc
 
 func testResourceSentinelPolicy_checkExists(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(ProviderConfig).client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back policy: %s", err)
@@ -208,7 +206,7 @@ func testResourceSentinelPolicy_checkExists(name string) resource.TestCheckFunc 
 
 func testResourceSentinelPolicy_checkDestroy(name string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(ProviderConfig).client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil && strings.Contains(err.Error(), "404") || policy == nil {
 			return nil
@@ -219,7 +217,7 @@ func testResourceSentinelPolicy_checkDestroy(name string) resource.TestCheckFunc
 
 func testResourceSentinelPolicy_delete(t *testing.T, name string) func() {
 	return func() {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(ProviderConfig).client
 		_, err := client.ACLPolicies().Delete(name, nil)
 		if err != nil {
 			t.Fatalf("error deleting ACL policy: %s", err)
