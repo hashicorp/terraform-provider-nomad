@@ -46,7 +46,7 @@ The following attributes are exported:
 * `modify_index`: `(integer)` Modification Index.
 * `job_modify_index`: `(integer)` Job modify index (used for version verification).
 * `stop`: `(boolean)` Job enabled status.
-* `priority`: `(integer)` Priority used for scheduling and resource access.
+* `priority`: `(integer)` Used for the prioritization of scheduling and resource access.
 * `parent_id`: `(string)` Job's parent ID.
 * `task_groups`: `(list of maps)` A list of of the job's task groups.
   * `placed_canaries`: `(string)`

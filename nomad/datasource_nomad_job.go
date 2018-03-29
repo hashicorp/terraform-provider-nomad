@@ -101,21 +101,49 @@ func dataSourceJob() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"placed_canaries": {
+						Tasks            []*Task
+						RestartPolicy    *RestartPolicy
+						ReschedulePolicy *ReschedulePolicy
+						EphemeralDisk    *EphemeralDisk
+						Update           *UpdateStrategy
+						Migrate          *MigrateStrategy
+						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"auto_revert": {
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-						"promoted": {
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-						"desired_canaries": {
+						"count": {
 							Type:     schema.TypeInt,
 							Computed: true,
+						},
+						"constraints": {
+							Type:     schema.TypeBool,
+							Computed: true,
+							Type:        schema.TypeList,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ltarget": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"rtarget": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"operand": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+								},
+							},
+						},
+						"tasks": {
+							Type:     schema.TypeInt,
+							Computed: true,
+							Type:        schema.TypeList,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+
+								}
 						},
 						"desired_total": {
 							Type:     schema.TypeInt,
