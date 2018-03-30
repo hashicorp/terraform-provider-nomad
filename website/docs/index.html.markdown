@@ -19,7 +19,7 @@ Use the navigation to the left to read about the available resources.
 ```hcl
 # Configure the Nomad provider
 provider "nomad" {
-  address = "nomad.mycompany.com"
+  address = "http://nomad.mycompany.com:4646"
   region  = "us-east-2"
 }
 
