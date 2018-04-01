@@ -101,12 +101,6 @@ func dataSourceJob() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						Tasks            []*Task
-						RestartPolicy    *RestartPolicy
-						ReschedulePolicy *ReschedulePolicy
-						EphemeralDisk    *EphemeralDisk
-						Update           *UpdateStrategy
-						Migrate          *MigrateStrategy
 						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
@@ -116,9 +110,8 @@ func dataSourceJob() *schema.Resource {
 							Computed: true,
 						},
 						"constraints": {
-							Type:     schema.TypeBool,
+							Type:     schema.TypeMap,
 							Computed: true,
-							Type:        schema.TypeList,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"ltarget": {
@@ -145,21 +138,141 @@ func dataSourceJob() *schema.Resource {
 
 								}
 						},
-						"desired_total": {
-							Type:     schema.TypeInt,
+						"restart_policy": {
+							Type:     schema.TypeMap,
 							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"interval": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"attempts": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"delay": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"mode": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+								},
+							},
 						},
-						"placed_alloc": {
-							Type:     schema.TypeInt,
+						"reschedule_policy": {
+							Type:     schema.TypeMap,
 							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"attempts": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"interval": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"delay": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"delay_function": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"max_delay": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"unlimited": {
+										Type:     schema.TypeBool,
+										Computed: true,
+									},
+								},
+							},
 						},
-						"healthy_alloc": {
-							Type:     schema.TypeInt,
+						"ephemeral_disk": {
+							Type:     schema.TypeMap,
 							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"sticky": {
+										Type:     schema.TypeBool,
+										Computed: true,
+									},
+									"migrate": {
+										Type:     schema.TypeBool,
+										Computed: true,
+									},
+									"size_mb": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+								},
+							},
 						},
-						"unhealthy_alloc": {
-							Type:     schema.TypeInt,
+						"update_strategy": {
+							Computed:    true,
+							Type:        schema.TypeMap,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"stagger": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"max_parallel": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"health_check": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"min_healthy_time": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"healthy_deadline": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"auto_revert": {
+										Type:     schema.TypeBool,
+										Computed: true,
+									},
+									"canary": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+								},
+							},
+						},
+						"migrate_strategy": {
+							Type:     schema.TypeMap,
 							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"max_parallel": {
+										Type:     schema.TypeInt,
+										Computed: true,
+									},
+									"health_check": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"min_healthy_time": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"healthy_deadline": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+								},
+							},
 						},
 					},
 				},
