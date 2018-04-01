@@ -129,15 +129,14 @@ func dataSourceJob() *schema.Resource {
 								},
 							},
 						},
-						"tasks": {
-							Type:     schema.TypeInt,
-							Computed: true,
-							Type:        schema.TypeList,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-
-								}
-						},
+						//"tasks": {
+						//	Type:     schema.TypeInt,
+						//	Computed: true,
+						//	Type:        schema.TypeList,
+						//	Elem: &schema.Resource{
+						//		Schema: map[string]*schema.Schema{
+						//		}
+						//},
 						"restart_policy": {
 							Type:     schema.TypeMap,
 							Computed: true,
@@ -215,8 +214,8 @@ func dataSourceJob() *schema.Resource {
 							},
 						},
 						"update_strategy": {
-							Computed:    true,
-							Type:        schema.TypeMap,
+							Computed: true,
+							Type:     schema.TypeMap,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"stagger": {
