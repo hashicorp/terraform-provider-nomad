@@ -1,10 +1,19 @@
-## 1.2.0 (Unreleased)
+## 1.2.1 (Unreleased)
+## 1.2.0 (March 28, 2018)
 
 FEATURES:
 
-* **New Resource**: `nomad_acl_token` allows management of ACL tokens [GH-20]
-* **New Resource**: `nomad_acl_policy` allows management of ACL policies [GH-22]
-* **New Resource**: `nomad_quota_specification` allows management of quotas (Nomad Enterprise only) [GH-25]
+* **New Resource**: `nomad_acl_token` allows management of ACL tokens ([#20](https://github.com/terraform-providers/terraform-provider-nomad/issues/20))
+* **New Resource**: `nomad_acl_policy` allows management of ACL policies ([#22](https://github.com/terraform-providers/terraform-provider-nomad/issues/22))
+* **New Data Source**: `nomad_regions` lists the regions in a Nomad cluster ([#24](https://github.com/terraform-providers/terraform-provider-nomad/issues/24))
+* **New Resource**: `nomad_quota_specification` allows management of quotas (Nomad Enterprise only) ([#25](https://github.com/terraform-providers/terraform-provider-nomad/issues/25))
+* **New Resource**: `nomad_namespace` allows management of namespaces (Nomad Enterprise only) ([#26](https://github.com/terraform-providers/terraform-provider-nomad/issues/26))
+* **New Resource**: `nomad_sentinel_policy` manages Sentinel policies (Nomad Enterprise only) ([#27](https://github.com/terraform-providers/terraform-provider-nomad/issues/27))
+
+IMPROVEMENTS:
+
+* Add support for Sentinel policy overrides to Nomad jobs ([#28](https://github.com/terraform-providers/terraform-provider-nomad/issues/28))
+* Add support for specifying Vault tokens at the provider level ([#30](https://github.com/terraform-providers/terraform-provider-nomad/issues/30))
 
 ## 1.1.0 (December 15, 2017)
 
