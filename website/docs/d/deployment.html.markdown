@@ -15,11 +15,11 @@ An error is triggered if zero or more than one result is returned by the query.
 
 ## Example Usage
 
-Get the data about a snapshot:
+Get the data about a deployment:
 
 ```hcl
 data "nomad_deployment" "example1" {
-  id = "example_deployment"
+  deployment_id = "70638f62-5c19-193e-30d6-f9d6e689ab8e"
 }
 ```
 
@@ -27,19 +27,19 @@ data "nomad_deployment" "example1" {
 
 The following arguments are supported:
 
-* `id` - The ID of the deployment.
+* `deployment_id`: `string` The ID of the deployment.
 
 ## Attributes Reference
 
 The following attributes are exported:
 
-* `namespace`: Namespace of the deployment.
-* `job_id`: ID of the job.
-* `job_version`: Job version.
-* `job_create_index`: Job creation index.
-* `job_modify_index`: Job modification index.
-* `task_groups`: Task Groups.
-* `status`: Deployment status.
-* `status_description`: Deployment Status Description.
-* `create_index`: Deployment creation date.
-* `modify_index`: Deployment modification date.
+* `namespace`: `string` Namespace of the deployment.
+* `job_id`: `string` ID of the job.
+* `job_version`: `string` Job version.
+* `job_create_index`: `integer` Job creation index.
+* `job_modify_index`: `integer` Job modification index.
+* `task_groups`: `map` Task Groups.
+* `status`: `string` Deployment status.
+* `status_description`: `string` Deployment Status Description.
+* `create_index`: `integer` Deployment creation date.
+* `modify_index`: `integer` Deployment modification date.

@@ -13,13 +13,13 @@ func dataSourceDeployment() *schema.Resource {
 		Read: dataSourceDeploymentRead,
 		Schema: map[string]*schema.Schema{
 
-			"id": {
+			"deployment_id": {
 				Description: "Deployment ID",
 				Type:        schema.TypeString,
 				Required:    true,
 			},
 			// computed attributes
-			"namepsace": {
+			"namespace": {
 				Description: "Deployment Namespace",
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -47,40 +47,40 @@ func dataSourceDeployment() *schema.Resource {
 			"task_groups": {
 				Description: "Task Groups",
 				Computed:    true,
-				Type:        schema.TypeList,
+				Type:        schema.TypeMap,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"placed_canaries": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 						"auto_revert": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"promoted": {
 							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"desired_canaries": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"desired_total": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"placed_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"healthy_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 						"unhealthy_alloc": {
 							Type:     schema.TypeInt,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -113,7 +113,7 @@ func dataSourceDeploymentRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	id := d.Get("id").(string)
+	id := d.Get("deployment_id").(string)
 	log.Printf("[DEBUG] Getting deployment status: %q", id)
 	deployment, _, err := client.Deployments().Info(id, nil)
 	if err != nil {

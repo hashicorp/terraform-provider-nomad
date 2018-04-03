@@ -3,47 +3,31 @@ package nomad
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 
-	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestAccNomadJob_Basic(t *testing.T) {
-	var testDeployment api.Deployment
-	deploymentId := acctest.RandString(8)
-
+func TestAccDataSourceDeployment(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckNomadDeploymentFail,
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckNomadDeploymentConfig_basic(deploymentId),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckNomadDeploymentExists("nomad_deployment.foobar", &testDeployment),
-				),
+				Config: testAccCheckDataSourceNomadDeploymentConfig,
+				Check:  testAccCheckDataSourceNomadDeploymentExist("data.nomad_deployment.foobaz"),
 			},
 			{
-				Config: testAccCheckNomadDeploymentConfig_basic(deploymentId),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						"data.nomad_deployment.foobar", "id", fmt.Sprintf("%s", deploymentId)),
-				),
-			},
-			{
-				Config:      testAccCheckNomadDeploymentConfig_nonexisting(deploymentId),
+				Config:      testAccCheckDataSourceNomadDeploymentConfigErr,
 				Destroy:     false,
-				ExpectError: regexp.MustCompile(`.*no deployment found with that id`),
+				ExpectError: regexp.MustCompile(`.*deployment not found`),
 			},
 		},
 	})
 }
 
-func testAccCheckNomadDeploymentExists(n string, deployment *api.Deployment) resource.TestCheckFunc {
+func testAccCheckDataSourceNomadDeploymentExist(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -59,7 +43,7 @@ func testAccCheckNomadDeploymentExists(n string, deployment *api.Deployment) res
 
 		id := rs.Primary.ID
 
-		// Try to find the deployment
+		// Try to find the job
 		test_deployment, _, err := client.Deployments().Info(id, nil)
 
 		if err != nil {
@@ -70,50 +54,47 @@ func testAccCheckNomadDeploymentExists(n string, deployment *api.Deployment) res
 			return fmt.Errorf("Deployment not found")
 		}
 
-		*deployment = *test_deployment
-
 		return nil
 	}
 }
 
-func testAccCheckNomadDeploymentFail(s *terraform.State) error {
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "nomad_deployment" {
-			continue
+var testAccCheckDataSourceNomadDeploymentConfig = `
+resource "nomad_job" "foobar" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+					resources {
+						cpu = 100
+						memory = 10
+					}
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
 		}
-
-		id := rs.Primary.ID
-
-		// Try to find the Droplet
-		_, _, err := client.Deployments().Info(id, nil)
-
-		// Wait
-
-		if err != nil && !strings.Contains(err.Error(), "404") {
-			return fmt.Errorf(
-				"Error waiting for deployment (%s) to fail: %s",
-				rs.Primary.ID, err)
-		}
-	}
-
-	return nil
+	EOT
 }
 
-func testAccCheckNomadDeploymentConfig_basic(str string) string {
-	return fmt.Sprintf(`
-data "nomad_deployment" "foobar" {
-  id               = "%s"
-}
-`, str)
+data "nomad_deployment" "foobaz" {
+	deployment_id			=	""
 }
 
-func testAccCheckNomadDeploymentConfig_nonexisting(str string) string {
-	return fmt.Sprintf(`
-data "nomad_deployment" "foobar" {
-  id               = "%s-nonexisting"
+`
+
+var testAccCheckDataSourceNomadDeploymentConfigErr = `
+data "nomad_deployment" "foobaz" {
+	deployment_id			= ""
 }
-`, str)
-}
+
+`
