@@ -2,26 +2,32 @@ package nomad
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
 
-func TestDataSourceDeployments(t *testing.T) {
+func TestAccDataSourceDeployments(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceDeployments_config,
-				Check:  testDataSourceDeployments_check,
+				Config: testAccCheckDataSourceNomadDeploymentsConfig,
+				Check:  testAccCheckDataSourceNomadDeploymentsExist,
+			},
+			{
+				Config:      testAccCheckDataSourceNomadDeploymentsConfigErr,
+				Destroy:     false,
+				ExpectError: regexp.MustCompile(`.*No deployments found`),
 			},
 		},
 	})
 }
 
-func testDataSourceDeployments_check(s *terraform.State) error {
+func testAccCheckDataSourceNomadDeploymentsExist(s *terraform.State) error {
 	providerConfig := testProvider.Meta().(ProviderConfig)
 	client := providerConfig.client
 
@@ -35,8 +41,39 @@ func testDataSourceDeployments_check(s *terraform.State) error {
 	return nil
 }
 
-var testDataSourceDeployments_config = `
+var testAccCheckDataSourceNomadDeploymentsConfig = `
+resource "nomad_job" "foobar" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+					resources {
+						cpu = 100
+						memory = 10
+					}
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
 
+data "nomad_deployments" "foobar" {}
+
+`
+
+var testAccCheckDataSourceNomadDeploymentsConfigErr = `
 data "nomad_deployments" "foobar" {}
 
 `

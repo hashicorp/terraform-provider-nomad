@@ -3,10 +3,10 @@ layout: "nomad"
 page_title: "Nomad: nomad_deployments"
 sidebar_current: "docs-nomad-datasource-deployments"
 description: |-
-  Retrieve a list of deployments.
+  Retrieve a list of deployments and a summary of their attributes.
 ---
 
-# nomad_regions
+# nomad_deployments
 
 Retrieve a list of deployments in Nomad.
 
@@ -20,4 +20,9 @@ data "nomad_deployments" "example" {}
 
 The following attributes are exported:
 
-- `deployments`: a list of deployments in the cluster.
+* `deployments`: `list of maps` a list of deployments in the cluster.
+  * `ID`: `string` Deployment ID.
+  * `JobID`: `string` Job ID associated with the deployment.
+  * `JobVersion`: `string` Job version.
+  * `Status`: `string` Deployment status.
+  * `StatusDescription`: `string` Detailed description of the deployment's status. 
