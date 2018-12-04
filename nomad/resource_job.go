@@ -81,7 +81,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	if prevId != "" && prevId != *job.ID {
 		log.Printf(
 			"[INFO] Deregistering %q before registering %q",
-			prevId, job.ID)
+			prevId, *job.ID)
 
 		log.Printf("[DEBUG] Deregistering job: %q", prevId)
 		_, _, err := client.Jobs().Deregister(prevId, false, nil)
@@ -89,7 +89,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf(
 				"error deregistering previous job %q "+
 					"before registering new job %q: %s",
-				prevId, job.ID, err)
+				prevId, *job.ID, err)
 		}
 
 		// Success! Clear our state.

@@ -6,8 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-
-	"github.com/kardianos/osext"
+	"strings"
 )
 
 // Checks the current executable, then $GOPATH/bin, and finally the CWD, in that
@@ -19,12 +18,12 @@ func NomadExecutable() (string, error) {
 	}
 
 	// Check the current executable.
-	bin, err := osext.Executable()
+	bin, err := os.Executable()
 	if err != nil {
 		return "", fmt.Errorf("Failed to determine the nomad executable: %v", err)
 	}
 
-	if filepath.Base(bin) == nomadExe {
+	if _, err := os.Stat(bin); err == nil && isNomad(bin, nomadExe) {
 		return bin, nil
 	}
 
@@ -57,4 +56,11 @@ func NomadExecutable() (string, error) {
 	}
 
 	return "", fmt.Errorf("Could not find Nomad executable (%v)", nomadExe)
+}
+
+func isNomad(path, nomadExe string) bool {
+	if strings.HasSuffix(path, ".test") || strings.HasSuffix(path, ".test.exe") {
+		return false
+	}
+	return true
 }
