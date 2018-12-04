@@ -74,7 +74,8 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"nomad_regions": dataSourceRegions(),
+			"nomad_regions":    dataSourceRegions(),
+			"nomad_namespaces": dataSourceNamespaces(),
 		},
 	}
 }
