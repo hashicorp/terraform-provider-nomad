@@ -76,5 +76,5 @@ The following arguments are supported:
 - `deregister_on_id_change` `(bool: true)` - Determines if the job will be
   deregistered if the ID of the job in the jobspec changes.
 
-- `policy_override` `(bool: false)` - Determins if the job will override any
+- `policy_override` `(bool: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.
