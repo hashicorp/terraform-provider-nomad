@@ -1,8 +1,11 @@
 package nomad
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/nomad/api"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -35,7 +38,7 @@ func TestResourceJob_v086(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_v086config,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_v086Check,
 			},
 		},
 
@@ -277,6 +280,93 @@ func testResourceJob_initialCheck(s *terraform.State) error {
 
 	if got, want := *job.ID, jobID; got != want {
 		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	return nil
+}
+
+func testResourceJob_v086Check(s *terraform.State) error {
+
+	resourceState := s.Modules[0].Resources["nomad_job.test"]
+	if resourceState == nil {
+		return errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return errors.New("resource has no primary instance")
+	}
+
+	jobID := instanceState.ID
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected a single TaskGroup")
+	}
+	tg := job.TaskGroups[0]
+
+	// 0.8.x jobs support migrate and update stanzas
+	expUpdate := api.UpdateStrategy{}
+	json.Unmarshal([]byte(`{
+      "Stagger":  		   30000000000,
+      "MaxParallel": 2,
+      "HealthCheck": "checks",
+      "MinHealthyTime":    12000000000,
+      "HealthyDeadline":  360000000000,
+      "ProgressDeadline": 720000000000,
+      "AutoRevert": true,
+      "Canary": 1
+    }`), &expUpdate)
+	if !reflect.DeepEqual(tg.Update, &expUpdate) {
+		return fmt.Errorf("job update strategy not as expected")
+	}
+
+	expMigrate := api.MigrateStrategy{}
+	json.Unmarshal([]byte(`{
+      "MaxParallel": 2,
+      "HealthCheck": "checks",
+      "MinHealthyTime":   12000000000,
+      "HealthyDeadline": 360000000000
+	}`), &expMigrate)
+	if !reflect.DeepEqual(tg.Migrate, &expMigrate) {
+		return fmt.Errorf("job migrate strategy not as expected")
+	}
+
+	// 0.8.x TaskGroups support reschedule stanza
+	expReschedule := api.ReschedulePolicy{}
+	json.Unmarshal([]byte(`{
+	  "Attempts": 0,
+	  "Interval": 7200000000000,
+	  "Delay": 	    12000000000,
+	  "DelayFunction": "exponential",
+	  "MaxDelay":  100000000000,
+	  "Unlimited": true
+	}`), &expReschedule)
+	if !reflect.DeepEqual(tg.ReschedulePolicy, &expReschedule) {
+		return fmt.Errorf("job reschedule strategy not as expected")
+	}
+
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("expected a single task in the task group")
+	}
+	t := tg.Tasks[0]
+
+	// 0.8.x Task service stanza supports canary tags
+	if len(t.Services) != 1 {
+		return fmt.Errorf("expected task Services stanza with a single element")
+	}
+	if sv := t.Services[0]; reflect.DeepEqual(sv.CanaryTags, []string{"canary-tag-a"}) != true {
+		return fmt.Errorf("expected task canary tags")
 	}
 
 	return nil
@@ -556,34 +646,49 @@ resource "nomad_job" "test" {
 			type = "service"
 
 			migrate {
-				max_parallel = 1
+				max_parallel = 2
 				health_check = "checks"
-				min_healthy_time = "10s"
-				healthy_deadline = "5m"
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
 			}
 
 			update {
-				max_parallel = 1
-				min_healthy_time = "10s"
-				healthy_deadline = "3m"
-				progress_deadline = "10m"
-				auto_revert = false
-				canary = 0
+			    max_parallel = 2	
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+				progress_deadline = "11m"
+				auto_revert = true
+				canary = 1
+			}
+
+			reschedule {
+				attempts       = 11
+				interval       = "2h"
+				delay          = "11s"
+				delay_function = "exponential"
+				max_delay      = "100s"
+				unlimited      = false
 			}
 
 			group "foo" {
 
-			    reschedule {
-					attempts       = 15
-					interval       = "1h"
-					delay          = "30s"
-					delay_function = "exponential"
-					max_delay      = "120s"
-					unlimited      = false
+				migrate {
+					min_healthy_time = "12s"
+				}
+
+				update {
+					min_healthy_time = "12s"
+					progress_deadline = "12m"
+				}
+
+				reschedule {
+					attempts       = 0
+					delay          = "12s"
+					unlimited 	   = true	
 				}
 
 				task "foo" {
-					leader = true ## new in Nomad 0.5.6
+
 					
 					driver = "raw_exec"
 					config {
