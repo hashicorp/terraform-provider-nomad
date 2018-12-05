@@ -46,6 +46,21 @@ func TestResourceJob_v086(t *testing.T) {
 	})
 }
 
+func TestResourceJob_json(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_jsonConfig,
+				Check:  testResourceJob_initialCheck,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
+	})
+}
+
 func TestResourceJob_refresh(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -227,6 +242,42 @@ resource "nomad_job" "test" {
 }
 `
 
+var testResourceJob_jsonConfig = `
+resource "nomad_job" "json_test" {
+	json = true
+	jobspec = <<EOT
+{
+  "Datacenters": [ "dc1" ],
+  "ID": "foo-json",
+  "Name": "foo-json",
+  "Type": "service",
+  "TaskGroups": [
+    {
+      "Name": "foo",
+      "Tasks": [{
+        "Config": {
+          "command": "/bin/sleep",
+          "args": [ "1" ]
+        },
+        "Driver": "raw_exec",
+        "Leader": true,
+        "LogConfig": {
+          "MaxFileSizeMB": 10,
+          "MaxFiles": 3
+        },
+        "Name": "foo",
+        "Resources": {
+          "CPU": 100,
+          "MemoryMB": 10
+        }
+      }
+      ]
+    }
+  ]
+}
+	EOT
+}
+`
 var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
 	deregister_on_destroy = false

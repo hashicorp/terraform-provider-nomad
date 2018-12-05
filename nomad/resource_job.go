@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -46,6 +47,12 @@ func resourceJob() *schema.Resource {
 				Default:     true,
 				Type:        schema.TypeBool,
 			},
+
+			"json": {
+				Description: "If true, the `jobspec` will be parsed as json instead of HCL.",
+				Optional:    true,
+				Type:        schema.TypeBool,
+			},
 		},
 	}
 }
@@ -58,9 +65,18 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	jobspecRaw := d.Get("jobspec").(string)
 
 	// Parse it
-	job, err := jobspec.Parse(strings.NewReader(jobspecRaw))
-	if err != nil {
-		return fmt.Errorf("error parsing jobspec: %s", err)
+	var job *api.Job
+	if is_json := d.Get("json").(bool); is_json {
+		err := json.Unmarshal([]byte(jobspecRaw), &job)
+		if err != nil {
+			return fmt.Errorf("error parsing jobspec: %s", err)
+		}
+	} else {
+		var err error
+		job, err = jobspec.Parse(strings.NewReader(jobspecRaw))
+		if err != nil {
+			return fmt.Errorf("error parsing jobspec: %s", err)
+		}
 	}
 
 	// Inject the Vault token
@@ -97,7 +113,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Register the job
-	_, _, err = client.Jobs().RegisterOpts(job, &api.RegisterOptions{
+	_, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
 	}, nil)
 	if err != nil {
