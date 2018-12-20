@@ -64,6 +64,12 @@ func Provider() terraform.ResourceProvider {
 
 		ConfigureFunc: providerConfigure,
 
+		DataSourcesMap: map[string]*schema.Resource{
+			"nomad_deployments": dataSourceDeployments(),
+			"nomad_namespaces":  dataSourceNamespaces(),
+			"nomad_regions":     dataSourceRegions(),
+		},
+
 		ResourcesMap: map[string]*schema.Resource{
 			"nomad_acl_policy":          resourceACLPolicy(),
 			"nomad_acl_token":           resourceACLToken(),
@@ -71,11 +77,6 @@ func Provider() terraform.ResourceProvider {
 			"nomad_namespace":           resourceNamespace(),
 			"nomad_quota_specification": resourceQuotaSpecification(),
 			"nomad_sentinel_policy":     resourceSentinelPolicy(),
-		},
-
-		DataSourcesMap: map[string]*schema.Resource{
-			"nomad_regions":    dataSourceRegions(),
-			"nomad_namespaces": dataSourceNamespaces(),
 		},
 	}
 }
