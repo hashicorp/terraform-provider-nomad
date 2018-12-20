@@ -66,7 +66,7 @@ func Provider() terraform.ResourceProvider {
 
 		DataSourcesMap: map[string]*schema.Resource{
 			"nomad_deployments": dataSourceDeployments(),
-			"nomad_namespaces": dataSourceNamespaces(),
+			"nomad_namespaces":  dataSourceNamespaces(),
 			"nomad_regions":     dataSourceRegions(),
 		},
 
