@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
 * **Target Nomad 0.8.6**: updated the nomad client to support Nomad API version 0.8.6 ([#46](https://github.com/terraform-providers/terraform-provider-nomad/issues/46))
 * **New Data Source**: `nomad_namespaces` lists the available namespaces (Nomad Enterprise only) (thanks, @jorgemarey!) ([#41](https://github.com/terraform-providers/terraform-provider-nomad/pull/41))
+* **New Data Source**: `nomad_deployments` lists all deployments (thanks, @slapula!) ([#34](https://github.com/terraform-providers/terraform-provider-nomad/pull/34))
+* **New Data Source**: `nomad_job` lists the jobs (thanks, @slapula!) ([#32](https://github.com/terraform-providers/terraform-provider-nomad/pull/32))
 * **JSON Job Spec**: Job specification can be provided as JSON (thanks, @smintz!) ([#42](https://github.com/terraform-providers/terraform-provider-nomad/pull/42))
 
 ## 1.2.0 (March 28, 2018)
