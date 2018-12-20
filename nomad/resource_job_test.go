@@ -1,11 +1,15 @@
 package nomad
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/nomad/api"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	r "github.com/hashicorp/terraform/helper/resource"
@@ -24,6 +28,36 @@ func TestResourceJob_basic(t *testing.T) {
 		},
 
 		CheckDestroy: testResourceJob_checkDestroy("foo"),
+	})
+}
+
+func TestResourceJob_v086(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_v086config,
+				Check:  testResourceJob_v086Check,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foov086"),
+	})
+}
+
+func TestResourceJob_json(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_jsonConfig,
+				Check:  testResourceJob_initialCheck,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
 	})
 }
 
@@ -208,6 +242,42 @@ resource "nomad_job" "test" {
 }
 `
 
+var testResourceJob_jsonConfig = `
+resource "nomad_job" "test" {
+	json = true
+	jobspec = <<EOT
+{
+  "Datacenters": [ "dc1" ],
+  "ID": "foo-json",
+  "Name": "foo-json",
+  "Type": "service",
+  "TaskGroups": [
+    {
+      "Name": "foo",
+      "Tasks": [{
+        "Config": {
+          "command": "/bin/sleep",
+          "args": [ "1" ]
+        },
+        "Driver": "raw_exec",
+        "Leader": true,
+        "LogConfig": {
+          "MaxFileSizeMB": 10,
+          "MaxFiles": 3
+        },
+        "Name": "foo",
+        "Resources": {
+          "CPU": 100,
+          "MemoryMB": 10
+        }
+      }
+      ]
+    }
+  ]
+}
+	EOT
+}
+`
 var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
 	deregister_on_destroy = false
@@ -266,6 +336,93 @@ func testResourceJob_initialCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJob_v086Check(s *terraform.State) error {
+
+	resourceState := s.Modules[0].Resources["nomad_job.test"]
+	if resourceState == nil {
+		return errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return errors.New("resource has no primary instance")
+	}
+
+	jobID := instanceState.ID
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected a single TaskGroup")
+	}
+	tg := job.TaskGroups[0]
+
+	// 0.8.x jobs support migrate and update stanzas
+	expUpdate := api.UpdateStrategy{}
+	json.Unmarshal([]byte(`{
+      "Stagger":  		   30000000000,
+      "MaxParallel": 2,
+      "HealthCheck": "checks",
+      "MinHealthyTime":    12000000000,
+      "HealthyDeadline":  360000000000,
+      "ProgressDeadline": 720000000000,
+      "AutoRevert": true,
+      "Canary": 1
+    }`), &expUpdate)
+	if !reflect.DeepEqual(tg.Update, &expUpdate) {
+		return fmt.Errorf("job update strategy not as expected")
+	}
+
+	expMigrate := api.MigrateStrategy{}
+	json.Unmarshal([]byte(`{
+      "MaxParallel": 2,
+      "HealthCheck": "checks",
+      "MinHealthyTime":   12000000000,
+      "HealthyDeadline": 360000000000
+	}`), &expMigrate)
+	if !reflect.DeepEqual(tg.Migrate, &expMigrate) {
+		return fmt.Errorf("job migrate strategy not as expected")
+	}
+
+	// 0.8.x TaskGroups support reschedule stanza
+	expReschedule := api.ReschedulePolicy{}
+	json.Unmarshal([]byte(`{
+	  "Attempts": 0,
+	  "Interval": 7200000000000,
+	  "Delay": 	    12000000000,
+	  "DelayFunction": "exponential",
+	  "MaxDelay":  100000000000,
+	  "Unlimited": true
+	}`), &expReschedule)
+	if !reflect.DeepEqual(tg.ReschedulePolicy, &expReschedule) {
+		return fmt.Errorf("job reschedule strategy not as expected")
+	}
+
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("expected a single task in the task group")
+	}
+	t := tg.Tasks[0]
+
+	// 0.8.x Task service stanza supports canary tags
+	if len(t.Services) != 1 {
+		return fmt.Errorf("expected task Services stanza with a single element")
+	}
+	if sv := t.Services[0]; reflect.DeepEqual(sv.CanaryTags, []string{"canary-tag-a"}) != true {
+		return fmt.Errorf("expected task canary tags")
+	}
+
+	return nil
+}
+
 func testResourceJob_checkExists(s *terraform.State) error {
 	jobID := "foo"
 
@@ -283,17 +440,27 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
 		client := providerConfig.client
-		job, _, err := client.Jobs().Info(jobID, nil)
-		// This should likely never happen, due to how nomad caches jobs
-		if err != nil && strings.Contains(err.Error(), "404") || job == nil {
-			return nil
+
+		tries := 0
+		for {
+			job, _, err := client.Jobs().Info(jobID, nil)
+			// This should likely never happen, due to how nomad caches jobs
+			if err != nil && strings.Contains(err.Error(), "404") || job == nil {
+				return nil
+			}
+
+			switch {
+			case *job.Status == "dead":
+				return nil
+			case tries < 5:
+				tries++
+				time.Sleep(time.Second)
+			default:
+				break
+			}
 		}
 
-		if *job.Status != "dead" {
-			return fmt.Errorf("Job %q has not been stopped. Status: %s", jobID, *job.Status)
-		}
-
-		return nil
+		return fmt.Errorf("Job %q has not been stopped.", jobID)
 	}
 }
 
@@ -318,7 +485,7 @@ resource "nomad_job" "test" {
 				task "foo" {
 					driver = "raw_exec"
 					config {
-						command = "/bin/true"
+						command = "/usr/bin/true"
 					}
 
 					resources {
@@ -373,7 +540,7 @@ func testResourceJob_updateCheck(s *terraform.State) error {
 		}
 
 		if *job.Status != "dead" {
-			return fmt.Errorf("%q job is not dead. Status: %q", "foo", job.Status)
+			return fmt.Errorf("%q job is not dead. Status: %q", "foo", *job.Status)
 		}
 	}
 
@@ -416,7 +583,7 @@ resource "nomad_job" "test" {
 				task "foo" {
 					driver = "raw_exec"
 					config {
-						command = "/bin/true"
+						command = "/usr/bin/true"
 					}
 
 					resources {
@@ -455,7 +622,7 @@ resource "nomad_job" "test" {
 
 					driver = "raw_exec"
 					config {
-						command = "/bin/true"
+						command = "/usr/bin/true"
 					}
 
 					resources {
@@ -521,3 +688,81 @@ EOT
 }
 `, acctest.RandomWithPrefix("tf-nomad-test"))
 }
+
+var testResourceJob_v086config = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "foov086" {
+			datacenters = ["dc1"]
+			type = "service"
+
+			migrate {
+				max_parallel = 2
+				health_check = "checks"
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+			}
+
+			update {
+			    max_parallel = 2	
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+				progress_deadline = "11m"
+				auto_revert = true
+				canary = 1
+			}
+
+			reschedule {
+				attempts       = 11
+				interval       = "2h"
+				delay          = "11s"
+				delay_function = "exponential"
+				max_delay      = "100s"
+				unlimited      = false
+			}
+
+			group "foo" {
+
+				migrate {
+					min_healthy_time = "12s"
+				}
+
+				update {
+					min_healthy_time = "12s"
+					progress_deadline = "12m"
+				}
+
+				reschedule {
+					attempts       = 0
+					delay          = "12s"
+					unlimited 	   = true	
+				}
+
+				task "foo" {
+
+					
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					service {
+					  canary_tags = ["canary-tag-a"]
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
