@@ -243,7 +243,7 @@ resource "nomad_job" "test" {
 `
 
 var testResourceJob_jsonConfig = `
-resource "nomad_job" "json_test" {
+resource "nomad_job" "test" {
 	json = true
 	jobspec = <<EOT
 {
