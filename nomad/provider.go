@@ -17,44 +17,44 @@ type ProviderConfig struct {
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"address": &schema.Schema{
+			"address": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_ADDR", nil),
 				Description: "URL of the root of the target Nomad agent.",
 			},
 
-			"region": &schema.Schema{
+			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_REGION", ""),
 				Description: "Region of the target Nomad agent.",
 			},
-			"ca_file": &schema.Schema{
+			"ca_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CACERT", ""),
 				Description: "A path to a PEM-encoded certificate authority used to verify the remote agent's certificate.",
 			},
-			"cert_file": &schema.Schema{
+			"cert_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_CERT", ""),
 				Description: "A path to a PEM-encoded certificate provided to the remote agent; requires use of key_file.",
 			},
-			"key_file": &schema.Schema{
+			"key_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", ""),
 				Description: "A path to a PEM-encoded private key, required if cert_file is specified.",
 			},
-			"vault_token": &schema.Schema{
+			"vault_token": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Vault token if policies are specified in the job file.",
 			},
-			"secret_id": &schema.Schema{
+			"secret_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_TOKEN", ""),
