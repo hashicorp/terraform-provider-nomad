@@ -16,9 +16,9 @@ Registering a policy from an HCL file:
 
 ```hcl
 resource "nomad_acl_policy" "dev" {
-  name = "dev"
+  name        = "dev"
   description = "Submit jobs to the dev environment."
-  rules_hcl = "${file("${path.module}/dev.hcl")}"
+  rules_hcl   = "${file("${path.module}/dev.hcl")}"
 }
 ```
 
@@ -26,8 +26,9 @@ Registering a policy from inline HCL:
 
 ```hcl
 resource "nomad_acl_policy" "dev" {
-  name = "dev"
+  name        = "dev"
   description = "Submit jobs to the dev environment."
+
   rules_hcl = <<EOT
 namespace "dev" {
   policy = "write"
