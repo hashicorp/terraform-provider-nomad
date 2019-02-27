@@ -65,16 +65,16 @@ func testCheckPro(t *testing.T) {
 
 func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
 	client := testProvider.Meta().(ProviderConfig).client
-	if b, _, err := client.Operator().AutopilotServerHealth(nil); b != nil && err == nil {
-		if version, err := version.NewVersion(b.Servers[0].Version); err != nil {
-			t.Skip("could not parse server version from Autopilot endpoint: ", err)
+	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
+		if version, err := version.NewVersion(nodes[0].Version); err != nil {
+			t.Skip("could not parse node version: ", err)
 		} else {
 			if !versionCheck(*version) {
-				t.Skip(fmt.Sprintf("server version '%v' not appropriate for test", version.String()))
+				t.Skip(fmt.Sprintf("node version '%v' not appropriate for test", version.String()))
 			}
 		}
 	} else {
-		t.Skip("error calling Autopilot endpoint: ", err)
+		t.Skip("error listing nodes: ", err)
 	}
 }
 
