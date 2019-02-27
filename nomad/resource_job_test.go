@@ -129,7 +129,7 @@ func TestResourceJob_idChange(t *testing.T) {
 func TestResourceJob_policyOverride(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_policyOverrideConfig(),
@@ -554,7 +554,7 @@ func TestResourceJob_vault(t *testing.T) {
 	}
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckVaultEnabled(t) },
 		Steps: []r.TestStep{
 			{
 				Config:      testResourceJob_invalidVaultConfig,

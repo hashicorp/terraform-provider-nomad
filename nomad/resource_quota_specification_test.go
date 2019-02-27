@@ -18,7 +18,7 @@ func TestResourceQuotaSpecification_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceQuotaSpecification_initialConfig(name),
@@ -39,7 +39,7 @@ func TestResourceQuotaSpecification_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceQuotaSpecification_initialConfig(name),
@@ -55,7 +55,7 @@ func TestResourceQuotaSpecification_refresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceQuotaSpecification_initialConfig(name),
@@ -77,7 +77,7 @@ func TestResourceQuotaSpecification_nameChange(t *testing.T) {
 	newName := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceQuotaSpecification_initialConfig(name),
@@ -97,7 +97,7 @@ func TestResourceQuotaSpecification_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceQuotaSpecification_initialConfig(name),
