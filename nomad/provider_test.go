@@ -2,10 +2,10 @@ package nomad
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-version"
 	"os"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
