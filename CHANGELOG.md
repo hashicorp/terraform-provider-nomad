@@ -1,4 +1,9 @@
 ## 1.3.1 (Unreleased)
+
+INTERNAL:
+
+* Acceptance tests are gated based on capability (skipped if Nomad endpoint doesn't have certain capability being tested) [GH-53]
+
 ## 1.3.0 (December 20, 2018)
 
 IMPROVEMENTS: 
