@@ -1,9 +1,11 @@
 package nomad
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -45,5 +47,48 @@ func init() {
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("NOMAD_ADDR"); v == "" {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
+	}
+
+	err := testProvider.Configure(terraform.NewResourceConfig(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testCheckEnt(t *testing.T) {
+	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "ent" })
+}
+
+func testCheckPro(t *testing.T) {
+	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "pro" || v.Metadata() == "ent" })
+}
+
+func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
+	client := testProvider.Meta().(ProviderConfig).client
+	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
+		if version, err := version.NewVersion(nodes[0].Version); err != nil {
+			t.Skip("could not parse node version: ", err)
+		} else {
+			if !versionCheck(*version) {
+				t.Skip(fmt.Sprintf("node version '%v' not appropriate for test", version.String()))
+			}
+		}
+	} else {
+		t.Skip("error listing nodes: ", err)
+	}
+}
+
+func testCheckVaultEnabled(t *testing.T) {
+	client := testProvider.Meta().(ProviderConfig).client
+	vaultEnabled := false
+	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
+		if node, _, err := client.Nodes().Info(nodes[0].ID, nil); err == nil {
+			if va := node.Attributes["vault.accessible"]; va == "true" {
+				vaultEnabled = true
+			}
+		}
+	}
+	if !vaultEnabled {
+		t.Skip("vault not detected as accessible")
 	}
 }

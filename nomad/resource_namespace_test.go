@@ -15,7 +15,7 @@ func TestResourceNamespace_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_initialConfig(name),
@@ -36,7 +36,7 @@ func TestResourceNamespace_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_initialConfig(name),
@@ -52,7 +52,7 @@ func TestResourceNamespace_refresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_initialConfig(name),
@@ -74,7 +74,7 @@ func TestResourceNamespace_nameChange(t *testing.T) {
 	newName := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_initialConfig(name),
@@ -94,7 +94,7 @@ func TestResourceNamespace_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_initialConfig(name),
