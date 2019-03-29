@@ -1,50 +1,43 @@
 package nomad
 
 import (
-	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
 )
 
+// Test will
+// * Create job with update stanza
+// * Pass config with same job spec and the deployments data source
+// * Check there is 1 deployment and Destroy after this step
+// * Pass just the data source config
+// * Verify deployment is cancelled
 func TestAccDataSourceDeployments(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckDataSourceNomadDeploymentsConfig,
-				Check:  testAccCheckDataSourceNomadDeploymentsExist,
+				Config: testAccCheckDataSourceNomadDeploymentsJobCfg,
 			},
 			{
-				Config:      testAccCheckDataSourceNomadDeploymentsConfigErr,
-				Destroy:     false,
-				ExpectError: regexp.MustCompile(`.*No deployments found`),
+				Config:  testAccCheckDataSourceNomadDeploymentsCfgWithJob,
+				Check:   resource.TestCheckResourceAttr("data.nomad_deployments.foobar", "deployments.#", "1"),
+				Destroy: true,
+			},
+			{
+				Config: testAccCheckDataSourceNomadDeploymentsCfg,
+				Check:  resource.TestCheckResourceAttr("data.nomad_deployments.foobar", "deployments.0.Status", "cancelled"),
 			},
 		},
 	})
 }
 
-func testAccCheckDataSourceNomadDeploymentsExist(s *terraform.State) error {
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-
-	// Try to find deployments
-	_, _, err := client.Deployments().List(nil)
-
-	if err != nil {
-		return fmt.Errorf("Deployments not found")
-	}
-
-	return nil
-}
-
-var testAccCheckDataSourceNomadDeploymentsConfig = `
+var testAccCheckDataSourceNomadDeploymentsJobCfg = `
 resource "nomad_job" "foobar" {
 	jobspec = <<EOT
 		job "foo" {
+			update {} ## creates deployment
 			datacenters = ["dc1"]
 			type = "service"
 			group "foo" {
@@ -68,12 +61,11 @@ resource "nomad_job" "foobar" {
 		}
 	EOT
 }
+`
+var testAccCheckDataSourceNomadDeploymentsCfg = `
 
 data "nomad_deployments" "foobar" {}
 
 `
 
-var testAccCheckDataSourceNomadDeploymentsConfigErr = `
-data "nomad_deployments" "foobar" {}
-
-`
+var testAccCheckDataSourceNomadDeploymentsCfgWithJob = testAccCheckDataSourceNomadDeploymentsJobCfg + testAccCheckDataSourceNomadDeploymentsCfg
