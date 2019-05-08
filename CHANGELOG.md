@@ -1,9 +1,13 @@
-## 1.3.1 (Unreleased)
+## 1.4.0 (Unreleased)
+
+IMPROVEMENTS:
+* **Target Nomad 0.9.1**: updated the nomad client to support Nomad API verison 0.9.1 ([#61](https://github.com/terraform-providers/terraform-provider-nomad/issues/61))
 
 INTERNAL:
 
-* Acceptance tests are gated based on capability (skipped if Nomad endpoint doesn't have certain capability being tested) [GH-53]
-* Provider is switched to go modules and the Terraform SDK vendored is bumped to v0.11 [GH-55]
+* Acceptance tests are gated based on capability (skipped if Nomad endpoint doesn't have certain capability being tested) ([#53](https://github.com/terraform-providers/terraform-provider-nomad/issues/53))
+* Terraform SDK bumped to v0.12-early11 ([#61](https://github.com/terraform-providers/terraform-provider-nomad/issues/61))
+* Provider is switched to go modules and the Terraform SDK vendored is bumped to v0.11 ([#55](https://github.com/terraform-providers/terraform-provider-nomad/issues/55))
 
 ## 1.3.0 (December 20, 2018)
 
