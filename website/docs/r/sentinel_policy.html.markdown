@@ -17,8 +17,9 @@ Manages a Sentinel policy registered in Nomad.
 
 ```hcl
 resource "nomad_sentinel_policy" "exec-only" {
-  name = "exec-only"
+  name        = "exec-only"
   description = "Only allow jobs that are based on an exec driver."
+
   policy = <<EOT
 main = rule { all_drivers_exec }
 
@@ -31,7 +32,9 @@ all_drivers_exec = rule {
     }
 }
 EOT
+
   scope = "submit-job"
+
   # allow administrators to override
   enforcement_level = "soft-mandatory"
 }

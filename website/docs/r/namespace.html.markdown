@@ -19,7 +19,7 @@ Registering a namespace:
 
 ```hcl
 resource "nomad_namespace" "dev" {
-  name = "dev"
+  name        = "dev"
   description = "Shared development environment."
   quota = "dev"
 }
