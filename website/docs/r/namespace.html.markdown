@@ -25,10 +25,35 @@ resource "nomad_namespace" "dev" {
 }
 ```
 
+Registering a namespace with a quota
+
+```hcl
+
+resource "nomad_quota_specification" "web_team" {
+  name        = "web-team"
+  description = "web team quota"
+
+  limits {
+    region = "global"
+
+    region_limit {
+      cpu       = 1000
+      memory_mb = 256
+    }
+  }
+}
+
+resource "nomad_namespace" "web" {
+  name = "web"
+  description = "Web team production environment."
+  quota = "${nomad_quota_specification.web_team.name}"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 - `name` `(string: <required>)` - A unique name for the namespace.
 - `description` `(string: "")` - A description of the namespace.
-- `quota` `(string: "")` - a resource quota to attach to the namespace.
+- `quota` `(string: "")` - A resource quota to attach to the namespace.
