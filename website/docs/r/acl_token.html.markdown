@@ -20,8 +20,8 @@ Creating a token with limited policies:
 
 ```hcl
 resource "nomad_acl_token" "ron" {
-  name = "Ron Weasley"
-  type = "client"
+  name     = "Ron Weasley"
+  type     = "client"
   policies = ["dev", "qa"]
 }
 ```
@@ -30,10 +30,10 @@ Creating a global token that will be replicated to all regions:
 
 ```hcl
 resource "nomad_acl_token" "hermione" {
-  name = "Hermione Granger"
-  type = "client"
+  name     = "Hermione Granger"
+  type     = "client"
   policies = ["dev", "qa"]
-  global = true
+  global   = true
 }
 ```
 
@@ -42,6 +42,7 @@ Creating a token with full access to the cluster:
 ```hcl
 resource "nomad_acl_token" "hagrid" {
   name = "Rubeus Hagrid"
+
   # Hagrid is the keeper of the keys
   type = "management"
 }
@@ -51,7 +52,7 @@ Accessing the token:
 
 ```hcl
 resource "nomad_acl_token" "token" {
-  type = "client"
+  type     = "client"
   policies = ["dev"]
 }
 

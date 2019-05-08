@@ -19,8 +19,9 @@ Registering a namespace:
 
 ```hcl
 resource "nomad_namespace" "dev" {
-  name = "dev"
+  name        = "dev"
   description = "Shared development environment."
+  quota = "dev"
 }
 ```
 
@@ -55,4 +56,4 @@ The following arguments are supported:
 
 - `name` `(string: <required>)` - A unique name for the namespace.
 - `description` `(string: "")` - A description of the namespace.
-- `quota` `(string: "")` - Quota specification to apply to the namespace.
+- `quota` `(string: "")` - A resource quota to attach to the namespace.

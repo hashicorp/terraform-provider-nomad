@@ -44,7 +44,7 @@ func dataSourceJob() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
-			"datacenters": &schema.Schema{
+			"datacenters": {
 				Description: "Job Datacenters",
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -276,12 +276,12 @@ func dataSourceJob() *schema.Resource {
 					},
 				},
 			},
-			"stable": &schema.Schema{
+			"stable": {
 				Description: "Job Stable",
 				Type:        schema.TypeBool,
 				Computed:    true,
 			},
-			"all_at_once": &schema.Schema{
+			"all_at_once": {
 				Description: "Job All At Once",
 				Type:        schema.TypeBool,
 				Computed:    true,

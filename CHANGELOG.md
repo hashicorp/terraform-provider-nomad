@@ -1,4 +1,10 @@
 ## 1.3.1 (Unreleased)
+
+INTERNAL:
+
+* Acceptance tests are gated based on capability (skipped if Nomad endpoint doesn't have certain capability being tested) [GH-53]
+* Provider is switched to go modules and the Terraform SDK vendored is bumped to v0.11 [GH-55]
+
 ## 1.3.0 (December 20, 2018)
 
 IMPROVEMENTS: 
