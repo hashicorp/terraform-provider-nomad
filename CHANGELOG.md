@@ -6,8 +6,8 @@ IMPROVEMENTS:
 INTERNAL:
 
 * Acceptance tests are gated based on capability (skipped if Nomad endpoint doesn't have certain capability being tested) ([#53](https://github.com/terraform-providers/terraform-provider-nomad/issues/53))
-* Terraform SDK bumped to v0.12-early11 ([#61](https://github.com/terraform-providers/terraform-provider-nomad/issues/61))
-* Provider is switched to go modules and the Terraform SDK vendored is bumped to v0.11 ([#55](https://github.com/terraform-providers/terraform-provider-nomad/issues/55))
+* Terraform SDK bumped to v0.12.0-rc1, Nomad SDK to 0.9.x ([#61](https://github.com/terraform-providers/terraform-provider-nomad/issues/61))
+* Provider is switched to go modules ([#55](https://github.com/terraform-providers/terraform-provider-nomad/issues/55))
 
 ## 1.3.0 (December 20, 2018)
 
