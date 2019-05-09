@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/nomad/api"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/nomad/api"
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	r "github.com/hashicorp/terraform/helper/resource"
@@ -39,6 +40,21 @@ func TestResourceJob_v086(t *testing.T) {
 			{
 				Config: testResourceJob_v086config,
 				Check:  testResourceJob_v086Check,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foov086"),
+	})
+}
+
+func TestResourceJob_v090(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_v090config,
+				Check:  testResourceJob_v090Check,
 			},
 		},
 
@@ -423,6 +439,76 @@ func testResourceJob_v086Check(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJob_v090Check(s *terraform.State) error {
+
+	resourceState := s.Modules[0].Resources["nomad_job.test"]
+	if resourceState == nil {
+		return errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return errors.New("resource has no primary instance")
+	}
+
+	jobID := instanceState.ID
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// 0.9.x jobs support affinity stanzas
+	expAffinities := []*api.Affinity{}
+	json.Unmarshal([]byte(`[
+        {
+            "LTarget": "${node.datacenter}",
+            "Operand": "=",
+            "RTarget": "dc1",
+            "Weight": 50
+        },
+        {
+            "LTarget": "${meta.tag}",
+            "Operand": "=",
+            "RTarget": "foo",
+            "Weight": 50
+        }
+    ]`), &expAffinities)
+	if !reflect.DeepEqual(job.Affinities, expAffinities) {
+		return fmt.Errorf("job affinities not as expected")
+	}
+
+	// 0.9.x jobs support spread stanzas
+	expSpreads := []*api.Spread{}
+	json.Unmarshal([]byte(`[
+        {
+            "Attribute": "${node.datacenter}",
+            "SpreadTarget": [
+                {
+                    "Percent": 35,
+                    "Value": "dc1"
+                },
+                {
+                    "Percent": 65,
+                    "Value": "dc2"
+                }
+            ],
+            "Weight": 80
+        }
+    ]`), &expSpreads)
+	if !reflect.DeepEqual(job.Spreads, expSpreads) {
+		return fmt.Errorf("job spreads not as expected")
+	}
+
+	return nil
+}
+
 func testResourceJob_checkExists(s *terraform.State) error {
 	jobID := "foo"
 
@@ -719,6 +805,103 @@ resource "nomad_job" "test" {
 				delay_function = "exponential"
 				max_delay      = "100s"
 				unlimited      = false
+			}
+
+			group "foo" {
+
+				migrate {
+					min_healthy_time = "12s"
+				}
+
+				update {
+					min_healthy_time = "12s"
+					progress_deadline = "12m"
+				}
+
+				reschedule {
+					attempts       = 0
+					delay          = "12s"
+					unlimited 	   = true	
+				}
+
+				task "foo" {
+
+					
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["1"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					service {
+					  canary_tags = ["canary-tag-a"]
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_v090config = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "foov090" {
+			datacenters = ["dc1"]
+			type = "service"
+
+			migrate {
+				max_parallel = 2
+				health_check = "checks"
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+			}
+
+			update {
+			    max_parallel = 2	
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+				progress_deadline = "11m"
+				auto_revert = true
+				canary = 1
+			}
+
+			reschedule {
+				attempts       = 11
+				interval       = "2h"
+				delay          = "11s"
+				delay_function = "exponential"
+				max_delay      = "100s"
+				unlimited      = false
+			}
+ 		
+			affinity {
+			    attribute = "$${node.datacenter}"
+				value = "dc1"
+				weight = 50
+			}
+
+			affinity {
+			    attribute = "$${meta.tag}"
+				value = "foo"
+				weight = 50
+			}
+	
+			spread {
+				attribute = "$${node.datacenter}"
+				target "dc1" { percent = 35 }
+				target "dc2" { percent = 65 }
+				weight = 80
 			}
 
 			group "foo" {
