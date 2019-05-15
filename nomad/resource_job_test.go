@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"github.com/hashicorp/nomad/api"
 
 	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/resource"
+
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -24,7 +28,7 @@ func TestResourceJob_basic(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 
@@ -69,7 +73,7 @@ func TestResourceJob_json(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_jsonConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 
@@ -84,7 +88,7 @@ func TestResourceJob_refresh(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 
 			// This should successfully cause the job to be recreated,
@@ -102,43 +106,54 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
+			// create the resource
 			{
 				Config: testResourceJob_noDestroy,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
-
-			// Destroy with our setting set
+			// "Destroy" with 'deregister_on_destroy = false', check that it wasn't destroyed
 			{
 				Destroy: true,
 				Config:  testResourceJob_noDestroy,
-				Check:   testResourceJob_checkExists,
-			},
-
-			// Re-apply without the setting set
-			{
-				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_checkExists,
+				Check: func(*terraform.State) error {
+					providerConfig := testProvider.Meta().(ProviderConfig)
+					client := providerConfig.client
+					job, _, err := client.Jobs().Info("foo", nil)
+					if err != nil {
+						return err
+					}
+					if *job.Stop == true {
+						return fmt.Errorf("job was unexpectedly stopped")
+					}
+					return nil
+				},
 			},
 		},
+
+		// Somewhat-abuse CheckDestroy to clean up
+		CheckDestroy: testResourceJob_forceDestroyWithPurge("foo"),
 	})
 }
 
-func TestResourceJob_idChange(t *testing.T) {
+func TestResourceJob_rename(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
-
-			// Change our ID
 			{
-				Config: testResourceJob_updateConfig,
-				Check:  testResourceJob_updateCheck,
+				Config: testResourceJob_renameConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testResourceJob_checkDestroy("foo"),
+					testResourceJob_checkExists("bar"),
+				),
 			},
 		},
+
+		CheckDestroy: testResourceJob_checkDestroy("bar"),
 	})
 }
 
@@ -149,7 +164,7 @@ func TestResourceJob_policyOverride(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_policyOverrideConfig(),
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 	})
@@ -215,7 +230,7 @@ resource "nomad_job" "parameterized" {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -226,6 +241,7 @@ resource "nomad_job" "parameterized" {
 	EOT
 }
 `
+
 var testResourceJob_initialConfig = `
 resource "nomad_job" "test" {
 	jobspec = <<EOT
@@ -241,12 +257,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["1"]
 					}
-
+					
 					resources {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -291,13 +307,46 @@ resource "nomad_job" "test" {
     }
   ]
 }
+EOT
+}
+`
+
+var testResourceJob_renameConfig = `
+resource "nomad_job" "test" {
+    jobspec = <<EOT
+		job "bar" {
+		    datacenters = ["dc1"]
+		    type = "service"
+		    group "foo" {
+		        task "foo" {
+		            leader = true ## new in Nomad 0.5.6
+							
+		            driver = "raw_exec"
+		            config {
+		                command = "/bin/sleep"
+		                args = ["1"]
+		            }
+							
+		            resources {
+		                cpu = 100
+		                memory = 10
+		            }
+							
+		            logs {
+		                max_files = 3
+		                max_file_size = 10
+		            }
+		        }
+		    }
+		}
 	EOT
 }
 `
+
 var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
-	deregister_on_destroy = false
-	jobspec = <<EOT
+    deregister_on_destroy = false
+    jobspec = <<EOT
 		job "foo" {
 			datacenters = ["dc1"]
 			type = "service"
@@ -306,14 +355,14 @@ resource "nomad_job" "test" {
 					driver = "raw_exec"
 					config {
 						command = "/bin/sleep"
-						args = ["1"]
+						args = ["30"]
 					}
-
+						
 					resources {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -325,31 +374,52 @@ resource "nomad_job" "test" {
 }
 `
 
-func testResourceJob_initialCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["nomad_job.test"]
-	if resourceState == nil {
-		return errors.New("resource not found in state")
+func testResourceJob_initialCheck(t *testing.T) r.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		resourceState := s.Modules[0].Resources["nomad_job.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		jobID := instanceState.ID
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		job, _, err := client.Jobs().Info(jobID, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+
+		if got, want := *job.ID, jobID; got != want {
+			return fmt.Errorf("jobID is %q; want %q", got, want)
+		}
+
+		wantAllocs, _, err := client.Jobs().Allocations(jobID, false, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+		wantAllocIds := make([]string, 0, len(wantAllocs))
+		for _, a := range wantAllocs {
+			wantAllocIds = append(wantAllocIds, a.ID)
+		}
+		numGotAllocs, _ := strconv.Atoi(instanceState.Attributes["allocation_ids.#"])
+		gotAllocs := make([]string, 0, numGotAllocs)
+		for i := 0; i < numGotAllocs; i++ {
+			id := instanceState.Attributes[fmt.Sprintf("allocation_ids.%d", i)]
+			gotAllocs = append(gotAllocs, id)
+		}
+		if !assert.ElementsMatch(t, gotAllocs, wantAllocIds) {
+			return fmt.Errorf("job 'allocation_ids' is '%v'; want '%v'", gotAllocs, wantAllocIds)
+		}
+
+		return nil
 	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return errors.New("resource has no primary instance")
-	}
-
-	jobID := instanceState.ID
-
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-	job, _, err := client.Jobs().Info(jobID, nil)
-	if err != nil {
-		return fmt.Errorf("error reading back job: %s", err)
-	}
-
-	if got, want := *job.ID, jobID; got != want {
-		return fmt.Errorf("jobID is %q; want %q", got, want)
-	}
-
-	return nil
 }
 
 func testResourceJob_v086Check(s *terraform.State) error {
@@ -509,17 +579,17 @@ func testResourceJob_v090Check(s *terraform.State) error {
 	return nil
 }
 
-func testResourceJob_checkExists(s *terraform.State) error {
-	jobID := "foo"
+func testResourceJob_checkExists(jobID string) r.TestCheckFunc {
+	return func(*terraform.State) error {
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		_, _, err := client.Jobs().Info(jobID, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
 
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-	_, _, err := client.Jobs().Info(jobID, nil)
-	if err != nil {
-		return fmt.Errorf("error reading back job: %s", err)
+		return nil
 	}
-
-	return nil
 }
 
 func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
@@ -528,9 +598,10 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 		client := providerConfig.client
 
 		tries := 0
+	TRY:
 		for {
 			job, _, err := client.Jobs().Info(jobID, nil)
-			// This should likely never happen, due to how nomad caches jobs
+			// This should likely never happen because we aren't purging jobs on delete
 			if err != nil && strings.Contains(err.Error(), "404") || job == nil {
 				return nil
 			}
@@ -542,11 +613,23 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 				tries++
 				time.Sleep(time.Second)
 			default:
-				break
+				break TRY
 			}
 		}
 
 		return fmt.Errorf("Job %q has not been stopped.", jobID)
+	}
+}
+
+func testResourceJob_forceDestroyWithPurge(jobID string) r.TestCheckFunc {
+	return func(*terraform.State) error {
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		_, _, err := client.Jobs().Deregister(jobID, true, nil)
+		if err != nil {
+			return fmt.Errorf("failed to clean up job %q after test: %s", jobID, err)
+		}
+		return nil
 	}
 }
 
@@ -561,78 +644,6 @@ func testResourceJob_deregister(t *testing.T, jobID string) func() {
 	}
 }
 
-var testResourceJob_updateConfig = `
-resource "nomad_job" "test" {
-	jobspec = <<EOT
-		job "bar" {
-			datacenters = ["dc1"]
-			type = "service"
-			group "foo" {
-				task "foo" {
-					driver = "raw_exec"
-					config {
-						command = "/usr/bin/true"
-					}
-
-					resources {
-						cpu = 100
-						memory = 10
-					}
-
-					logs {
-						max_files = 3
-						max_file_size = 10
-					}
-				}
-			}
-		}
-	EOT
-}
-`
-
-func testResourceJob_updateCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["nomad_job.test"]
-	if resourceState == nil {
-		return errors.New("resource not found in state")
-	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return errors.New("resource has no primary instance")
-	}
-
-	jobID := instanceState.ID
-
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-	job, _, err := client.Jobs().Info(jobID, nil)
-	if err != nil {
-		return fmt.Errorf("error reading back job: %s", err)
-	}
-
-	if got, want := *job.ID, jobID; got != want {
-		return fmt.Errorf("jobID is %q; want %q", got, want)
-	}
-
-	{
-		// Verify foo doesn't exist
-		job, _, err := client.Jobs().Info("foo", nil)
-		if err != nil {
-			// Job could have already been purged from nomad server
-			if !strings.Contains(err.Error(), "(job not found)") {
-				return fmt.Errorf("error reading %q job: %s", "foo", err)
-			}
-			return nil
-		}
-
-		if *job.Status != "dead" {
-			return fmt.Errorf("%q job is not dead. Status: %q", "foo", *job.Status)
-		}
-	}
-
-	return nil
-}
-
 func TestResourceJob_vault(t *testing.T) {
 	re, err := regexp.Compile("bad token")
 	if err != nil {
@@ -644,12 +655,12 @@ func TestResourceJob_vault(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config:      testResourceJob_invalidVaultConfig,
-				Check:       testResourceJob_initialCheck,
+				Check:       testResourceJob_initialCheck(t),
 				ExpectError: re,
 			},
 			{
 				Config: testResourceJob_validVaultConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("test"),

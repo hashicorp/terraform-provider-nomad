@@ -11,14 +11,15 @@ build: fmtcheck
 test: fmtcheck
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \
-		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4 -count=1
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 
 localtestacc: fmtcheck
-	scripts/start-nomad.sh
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	-export NOMAD_TOKEN=$(shell scripts/start-nomad.sh); \
+	export TF_ACC=1; \
+	go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 	scripts/stop-nomad.sh
 
 vet:
