@@ -89,6 +89,15 @@ func resourceJob() *schema.Resource {
 				},
 			},
 
+			"allocation_ids": {
+				Description: "The IDs for allocations associated with this job.",
+				Computed:    true,
+				Type:        schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
 			"task_groups": {
 				Computed: true,
 				Type:     schema.TypeList,
@@ -208,11 +217,21 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error checking for job: %#v", err)
 	}
 
+	allocStubs, _, err := client.Jobs().Allocations(id, false, nil)
+	if err != nil {
+		log.Printf("[WARN] Error listing allocations for Job %q, will return empty list", id)
+	}
+	allocIds := make([]string, 0, len(allocStubs))
+	for _, a := range allocStubs {
+		allocIds = append(allocIds, a.ID)
+	}
+
 	d.Set("name", job.ID)
 	d.Set("type", job.Type)
 	d.Set("region", job.Region)
 	d.Set("datacenters", job.Datacenters)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
+	d.Set("allocation_ids", allocIds)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
 	} else {
@@ -289,6 +308,7 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	// _somehow_, but we won't know how much it will increment until
 	// after we complete registration.
 	d.SetNewComputed("modify_index")
+	d.SetNewComputed("allocation_ids")
 
 	d.SetNew("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 

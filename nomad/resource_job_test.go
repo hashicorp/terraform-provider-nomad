@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +28,7 @@ func TestResourceJob_basic(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 
@@ -71,7 +73,7 @@ func TestResourceJob_json(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_jsonConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 
@@ -86,7 +88,7 @@ func TestResourceJob_refresh(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 
 			// This should successfully cause the job to be recreated,
@@ -107,7 +109,7 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 			// create the resource
 			{
 				Config: testResourceJob_noDestroy,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 			// "Destroy" with 'deregister_on_destroy = false', check that it wasn't destroyed
 			{
@@ -140,7 +142,7 @@ func TestResourceJob_rename(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 			{
 				Config: testResourceJob_renameConfig,
@@ -162,7 +164,7 @@ func TestResourceJob_policyOverride(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_policyOverrideConfig(),
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 	})
@@ -228,7 +230,7 @@ resource "nomad_job" "parameterized" {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -239,6 +241,7 @@ resource "nomad_job" "parameterized" {
 	EOT
 }
 `
+
 var testResourceJob_initialConfig = `
 resource "nomad_job" "test" {
 	jobspec = <<EOT
@@ -254,12 +257,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["1"]
 					}
-
+					
 					resources {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -354,12 +357,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["30"]
 					}
-
+						
 					resources {
 						cpu = 100
 						memory = 10
 					}
-
+					
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -371,31 +374,52 @@ resource "nomad_job" "test" {
 }
 `
 
-func testResourceJob_initialCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["nomad_job.test"]
-	if resourceState == nil {
-		return errors.New("resource not found in state")
+func testResourceJob_initialCheck(t *testing.T) r.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		resourceState := s.Modules[0].Resources["nomad_job.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		jobID := instanceState.ID
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		job, _, err := client.Jobs().Info(jobID, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+
+		if got, want := *job.ID, jobID; got != want {
+			return fmt.Errorf("jobID is %q; want %q", got, want)
+		}
+
+		wantAllocs, _, err := client.Jobs().Allocations(jobID, false, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+		wantAllocIds := make([]string, 0, len(wantAllocs))
+		for _, a := range wantAllocs {
+			wantAllocIds = append(wantAllocIds, a.ID)
+		}
+		numGotAllocs, _ := strconv.Atoi(instanceState.Attributes["allocation_ids.#"])
+		gotAllocs := make([]string, 0, numGotAllocs)
+		for i := 0; i < numGotAllocs; i++ {
+			id := instanceState.Attributes[fmt.Sprintf("allocation_ids.%d", i)]
+			gotAllocs = append(gotAllocs, id)
+		}
+		if !assert.ElementsMatch(t, gotAllocs, wantAllocIds) {
+			return fmt.Errorf("job 'allocation_ids' is '%v'; want '%v'", gotAllocs, wantAllocIds)
+		}
+
+		return nil
 	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return errors.New("resource has no primary instance")
-	}
-
-	jobID := instanceState.ID
-
-	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
-	job, _, err := client.Jobs().Info(jobID, nil)
-	if err != nil {
-		return fmt.Errorf("error reading back job: %s", err)
-	}
-
-	if got, want := *job.ID, jobID; got != want {
-		return fmt.Errorf("jobID is %q; want %q", got, want)
-	}
-
-	return nil
 }
 
 func testResourceJob_v086Check(s *terraform.State) error {
@@ -631,12 +655,12 @@ func TestResourceJob_vault(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config:      testResourceJob_invalidVaultConfig,
-				Check:       testResourceJob_initialCheck,
+				Check:       testResourceJob_initialCheck(t),
 				ExpectError: re,
 			},
 			{
 				Config: testResourceJob_validVaultConfig,
-				Check:  testResourceJob_initialCheck,
+				Check:  testResourceJob_initialCheck(t),
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("test"),
