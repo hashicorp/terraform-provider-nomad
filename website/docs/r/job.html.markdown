@@ -79,5 +79,5 @@ The following arguments are supported:
 - `policy_override` `(bool: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.
 
-- `json` `(bool: false)` - Set this to true if your jobspec is stractured with
+- `json` `(bool: false)` - Set this to true if your jobspec is structured with
   JSON instead of the default HCL.
