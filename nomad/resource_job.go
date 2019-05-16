@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -45,6 +46,13 @@ func resourceJob() *schema.Resource {
 
 			"deregister_on_id_change": {
 				Description: "If true, the job will be deregistered when the job ID changes.",
+				Optional:    true,
+				Default:     true,
+				Type:        schema.TypeBool,
+			},
+
+			"detach": {
+				Description: "If true, the provider will return immediately after creating or updating, instead of monitoring.",
 				Optional:    true,
 				Default:     true,
 				Type:        schema.TypeBool,
@@ -173,7 +181,71 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", job.ID)
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
+	evalId := resp.EvalID
+	if !d.Get("detach").(bool) {
+		err, deploymentId := monitorEval(client, evalId)
+		if err != nil {
+			return fmt.Errorf("error returned fetching evaluation while monitoring deployment: %v", err)
+		}
+		if deploymentId != "" {
+			return monitorDeployment(client, deploymentId)
+		}
+	}
+
 	return resourceJobRead(d, meta) // populate other computed attributes
+}
+
+func monitorDeployment(client *api.Client, deploymentId string) error {
+MONITOR:
+	for {
+		deployment, _, err := client.Deployments().Info(deploymentId, nil)
+		if err != nil {
+			return err
+		}
+		switch deployment.Status {
+		case "failed", "successful", "cancelled":
+			break MONITOR
+		default:
+			// don't overwhelm the API server
+			time.Sleep(time.Second)
+			continue
+		}
+	}
+	return nil
+}
+
+func monitorEval(client *api.Client, evalId string) (error, string) {
+	var deploymentId string
+MONITOR:
+	for {
+		eval, _, err := client.Evaluations().Info(evalId, nil)
+		if err != nil {
+			return err, ""
+		}
+
+		fmt.Printf("monitoring eval '%v', status '%v'\n", eval.ID, eval.Status)
+
+		switch eval.Status {
+		case "complete", "failed", "cancelled":
+			deploymentId = eval.DeploymentID
+			break MONITOR
+		default:
+			// don't overwhelm the API server
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// Monitor the next eval in the chain, if present
+		if eval.NextEval != "" {
+			if eval.Wait.Nanoseconds() != 0 {
+				// Skip some unnecessary polling
+				time.Sleep(eval.Wait)
+			}
+			return monitorEval(client, eval.NextEval)
+		}
+		break
+	}
+	return nil, deploymentId
 }
 
 func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
