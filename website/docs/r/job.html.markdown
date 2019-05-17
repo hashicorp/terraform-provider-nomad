@@ -75,6 +75,9 @@ The following arguments are supported:
 
 - `deregister_on_id_change` `(bool: true)` - Determines if the job will be
   deregistered if the ID of the job in the jobspec changes.
+  
+- `detach` `(bool: true)` - If true, the provider will return immediately
+  after creating or updating, instead of monitoring.  
 
 - `policy_override` `(bool: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.

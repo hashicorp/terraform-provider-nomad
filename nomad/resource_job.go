@@ -3,10 +3,12 @@ package nomad
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/resource"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -48,6 +50,25 @@ func resourceJob() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 				Type:        schema.TypeBool,
+			},
+
+			"detach": {
+				Description: "If true, the provider will return immediately after creating or updating, instead of monitoring.",
+				Optional:    true,
+				Default:     true,
+				Type:        schema.TypeBool,
+			},
+
+			"deployment_id": {
+				Description: "If detach = false, the ID for the deployment associated with the last job create/update, if one exists.",
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+
+			"deployment_status": {
+				Description: "If detach = false, the status for the deployment associated with the last job create/update, if one exists.",
+				Computed:    true,
+				Type:        schema.TypeString,
 			},
 
 			"json": {
@@ -143,6 +164,11 @@ func resourceJob() *schema.Resource {
 }
 
 func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
+	timeout := d.Timeout(schema.TimeoutCreate)
+	if !d.IsNewResource() {
+		timeout = d.Timeout(schema.TimeoutUpdate)
+	}
+
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -169,11 +195,117 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}
 
+	log.Printf("[DEBUG] job '%s' registered", *job.ID)
 	d.SetId(*job.ID)
 	d.Set("name", job.ID)
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
+	evalId := resp.EvalID
+	if !d.Get("detach").(bool) {
+		log.Printf("[DEBUG] will monitor deployment of job '%s'", *job.ID)
+		stateConf := &resource.StateChangeConf{
+			Pending:    []string{"monitoring_deployment", "monitoring_evaluation"},
+			Target:     []string{"job_scheduled_without_deployment", "deployment_successful"},
+			Refresh:    deploymentStateRefreshFunc(client, evalId),
+			Timeout:    timeout,
+			Delay:      10 * time.Second,
+			MinTimeout: 3 * time.Second,
+		}
+
+		state, err := stateConf.WaitForState()
+		if err != nil {
+			return fmt.Errorf(
+				"error waiting for job '%s' to deploy successfully: %s",
+				*job.ID, err)
+		}
+
+		deployment := state.(*api.Deployment)
+
+		if deployment != nil {
+			d.Set("deployment_id", deployment.ID)
+			d.Set("deployment_status", deployment.Status)
+		} else {
+			d.Set("deployment_id", "")
+			d.Set("deployment_status", "")
+		}
+	}
+
 	return resourceJobRead(d, meta) // populate other computed attributes
+}
+
+type monitorState struct {
+	// evalId is the evaluation that we are currently monitoring. This will change
+	// along with follow-up evals.
+	evalId string
+
+	// deploymentId is the deployment that we are monitoring. This is captured from the
+	// final evaluation.
+	deploymentId string
+}
+
+// deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// the deployment from a job create/update
+func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resource.StateRefreshFunc {
+	watching := &monitorState{
+		evalId:       initialEvalId,
+		deploymentId: "",
+	}
+	return func() (interface{}, string, error) {
+
+		var deployment *api.Deployment
+		var state string
+		if watching.deploymentId == "" {
+			// monitor the eval
+			log.Printf("[DEBUG] monitoring evaluation '%s'", watching.evalId)
+			eval, _, err := client.Evaluations().Info(watching.evalId, nil)
+			if err != nil {
+				log.Printf("[ERROR] error on Evaluation.Info during deploymentStateRefresh: %s", err)
+				return nil, "", err
+			}
+
+			switch eval.Status {
+			case "complete":
+				// Monitor the next eval in the chain, if present
+				if eval.NextEval != "" {
+					log.Printf("[DEBUG] will monitor follow-up eval '%v'", watching.evalId)
+					watching.evalId = eval.NextEval
+					state = "monitoring_evaluation"
+				} else if eval.DeploymentID != "" {
+					log.Printf("[DEBUG] job has been scheduled, will monitor deployment '%s'", eval.DeploymentID)
+					watching.deploymentId = eval.DeploymentID
+					state = "monitoring_deployment"
+				} else {
+					log.Printf("[WARN] job has been scheduled, but there is no deployment to monitor")
+					state = "job_scheduled_without_deployment"
+				}
+			case "failed", "cancelled":
+				return nil, "", fmt.Errorf("evaluation failed: %v", eval.StatusDescription)
+			default:
+				state = "monitoring_evaluation"
+			}
+		} else {
+			// monitor the deployment
+			deployment, _, err := client.Deployments().Info(watching.deploymentId, nil)
+			if err != nil {
+				log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
+				return nil, "", err
+			}
+			switch deployment.Status {
+			case "successful":
+				log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
+				state = "deployment_successful"
+			case "failed", "cancelled":
+				log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
+				return deployment, "",
+					fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
+						deployment.ID, deployment.Status, deployment.StatusDescription)
+			default:
+				// don't overwhelm the API server
+				state = "monitoring_deployment"
+			}
+		}
+		return deployment, state, nil
+	}
 }
 
 func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
@@ -183,13 +315,13 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	// If deregistration is disabled, then do nothing
 	if !d.Get("deregister_on_destroy").(bool) {
 		log.Printf(
-			"[WARN] Job %q will not deregister since 'deregister_on_destroy'"+
+			"[WARN] job %q will not deregister since 'deregister_on_destroy'"+
 				" is false", d.Id())
 		return nil
 	}
 
 	id := d.Id()
-	log.Printf("[DEBUG] Deregistering job: %q", id)
+	log.Printf("[DEBUG] deregistering job: %q", id)
 	_, _, err := client.Jobs().Deregister(id, false, nil)
 	if err != nil {
 		return fmt.Errorf("error deregistering job: %s", err)
@@ -203,23 +335,23 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	id := d.Id()
-	log.Printf("[DEBUG] Reading information for job %q", id)
+	log.Printf("[DEBUG] reading information for job %q", id)
 	job, _, err := client.Jobs().Info(id, nil)
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
 		if strings.Contains(err.Error(), "404") {
-			log.Printf("[DEBUG] Job %q does not exist, so removing", id)
+			log.Printf("[DEBUG] job %q does not exist, so removing", id)
 			d.SetId("")
 			return nil
 		}
 
-		return fmt.Errorf("error checking for job: %#v", err)
+		return fmt.Errorf("error checking for job: %s", err)
 	}
 
 	allocStubs, _, err := client.Jobs().Allocations(id, false, nil)
 	if err != nil {
-		log.Printf("[WARN] Error listing allocations for Job %q, will return empty list", id)
+		log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
 	}
 	allocIds := make([]string, 0, len(allocStubs))
 	for _, a := range allocStubs {
