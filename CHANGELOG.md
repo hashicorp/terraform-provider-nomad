@@ -3,7 +3,7 @@
 IMPROVEMENTS:
 * **Target Nomad 0.9.1**: updated the nomad client to support Nomad API verison 0.9.1 ([#61](https://github.com/terraform-providers/terraform-provider-nomad/issues/61))
 * **Option to monitor Job resources until deployment is complete** ([#64](https://github.com/terraform-providers/terraform-provider-nomad/issues/64))
-* **Richer diffs for Nomad jobs** ([#63](https://github.com/terraform-providers/terraform-provider-nomad/issues/63)][[#15](https://github.com/terraform-providers/terraform-provider-nomad/issues/15))
+* **Richer diffs for Nomad jobs** ([#63](https://github.com/terraform-providers/terraform-provider-nomad/issues/63))
 * Added `allocation_ids` as an attribute to Nomad Job resources. ([#63](https://github.com/terraform-providers/terraform-provider-nomad/issues/63))
 
 INTERNAL:
