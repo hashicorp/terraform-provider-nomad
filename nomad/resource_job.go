@@ -3,7 +3,6 @@ package nomad
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/resource"
 	"log"
 	"reflect"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/terraform-providers/terraform-provider-nomad/nomad/jobspec"
 )
@@ -233,31 +233,25 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	return resourceJobRead(d, meta) // populate other computed attributes
 }
 
-type monitorState struct {
-	// evalId is the evaluation that we are currently monitoring. This will change
-	// along with follow-up evals.
-	evalId string
-
-	// deploymentId is the deployment that we are monitoring. This is captured from the
-	// final evaluation.
-	deploymentId string
-}
-
 // deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
 // the deployment from a job create/update
 func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resource.StateRefreshFunc {
-	watching := &monitorState{
-		evalId:       initialEvalId,
-		deploymentId: "",
-	}
-	return func() (interface{}, string, error) {
 
+	// evalId is the evaluation that we are currently monitoring. This will change
+	// along with follow-up evaluations.
+	evalId := initialEvalId
+
+	// deploymentId is the deployment that we are monitoring. This is captured from the
+	// final evaluation.
+	deploymentId := ""
+
+	return func() (interface{}, string, error) {
 		var deployment *api.Deployment
 		var state string
-		if watching.deploymentId == "" {
+		if deploymentId == "" {
 			// monitor the eval
-			log.Printf("[DEBUG] monitoring evaluation '%s'", watching.evalId)
-			eval, _, err := client.Evaluations().Info(watching.evalId, nil)
+			log.Printf("[DEBUG] monitoring evaluation '%s'", evalId)
+			eval, _, err := client.Evaluations().Info(evalId, nil)
 			if err != nil {
 				log.Printf("[ERROR] error on Evaluation.Info during deploymentStateRefresh: %s", err)
 				return nil, "", err
@@ -267,12 +261,12 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 			case "complete":
 				// Monitor the next eval in the chain, if present
 				if eval.NextEval != "" {
-					log.Printf("[DEBUG] will monitor follow-up eval '%v'", watching.evalId)
-					watching.evalId = eval.NextEval
+					log.Printf("[DEBUG] will monitor follow-up eval '%v'", evalId)
+					evalId = eval.NextEval
 					state = "monitoring_evaluation"
 				} else if eval.DeploymentID != "" {
 					log.Printf("[DEBUG] job has been scheduled, will monitor deployment '%s'", eval.DeploymentID)
-					watching.deploymentId = eval.DeploymentID
+					deploymentId = eval.DeploymentID
 					state = "monitoring_deployment"
 				} else {
 					log.Printf("[WARN] job has been scheduled, but there is no deployment to monitor")
@@ -285,7 +279,7 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 			}
 		} else {
 			// monitor the deployment
-			deployment, _, err := client.Deployments().Info(watching.deploymentId, nil)
+			deployment, _, err := client.Deployments().Info(deploymentId, nil)
 			if err != nil {
 				log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
 				return nil, "", err
