@@ -1603,6 +1603,7 @@ func parseUpdate(result **api.UpdateStrategy, list *ast.ObjectList) error {
 		"healthy_deadline",
 		"progress_deadline",
 		"auto_revert",
+		"auto_promote",
 		"canary",
 	}
 	if err := helper.CheckHCLKeys(o.Val, valid); err != nil {

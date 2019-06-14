@@ -242,6 +242,10 @@ func dataSourceJob() *schema.Resource {
 										Type:     schema.TypeBool,
 										Computed: true,
 									},
+									"auto_promote": {
+										Type:     schema.TypeBool,
+										Computed: true,
+									},
 									"canary": {
 										Type:     schema.TypeInt,
 										Computed: true,

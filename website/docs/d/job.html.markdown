@@ -51,6 +51,7 @@ The following attributes are exported:
 * `task_groups`: `(list of maps)` A list of of the job's task groups.
   * `placed_canaries`: `(string)`
   * `auto_revert`: `(boolean)`
+  * `auto_promote`: `(boolean)`
   * `promoted`: `(boolean)`
   * `desired_canaries`: `(integer)`
   * `desired_total`: `(integer)`
