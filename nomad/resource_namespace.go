@@ -2,11 +2,10 @@ package nomad
 
 import (
 	"fmt"
-	"log"
-	"strings"
-
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
+	"log"
+	"strings"
 )
 
 func resourceNamespace() *schema.Resource {
@@ -69,9 +68,17 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	name := d.Id()
 
 	log.Printf("[DEBUG] Deleting namespace %q", name)
-	_, err := client.Namespaces().Delete(name, nil)
-	if err != nil {
-		return fmt.Errorf("error deleting namespace %q: %s", name, err.Error())
+	for retries := 0; retries < 3; retries++ {
+		_, err := client.Namespaces().Delete(name, nil)
+		if err == nil {
+			break
+		} else {
+			if strings.Contains(err.Error(), "has non-terminal jobs") {
+				log.Printf("[WARN] could not delete namespace %q because of non-terminal jobs, will pause and retry", name)
+				continue
+			}
+			return fmt.Errorf("error deleting namespace %q: %s", name, err.Error())
+		}
 	}
 	log.Printf("[DEBUG] Deleted namespace %q", name)
 
