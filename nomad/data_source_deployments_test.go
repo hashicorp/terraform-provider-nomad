@@ -73,7 +73,7 @@ func TestAccDataSourceDeployments(t *testing.T) {
 		},
 
 		// Somewhat-abuse CheckDestroy to actually do our cleanup... :/
-		CheckDestroy: testResourceJob_forceDestroyWithPurge("foo_deploy"),
+		CheckDestroy: testResourceJob_forceDestroyWithPurge("foo_deploy", "default"),
 	})
 }
 
