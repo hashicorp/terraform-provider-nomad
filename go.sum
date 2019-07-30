@@ -104,6 +104,7 @@ github.com/gophercloud/utils v0.0.0-20190128072930-fbb6ab446f01/go.mod h1:wjDF8z
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 h1:f0n1xnMSmBLzVfsMMvriDyA75NB/oBgILX2GcHXIQzY=
 github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75/go.mod h1:g2644b03hfBX9Ov0ZBDgXXens4rxSxmqFBbhvKv2yVA=
+github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
@@ -117,6 +118,7 @@ github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/U
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-azure-helpers v0.0.0-20190129193224-166dfd221bb2/go.mod h1:lu62V//auUow6k0IykxLK2DCNW8qTmpm8KqhYVWattA=
 github.com/hashicorp/go-checkpoint v0.5.0/go.mod h1:7nfLNL10NsxqO4iWuW6tWW0HjZuDrwkBuEQsVcpCOgg=
+github.com/hashicorp/go-cleanhttp v0.5.0 h1:wvCrVc9TjDls6+YGAF2hAifE1E5U1+b4tH6KdvN3Gig=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-cleanhttp v0.5.1 h1:dH3aiDG9Jvb5r5+bYHsikaOUIpcM0xvgMXVoDkXMzJM=
 github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
@@ -159,8 +161,12 @@ github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO
 github.com/hashicorp/memberlist v0.1.0/go.mod h1:ncdBp14cuox2iFOq3kDiquKU6fqsTBc3W6JvZwjxxsE=
 github.com/hashicorp/nomad v0.9.1 h1:oOUlPrl7nlT6DJEfYplggXK8p+diugEBzUFai9/EoHU=
 github.com/hashicorp/nomad v0.9.1/go.mod h1:WRaKjdO1G2iqi86TvTjIYtKTyxg4pl7NLr9InxtWaI0=
+github.com/hashicorp/nomad v0.9.3 h1:mWczfImY8S+xASCwQvhtjIsj/RXKyc597XK8QhORAcc=
+github.com/hashicorp/nomad v0.9.3/go.mod h1:WRaKjdO1G2iqi86TvTjIYtKTyxg4pl7NLr9InxtWaI0=
 github.com/hashicorp/nomad/api v0.0.0-20190506160519-84306b0bfbed h1:B3ebedlbNLAOwY+5acWtcaipCS+tTguSksavplKNhnE=
 github.com/hashicorp/nomad/api v0.0.0-20190506160519-84306b0bfbed/go.mod h1:BDngVi1f4UA6aJq9WYTgxhfWSE1+42xshvstLU2fRGk=
+github.com/hashicorp/nomad/api v0.0.0-20190723171653-9aa271409411 h1:Nzh3n21ajvf3/6JrF6kSGfMTZeF+XB4zxTadcDON9z4=
+github.com/hashicorp/nomad/api v0.0.0-20190723171653-9aa271409411/go.mod h1:BDngVi1f4UA6aJq9WYTgxhfWSE1+42xshvstLU2fRGk=
 github.com/hashicorp/serf v0.0.0-20160124182025-e4ec8cc423bb/go.mod h1:h/Ru6tmZazX7WO/GDmwdpS975F019L4t5ng5IgwbNrE=
 github.com/hashicorp/terraform v0.12.0-rc1 h1:sTOrvFeoklMBsEHNhu25APyMyATTOeUUiuXm+PpLjDg=
 github.com/hashicorp/terraform v0.12.0-rc1/go.mod h1:mLbSyFcATc332aCwDeX9cziNg/dUb6ZJzRVd1KgrDOk=

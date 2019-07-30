@@ -114,7 +114,7 @@ github.com/hashicorp/hil/parser
 github.com/hashicorp/hil/scanner
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/nomad v0.9.1
+# github.com/hashicorp/nomad v0.9.3
 github.com/hashicorp/nomad/helper
 # github.com/hashicorp/nomad/api v0.0.0-20190506160519-84306b0bfbed
 github.com/hashicorp/nomad/api
