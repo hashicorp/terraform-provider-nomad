@@ -90,7 +90,7 @@ func resourceJob() *schema.Resource {
 			},
 
 			"namespace": {
-				Description: "The namespace of the job, as dervied from the jobspec.",
+				Description: "The namespace of the job, as derived from the jobspec.",
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
@@ -396,6 +396,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+	log.Printf("[DEBUG] resourceJobCustomizeDiff")
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -430,20 +431,16 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	// to the subset of job attributes we include in our schema.
 
 	d.SetNew("name", job.ID)
-	d.SetNew("namespace", job.Namespace)
 	d.SetNew("type", job.Type)
 	d.SetNew("region", job.Region)
 	d.SetNew("datacenters", job.Datacenters)
 
 	// If the identity has changed and the config asks us to deregister on identity
 	// change then the id field "forces new resource".
-	if d.Get("namespace") != *job.Namespace {
-		if d.Get("deregister_on_id_change").(bool) {
-			log.Printf("[DEBUG] namespace change forces new resource because deregister_on_id_change is set")
-			d.ForceNew("namespace")
-		} else {
-			log.Printf("[DEBUG] allowing namespace change as update because deregister_on_id_change is not set")
-		}
+	if d.Get("namespace").(string) != *job.Namespace {
+		log.Printf("[DEBUG] namespace change forces new resource")
+		d.SetNew("namespace", job.Namespace)
+		d.ForceNew("namespace")
 	} else if d.Id() != *job.ID {
 		if d.Get("deregister_on_id_change").(bool) {
 			log.Printf("[DEBUG] name change forces new resource because deregister_on_id_change is set")
@@ -453,6 +450,8 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 			log.Printf("[DEBUG] allowing name change as update because deregister_on_id_change is not set")
 		}
 	} else {
+		d.SetNew("namespace", job.Namespace)
+
 		// If the identity (namespace+name) _isn't_ changing, then we require consistency of the
 		// job modify index to ensure that the "old" part of our diff
 		// will show what Nomad currently knows.
