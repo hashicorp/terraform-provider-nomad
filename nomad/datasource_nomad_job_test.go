@@ -2,51 +2,13 @@ package nomad
 
 import (
 	"fmt"
-	"github.com/hashicorp/nomad/api"
 	"testing"
+
+	"github.com/hashicorp/nomad/api"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
-
-//func cleanupTestJobAndNamespace(jobID, namespace string) resource.TestCheckFunc {
-//	return func(*terraform.State) error {
-//		providerConfig := testProvider.Meta().(ProviderConfig)
-//		client := providerConfig.client
-//		_, _, err := client.Jobs().Deregister(jobID, true, &api.WriteOptions{
-//			Namespace: namespace,
-//		})
-//		if err != nil {
-//			return fmt.Errorf("failed to clean up job %q after test: %s", jobID, err)
-//		}
-//		if namespace != "default" && namespace != "" {
-//			_, err := client.Namespaces().Delete(namespace, nil)
-//			if err != nil {
-//				return fmt.Errorf("failed to clean up namespace %q after test: %s", namespace, err)
-//			}
-//		}
-//		return nil
-//	}
-//}
-//
-//func setupTestJobAndNamespace(job, namespace string) error {
-//	client := testProvider.Meta().(ProviderConfig).client
-//	fmt.Println("setupTestJobAndNamespace")
-//	if namespace != "" && namespace != "default" {
-//		_, err := client.Namespaces().Register(&api.Namespace{
-//			Name: namespace,
-//		}, nil)
-//		if err != nil {
-//			return fmt.Errorf("error creating test namespace: %s", err)
-//		}
-//	}
-//	j, _ := client.Jobs().ParseHCL(testJobHCL(job, namespace), false)
-//	_, _, err := client.Jobs().Register(j, nil)
-//	if err != nil {
-//		return fmt.Errorf("error creating test job: %s", err)
-//	}
-//	return nil
-//}
 
 func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 	job := "testjobds"
@@ -69,11 +31,6 @@ func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 						"data.nomad_job.test-job", "namespace", "default"),
 				),
 			},
-			//{
-			//	Config: testAccCheckDataSourceNomadJobConfigErr,
-			//	Destroy:     false,
-			//	ExpectError: regexp.MustCompile(`.*job not found`),
-			//},
 		},
 	})
 }
@@ -100,10 +57,6 @@ func TestAccDataSourceNomadJob_Namespaced(t *testing.T) {
 						"data.nomad_job.test-job", "namespace", ns),
 				),
 			},
-			//{
-			//	Config:      testAccCheckDataSourceNomadJobWrongNamespace,
-			//	ExpectError: regexp.MustCompile(`.*job not found`),
-			//},
 		},
 	})
 }
