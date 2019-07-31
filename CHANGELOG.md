@@ -1,4 +1,8 @@
 ## 1.4.1 (Unreleased)
+
+IMPROVEMENTS:
+* Better support for Nomad namespaces ([#70](https://github.com/terraform-providers/terraform-provider-nomad/issues/70))
+
 ## 1.4.0 (May 20, 2019)
 
 IMPROVEMENTS:

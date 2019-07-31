@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -18,14 +19,15 @@ func dataSourceJob() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"namespace": {
+				Description: "Job Namespace",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "default",
+			},
 			// computed attributes
 			"name": {
 				Description: "Job Name",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
-			"namespace": {
-				Description: "Job Namespace",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
@@ -382,8 +384,14 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	id := d.Get("job_id").(string)
-	log.Printf("[DEBUG] Getting job status: %q", id)
-	job, _, err := client.Jobs().Info(id, nil)
+	ns := d.Get("namespace").(string)
+	if ns == "" {
+		ns = "default"
+	}
+	log.Printf("[DEBUG] Getting job status: %q/%q", ns, id)
+	job, _, err := client.Jobs().Info(id, &api.QueryOptions{
+		Namespace: ns,
+	})
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.

@@ -89,6 +89,12 @@ func resourceJob() *schema.Resource {
 				Type:        schema.TypeString,
 			},
 
+			"namespace": {
+				Description: "The namespace of the job, as derived from the jobspec.",
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+
 			"type": {
 				Description: "The type of the job, as derived from the jobspec.",
 				Computed:    true,
@@ -180,6 +186,11 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	if job.Namespace == nil || *job.Namespace == "" {
+		defaultNamespace := "default"
+		job.Namespace = &defaultNamespace
+	}
+
 	// Register the job
 	wantModifyIndexStrI, _ := d.GetChange("modify_index")
 	wantModifyIndex, err := strconv.ParseUint(wantModifyIndexStrI.(string), 10, 64)
@@ -195,9 +206,10 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}
 
-	log.Printf("[DEBUG] job '%s' registered", *job.ID)
+	log.Printf("[DEBUG] job '%s' registered in namespace '%s'", *job.ID, *job.Namespace)
 	d.SetId(*job.ID)
 	d.Set("name", job.ID)
+	d.Set("namespace", job.Namespace)
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
 	evalId := resp.EvalID
@@ -307,16 +319,24 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	// If deregistration is disabled, then do nothing
-	if !d.Get("deregister_on_destroy").(bool) {
+
+	deregister_on_destroy := d.Get("deregister_on_destroy").(bool)
+	if !deregister_on_destroy {
 		log.Printf(
-			"[WARN] job %q will not deregister since 'deregister_on_destroy'"+
-				" is false", d.Id())
+			"[WARN] job %q will not deregister since "+
+				"'deregister_on_destroy' is %t", d.Id(), deregister_on_destroy)
 		return nil
 	}
 
 	id := d.Id()
 	log.Printf("[DEBUG] deregistering job: %q", id)
-	_, _, err := client.Jobs().Deregister(id, false, nil)
+	opts := &api.WriteOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = "default"
+	}
+	_, _, err := client.Jobs().Deregister(id, false, opts)
 	if err != nil {
 		return fmt.Errorf("error deregistering job: %s", err)
 	}
@@ -329,8 +349,14 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	id := d.Id()
-	log.Printf("[DEBUG] reading information for job %q", id)
-	job, _, err := client.Jobs().Info(id, nil)
+	opts := &api.QueryOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = "default"
+	}
+	log.Printf("[DEBUG] reading information for job %q in namespace %q", id, opts.Namespace)
+	job, _, err := client.Jobs().Info(id, opts)
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
@@ -342,6 +368,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 
 		return fmt.Errorf("error checking for job: %s", err)
 	}
+	log.Printf("[DEBUG] found job %q in namespace %q", *job.Name, *job.Namespace)
 
 	allocStubs, _, err := client.Jobs().Allocations(id, false, nil)
 	if err != nil {
@@ -358,6 +385,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("datacenters", job.Datacenters)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 	d.Set("allocation_ids", allocIds)
+	d.Set("namespace", job.Namespace)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
 	} else {
@@ -368,6 +396,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+	log.Printf("[DEBUG] resourceJobCustomizeDiff")
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -381,6 +410,11 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	job, err := parseJobspec(newSpecRaw.(string), is_json, providerConfig.vaultToken) // catch syntax errors client-side during plan
 	if err != nil {
 		return err
+	}
+
+	defaultNamespace := "default"
+	if job.Namespace == nil || *job.Namespace == "" {
+		job.Namespace = &defaultNamespace
 	}
 
 	resp, _, err := client.Jobs().PlanOpts(job, &api.PlanOptions{
@@ -401,9 +435,13 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	d.SetNew("region", job.Region)
 	d.SetNew("datacenters", job.Datacenters)
 
-	// If the id has changed and the config asks us to deregister on id
+	// If the identity has changed and the config asks us to deregister on identity
 	// change then the id field "forces new resource".
-	if d.Id() != *job.ID {
+	if d.Get("namespace").(string) != *job.Namespace {
+		log.Printf("[DEBUG] namespace change forces new resource")
+		d.SetNew("namespace", job.Namespace)
+		d.ForceNew("namespace")
+	} else if d.Id() != *job.ID {
 		if d.Get("deregister_on_id_change").(bool) {
 			log.Printf("[DEBUG] name change forces new resource because deregister_on_id_change is set")
 			d.ForceNew("id")
@@ -412,7 +450,9 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 			log.Printf("[DEBUG] allowing name change as update because deregister_on_id_change is not set")
 		}
 	} else {
-		// If the id _isn't_ changing, then we require consistency of the
+		d.SetNew("namespace", job.Namespace)
+
+		// If the identity (namespace+name) _isn't_ changing, then we require consistency of the
 		// job modify index to ensure that the "old" part of our diff
 		// will show what Nomad currently knows.
 		wantModifyIndexStr := d.Get("modify_index").(string)

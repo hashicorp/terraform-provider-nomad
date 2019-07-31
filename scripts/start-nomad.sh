@@ -19,7 +19,7 @@ if [ ! -e /tmp/nomad-test.pid ]; then
     sleep 5
 
     http --ignore-stdin POST http://localhost:4646/v1/acl/bootstrap | jq -r '.SecretID' > /tmp/nomad-test.token
-    cat /tmp/nomad-test.token
+    echo export NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
 elif [ -e /tmp/nomad-test.token ]; then 
-  cat /tmp/nomad-test.token
+  echo export NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
 fi

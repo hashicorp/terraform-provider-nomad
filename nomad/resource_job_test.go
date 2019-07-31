@@ -37,6 +37,21 @@ func TestResourceJob_basic(t *testing.T) {
 	})
 }
 
+func TestResourceJob_namespace(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_initialConfigNamespace,
+				Check:  testResourceJob_initialCheckNS(t, "jobresource-test-namespace"),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroyNS("foo", "jobresource-test-namespace"),
+	})
+}
+
 func TestResourceJob_v086(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -132,7 +147,7 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 		},
 
 		// Somewhat-abuse CheckDestroy to clean up
-		CheckDestroy: testResourceJob_forceDestroyWithPurge("foo"),
+		CheckDestroy: testResourceJob_forceDestroyWithPurge("foo", "default"),
 	})
 }
 
@@ -155,6 +170,31 @@ func TestResourceJob_rename(t *testing.T) {
 		},
 
 		CheckDestroy: testResourceJob_checkDestroy("bar"),
+	})
+}
+
+func TestResourceJob_change_namespace(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_initialConfigNamespace,
+				Check:  testResourceJob_initialCheckNS(t, "jobresource-test-namespace"),
+			},
+			{
+				Config: testResourceJob_changeNamespaceConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testResourceJob_checkDestroyNS("foo", "jobresource-test-namespace"),
+					testResourceJob_checkExistsNS("foo", "jobresource-updated-namespace"),
+				),
+			},
+		},
+
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testResourceJob_checkDestroyNS("bar", "jobresource-test-namespace"),
+			testResourceJob_checkDestroyNS("bar", "jobresource-updated-namespace"),
+		),
 	})
 }
 
@@ -256,7 +296,81 @@ resource "nomad_job" "test" {
 					driver = "raw_exec"
 					config {
 						command = "/bin/sleep"
-						args = ["1"]
+						args = ["10"]
+					}
+					
+					resources {
+						cpu = 100
+						memory = 10
+					}
+					
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_initialConfigNamespace = `
+resource "nomad_namespace" "test-namespace" {
+  name = "jobresource-test-namespace" 
+}
+
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "batch"
+			namespace = "${nomad_namespace.test-namespace.name}"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["10"]
+					}
+					
+					resources {
+						cpu = 100
+						memory = 10
+					}
+					
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_changeNamespaceConfig = `
+resource "nomad_namespace" "test-namespace" {
+  name = "jobresource-test-namespace" 
+}
+
+resource "nomad_namespace" "new-namespace" {
+  name = "jobresource-updated-namespace"
+}
+
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "batch"
+			namespace = "${nomad_namespace.new-namespace.name}"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["10"]
 					}
 					
 					resources {
@@ -376,6 +490,10 @@ resource "nomad_job" "test" {
 `
 
 func testResourceJob_initialCheck(t *testing.T) r.TestCheckFunc {
+	return testResourceJob_initialCheckNS(t, "default")
+}
+
+func testResourceJob_initialCheckNS(t *testing.T, expectedNamespace string) r.TestCheckFunc {
 	return func(s *terraform.State) error {
 
 		resourceState := s.Modules[0].Resources["nomad_job.test"]
@@ -390,15 +508,25 @@ func testResourceJob_initialCheck(t *testing.T) r.TestCheckFunc {
 
 		jobID := instanceState.ID
 
+		if setNamespace, ok := instanceState.Attributes["namespace"]; !ok || setNamespace != expectedNamespace {
+			return errors.New("resource does not have expected namespace")
+		}
+
 		providerConfig := testProvider.Meta().(ProviderConfig)
 		client := providerConfig.client
-		job, _, err := client.Jobs().Info(jobID, nil)
+		job, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
+			Namespace: expectedNamespace,
+		})
 		if err != nil {
 			return fmt.Errorf("error reading back job: %s", err)
 		}
 
 		if got, want := *job.ID, jobID; got != want {
 			return fmt.Errorf("jobID is %q; want %q", got, want)
+		}
+
+		if got, want := *job.Namespace, expectedNamespace; got != want {
+			return fmt.Errorf("job namespace is %q; want %q", got, want)
 		}
 
 		wantAllocs, _, err := client.Jobs().Allocations(jobID, false, nil)
@@ -580,11 +708,13 @@ func testResourceJob_v090Check(s *terraform.State) error {
 	return nil
 }
 
-func testResourceJob_checkExists(jobID string) r.TestCheckFunc {
+func testResourceJob_checkExistsNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
 		client := providerConfig.client
-		_, _, err := client.Jobs().Info(jobID, nil)
+		_, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
+			Namespace: ns,
+		})
 		if err != nil {
 			return fmt.Errorf("error reading back job: %s", err)
 		}
@@ -593,7 +723,15 @@ func testResourceJob_checkExists(jobID string) r.TestCheckFunc {
 	}
 }
 
+func testResourceJob_checkExists(jobID string) r.TestCheckFunc {
+	return testResourceJob_checkExistsNS(jobID, "default")
+}
+
 func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
+	return testResourceJob_checkDestroyNS(jobID, "default")
+}
+
+func testResourceJob_checkDestroyNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
 		client := providerConfig.client
@@ -601,7 +739,9 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 		tries := 0
 	TRY:
 		for {
-			job, _, err := client.Jobs().Info(jobID, nil)
+			job, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
+				Namespace: ns,
+			})
 			// This should likely never happen because we aren't purging jobs on delete
 			if err != nil && strings.Contains(err.Error(), "404") || job == nil {
 				return nil
@@ -618,15 +758,17 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 			}
 		}
 
-		return fmt.Errorf("Job %q has not been stopped.", jobID)
+		return fmt.Errorf("Job %q in namespace %q has not been stopped.", jobID, ns)
 	}
 }
 
-func testResourceJob_forceDestroyWithPurge(jobID string) r.TestCheckFunc {
+func testResourceJob_forceDestroyWithPurge(jobID, namespace string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
 		client := providerConfig.client
-		_, _, err := client.Jobs().Deregister(jobID, true, nil)
+		_, _, err := client.Jobs().Deregister(jobID, true, &api.WriteOptions{
+			Namespace: namespace,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to clean up job %q after test: %s", jobID, err)
 		}
