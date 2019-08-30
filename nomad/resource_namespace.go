@@ -74,7 +74,7 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	for {
 		var err error
 		if name == api.DefaultNamespace {
-			log.Printf("[DEBUG] Can't delete namespace %s, clearing attributes instead", api.DefaultNamespace)
+			log.Printf("[DEBUG] Can't delete default namespace, clearing attributes instead")
 			d.Set("description", "Default shared namespace")
 			d.Set("quota", "")
 			err = resourceNamespaceWrite(d, meta)
