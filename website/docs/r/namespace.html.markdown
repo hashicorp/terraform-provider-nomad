@@ -13,6 +13,11 @@ Provisions a namespace within a Nomad cluster.
 ~> **Enterprise Only!** This API endpoint and functionality only exists in
 Nomad Enterprise. This is not present in the open source version of Nomad.
 
+Nomad auto-generates a default namespace called `default`. This namespace
+cannot be removed, so destroying a `nomad_namespace` resource where
+`name = "default"` will cause the namespace to be reset to its initial
+configuration.
+
 ## Example Usage
 
 Registering a namespace:
