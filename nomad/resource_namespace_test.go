@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -108,6 +109,22 @@ func TestResourceNamespace_update(t *testing.T) {
 	})
 }
 
+func TestResourceNamespace_deleteDefault(t *testing.T) {
+	name := api.DefaultNamespace
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckPro(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceNamespace_initialConfig(name),
+				Check:  testResourceNamespace_initialCheck(name),
+			},
+		},
+
+		CheckDestroy: testResourceNamespace_checkResetDefault(),
+	})
+}
+
 func testResourceNamespace_initialConfig(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_namespace" "test" {
@@ -184,6 +201,26 @@ func testResourceNamespace_checkDestroy(name string) resource.TestCheckFunc {
 			return nil
 		}
 		return fmt.Errorf("namespace %q has not been deleted.", name)
+	}
+}
+
+func testResourceNamespace_checkResetDefault() resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		defaultNamespace := api.Namespace{
+			Name:        api.DefaultNamespace,
+			Description: "Default shared namespace",
+			Quota:       "",
+		}
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(defaultNamespace.Name, nil)
+		if err != nil {
+			return fmt.Errorf("failed to find default namespace %q.", defaultNamespace.Name)
+		}
+		if namespace.Description != defaultNamespace.Description || namespace.Quota != defaultNamespace.Quota {
+			return fmt.Errorf("default namespace %q not reset.", defaultNamespace.Name)
+		}
+
+		return nil
 	}
 }
 

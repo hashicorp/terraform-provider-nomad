@@ -72,7 +72,16 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting namespace %q", name)
 	retries := 0
 	for {
-		_, err := client.Namespaces().Delete(name, nil)
+		var err error
+		if name == api.DefaultNamespace {
+			log.Printf("[DEBUG] Can't delete default namespace, clearing attributes instead")
+			d.Set("description", "Default shared namespace")
+			d.Set("quota", "")
+			err = resourceNamespaceWrite(d, meta)
+		} else {
+			_, err = client.Namespaces().Delete(name, nil)
+		}
+
 		if err == nil {
 			break
 		} else if retries < 10 {
@@ -87,7 +96,12 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("too many failures attempting to delete namespace %q: %s", name, err.Error())
 		}
 	}
-	log.Printf("[DEBUG] Deleted namespace %q", name)
+
+	if name == api.DefaultNamespace {
+		log.Printf("[DEBUG] %s namespace reset", name)
+	} else {
+		log.Printf("[DEBUG] Deleted namespace %q", name)
+	}
 
 	return nil
 }
