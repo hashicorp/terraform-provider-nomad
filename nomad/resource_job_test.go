@@ -810,6 +810,20 @@ func TestResourceJob_vault(t *testing.T) {
 	})
 }
 
+func TestResourceJob_serverNotAvailableForPlan(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config:             testResourceJob_invalidNomadServerConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 var testResourceJob_validVaultConfig = `
 provider "nomad" {
 }
@@ -877,6 +891,29 @@ resource "nomad_job" "test" {
 
 					vault {
 						policies = ["default"]
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_invalidNomadServerConfig = `
+provider "nomad" {
+	address = "http://invalid.example.com"
+}
+
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "test" {
+			datacenters = ["dc1"]
+			type = "batch"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/usr/bin/true"
 					}
 				}
 			}

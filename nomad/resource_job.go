@@ -422,7 +422,7 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		PolicyOverride: d.Get("policy_override").(bool),
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("error from 'nomad plan': %s", err)
+		log.Printf("[WARN] failed to validate Nomad plan: %s", err)
 	}
 
 	// If we were able to successfully plan then we can safely populate our
@@ -463,7 +463,7 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 			return fmt.Errorf("invalid modify_index in state: %s", err)
 		}
 
-		if resp.JobModifyIndex != wantModifyIndex {
+		if resp != nil && resp.JobModifyIndex != wantModifyIndex {
 			// Should rarely happen, but might happen if there was a concurrent
 			// other process writing to Nomad since our Read call.
 			return fmt.Errorf("job modify index has changed since last refresh")
