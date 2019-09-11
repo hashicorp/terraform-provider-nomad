@@ -49,7 +49,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
 
-	err := testProvider.Configure(terraform.NewResourceConfig(nil))
+	err := testProvider.Configure(terraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}

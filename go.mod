@@ -16,10 +16,9 @@ require (
 	github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f
 	github.com/hashicorp/nomad v0.9.1
 	github.com/hashicorp/nomad/api v0.0.0-20190506160519-84306b0bfbed
-	github.com/hashicorp/terraform v0.12.0-rc1
+	github.com/hashicorp/terraform v0.12.8
 	github.com/hashicorp/vault v0.10.4
 	github.com/hashicorp/yamux v0.0.0-20180917205041-7221087c3d28 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/stretchr/testify v1.3.0
-	google.golang.org/grpc v1.19.0 // indirect
 )
