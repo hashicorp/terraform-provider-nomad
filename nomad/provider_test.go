@@ -78,6 +78,16 @@ func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
 	}
 }
 
+func testCheckMinVersion(t *testing.T, v string) {
+	minVersion, err := version.NewVersion(v)
+	if err != nil {
+		t.Skipf("failed to check min version: %s", err)
+		return
+	}
+
+	testCheckVersion(t, func(v version.Version) bool { return v.Compare(minVersion) >= 0 })
+}
+
 func testCheckVaultEnabled(t *testing.T) {
 	client := testProvider.Meta().(ProviderConfig).client
 	vaultEnabled := false

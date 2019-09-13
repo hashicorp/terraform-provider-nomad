@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/nomad/api"
@@ -80,6 +81,36 @@ func TestResourceJob_v090(t *testing.T) {
 
 		CheckDestroy: testResourceJob_checkDestroy("foov086"),
 	})
+}
+
+func TestResourceJob_volumes(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.10.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_volumesConfig,
+				Check:  testResourceJob_volumesCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-volumes"),
+	})
+
+}
+
+func TestResourceJob_consulConnect(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.10.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_consulConnectConfig,
+				Check:  testResourceJob_consulConnectCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
+	})
+
 }
 
 func TestResourceJob_json(t *testing.T) {
@@ -271,7 +302,7 @@ resource "nomad_job" "parameterized" {
 						cpu = 100
 						memory = 10
 					}
-					
+
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -292,18 +323,18 @@ resource "nomad_job" "test" {
 			group "foo" {
 				task "foo" {
 					leader = true ## new in Nomad 0.5.6
-					
+
 					driver = "raw_exec"
 					config {
 						command = "/bin/sleep"
 						args = ["10"]
 					}
-					
+
 					resources {
 						cpu = 100
 						memory = 10
 					}
-					
+
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -317,7 +348,7 @@ resource "nomad_job" "test" {
 
 var testResourceJob_initialConfigNamespace = `
 resource "nomad_namespace" "test-namespace" {
-  name = "jobresource-test-namespace" 
+  name = "jobresource-test-namespace"
 }
 
 resource "nomad_job" "test" {
@@ -333,12 +364,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["10"]
 					}
-					
+
 					resources {
 						cpu = 100
 						memory = 10
 					}
-					
+
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -352,7 +383,7 @@ resource "nomad_job" "test" {
 
 var testResourceJob_changeNamespaceConfig = `
 resource "nomad_namespace" "test-namespace" {
-  name = "jobresource-test-namespace" 
+  name = "jobresource-test-namespace"
 }
 
 resource "nomad_namespace" "new-namespace" {
@@ -372,12 +403,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["10"]
 					}
-					
+
 					resources {
 						cpu = 100
 						memory = 10
 					}
-					
+
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -435,18 +466,18 @@ resource "nomad_job" "test" {
 		    group "foo" {
 		        task "foo" {
 		            leader = true ## new in Nomad 0.5.6
-							
+
 		            driver = "raw_exec"
 		            config {
 		                command = "/bin/sleep"
 		                args = ["1"]
 		            }
-							
+
 		            resources {
 		                cpu = 100
 		                memory = 10
 		            }
-							
+
 		            logs {
 		                max_files = 3
 		                max_file_size = 10
@@ -472,12 +503,12 @@ resource "nomad_job" "test" {
 						command = "/bin/sleep"
 						args = ["30"]
 					}
-						
+
 					resources {
 						cpu = 100
 						memory = 10
 					}
-					
+
 					logs {
 						max_files = 3
 						max_file_size = 10
@@ -703,6 +734,164 @@ func testResourceJob_v090Check(s *terraform.State) error {
     ]`), &expSpreads)
 	if !reflect.DeepEqual(job.Spreads, expSpreads) {
 		return fmt.Errorf("job spreads not as expected")
+	}
+
+	return nil
+}
+
+func testResourceJob_volumesCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has expected volume declared
+	taskGroupName := "foo"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expVolumes := map[string]*api.VolumeRequest{}
+	json.Unmarshal([]byte(`{
+		"data": {
+			"Name": "data",
+			"Type": "host",
+			"ReadOnly": true,
+			"Config": {
+				"source": "data"
+			}
+		}
+	}`), &expVolumes)
+	if diff := cmp.Diff(expVolumes, taskGroup.Volumes); diff != "" {
+		return fmt.Errorf("task group volume mismatch (-want +got):\n%s", diff)
+	}
+
+	// check if task has expected volume mount
+	taskName := "foo"
+	var task *api.Task
+	for _, t := range taskGroup.Tasks {
+		if t.Name == taskName {
+			task = t
+			break
+		}
+	}
+
+	expVolumeMounts := []*api.VolumeMount{}
+	json.Unmarshal([]byte(`[
+		{
+			"Volume": "data",
+            "Destination": "/var/lib/data",
+            "ReadOnly": true
+		}
+	]`), &expVolumeMounts)
+	if diff := cmp.Diff(expVolumeMounts, task.VolumeMounts); diff != "" {
+		return fmt.Errorf("task volume mount mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_consulConnectCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has Service declaration
+	taskGroupName := "foo"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expServices := []*api.Service{}
+	json.Unmarshal([]byte(`[
+		{
+			"Name": "foo",
+			"PortLabel": "9002",
+			"AddressMode": "auto",
+			"Connect": {
+				"SidecarService": {
+					"Proxy": {
+						"Upstreams": [
+							{
+								"DestinationName": "bar",
+								"LocalBindPort": 8080
+							}
+						]
+					}
+				}
+			}
+		}
+	]`), &expServices)
+	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
+		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
+	}
+
+	// check if task has Consul Connect sidecar proxy
+	proxyTaskName := "connect-proxy-foo"
+	var proxyTask *api.Task
+	for _, t := range taskGroup.Tasks {
+		if t.Name == proxyTaskName {
+			proxyTask = t
+			break
+		}
+	}
+
+	if proxyTask == nil {
+		return fmt.Errorf("conect proxy task %s not found", proxyTaskName)
 	}
 
 	return nil
@@ -942,7 +1131,7 @@ job "foo" {
     group "foo" {
         task "foo" {
             leader = true ## new in Nomad 0.5.6
-            
+
             driver = "raw_exec"
             config {
                 command = "/bin/sleep"
@@ -981,7 +1170,7 @@ resource "nomad_job" "test" {
 			}
 
 			update {
-			    max_parallel = 2	
+			    max_parallel = 2
 				min_healthy_time = "11s"
 				healthy_deadline = "6m"
 				progress_deadline = "11m"
@@ -1012,12 +1201,12 @@ resource "nomad_job" "test" {
 				reschedule {
 					attempts       = 0
 					delay          = "12s"
-					unlimited 	   = true	
+					unlimited 	   = true
 				}
 
 				task "foo" {
 
-					
+
 					driver = "raw_exec"
 					config {
 						command = "/bin/sleep"
@@ -1059,7 +1248,7 @@ resource "nomad_job" "test" {
 			}
 
 			update {
-			    max_parallel = 2	
+			    max_parallel = 2
 				min_healthy_time = "11s"
 				healthy_deadline = "6m"
 				progress_deadline = "11m"
@@ -1075,7 +1264,7 @@ resource "nomad_job" "test" {
 				max_delay      = "100s"
 				unlimited      = false
 			}
- 		
+
 			affinity {
 			    attribute = "$${node.datacenter}"
 				value = "dc1"
@@ -1087,7 +1276,7 @@ resource "nomad_job" "test" {
 				value = "foo"
 				weight = 50
 			}
-	
+
 			spread {
 				attribute = "$${node.datacenter}"
 				target "dc1" { percent = 35 }
@@ -1109,12 +1298,12 @@ resource "nomad_job" "test" {
 				reschedule {
 					attempts       = 0
 					delay          = "12s"
-					unlimited 	   = true	
+					unlimited 	   = true
 				}
 
 				task "foo" {
 
-					
+
 					driver = "raw_exec"
 					config {
 						command = "/bin/sleep"
@@ -1137,6 +1326,100 @@ resource "nomad_job" "test" {
 				}
 			}
 		}
+	EOT
+}
+`
+
+var testResourceJob_volumesConfig = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+	job "foo-volumes" {
+		datacenters = ["dc1"]
+		group "foo" {
+			volume "data" {
+				type = "host"
+				read_only = true
+				config {
+					source = "data"
+				}
+			}
+
+			task "foo" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+
+				volume_mount {
+					volume = "data"
+					destination = "/var/lib/data"
+					read_only = true
+				}
+			}
+		}
+	}
+	EOT
+}
+`
+
+var testResourceJob_consulConnectConfig = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+	job "foo-consul-connect" {
+		datacenters = ["dc1"]
+		group "foo" {
+			network {
+				mode = "bridge"
+				port "foo" {
+					static = 9002
+					to = 9002
+				}
+			}
+			service {
+				name = "foo"
+				port = "9002"
+
+				connect {
+					sidecar_service {
+						proxy {
+							upstreams {
+								destination_name = "bar"
+								local_bind_port = 8080
+							}
+						}
+					}
+				}
+			}
+			task "foo" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+			}
+		}
+		group "bar" {
+			network {
+				mode = "bridge"
+			}
+			service {
+				 name = "bar"
+				 port = "9001"
+
+				 connect {
+					 sidecar_service {}
+				 }
+			 }
+			task "foo" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+			}
+		}
+	}
 	EOT
 }
 `

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/terraform-providers/terraform-provider-nomad/nomad/jobspec"
+	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/jobspec"
 )
 
 func resourceJob() *schema.Resource {
@@ -152,6 +152,50 @@ func resourceJob() *schema.Resource {
 										Type:     schema.TypeString,
 									},
 									"meta": {
+										Computed: true,
+										Type:     schema.TypeMap,
+									},
+									"volume_mounts": {
+										Computed: true,
+										Type:     schema.TypeList,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"volume": {
+													Computed: true,
+													Type:     schema.TypeString,
+												},
+												"destination": {
+													Computed: true,
+													Type:     schema.TypeString,
+												},
+												"read_only": {
+													Computed: true,
+													Type:     schema.TypeBool,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						"volumes": {
+							Computed: true,
+							Type:     schema.TypeList,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Computed: true,
+										Type:     schema.TypeString,
+									},
+									"type": {
+										Computed: true,
+										Type:     schema.TypeString,
+									},
+									"read_only": {
+										Computed: true,
+										Type:     schema.TypeBool,
+									},
+									"config": {
 										Computed: true,
 										Type:     schema.TypeMap,
 									},
@@ -536,9 +580,34 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 				taskM["meta"] = make(map[string]interface{})
 			}
 
+			volumeMountsI := make([]interface{}, 0, len(task.VolumeMounts))
+			for _, vm := range task.VolumeMounts {
+				volumeMountM := make(map[string]interface{})
+
+				volumeMountM["volume"] = vm.Volume
+				volumeMountM["destination"] = vm.Destination
+				volumeMountM["read_only"] = vm.ReadOnly
+
+				volumeMountsI = append(volumeMountsI, volumeMountM)
+			}
+			taskM["volume_mounts"] = volumeMountsI
+
 			tasksI = append(tasksI, taskM)
 		}
 		tgM["task"] = tasksI
+
+		volumesI := make([]interface{}, 0, len(tg.Volumes))
+		for _, v := range tg.Volumes {
+			volumeM := make(map[string]interface{})
+
+			volumeM["name"] = v.Name
+			volumeM["type"] = v.Type
+			volumeM["read_only"] = v.ReadOnly
+			volumeM["config"] = v.Config
+
+			volumesI = append(volumesI, volumeM)
+		}
+		tgM["volumes"] = volumesI
 
 		ret = append(ret, tgM)
 	}

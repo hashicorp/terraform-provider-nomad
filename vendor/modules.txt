@@ -82,6 +82,8 @@ github.com/google/uuid
 github.com/googleapis/gax-go/v2
 # github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 github.com/gorhill/cronexpr
+# github.com/gorilla/websocket v1.4.0
+github.com/gorilla/websocket
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
@@ -89,7 +91,7 @@ github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-getter v1.3.1-0.20190627223108-da0323b9545e
 github.com/hashicorp/go-getter
 github.com/hashicorp/go-getter/helper/url
-# github.com/hashicorp/go-hclog v0.8.0
+# github.com/hashicorp/go-hclog v0.9.1
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
@@ -107,13 +109,13 @@ github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.0
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f
-github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
-github.com/hashicorp/hcl/hcl/parser
+github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/token
+github.com/hashicorp/hcl/hcl/parser
 github.com/hashicorp/hcl/json/parser
-github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/hcl/strconv
+github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/hcl2 v0.0.0-20190821123243-0c888d1241f6
@@ -134,9 +136,7 @@ github.com/hashicorp/hil/parser
 github.com/hashicorp/hil/scanner
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/nomad v0.9.1
-github.com/hashicorp/nomad/helper
-# github.com/hashicorp/nomad/api v0.0.0-20190506160519-84306b0bfbed
+# github.com/hashicorp/nomad/api v0.0.0-20190906191921-82f214630cd6
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/terraform v0.12.8
