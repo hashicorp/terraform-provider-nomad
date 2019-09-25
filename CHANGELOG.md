@@ -1,4 +1,9 @@
 ## 1.4.2 (Unreleased)
+
+NOTES:
+
+* The provider has switched to the standalone TF SDK, there should be no noticeable impact on compatibility. [GH-78]
+
 ## 1.4.1 (July 31, 2019)
 
 IMPROVEMENTS:
