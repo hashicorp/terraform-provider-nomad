@@ -8,7 +8,7 @@ Run `terraform -v` to show the version. If you are not running the latest versio
 This command will also output the provider version, please include that as well.
 
 ### Nomad Version
-Run `nomad -v` in your target node to view which version of Nomad is running. Make sure to include the entire version output.
+Run `nomad server members` in your target node to view which version of Nomad is running. Make sure to include the entire version output.
 
 ### Provider Configuration
 Which values are you setting in the provider configuration?
