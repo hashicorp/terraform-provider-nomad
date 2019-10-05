@@ -1,9 +1,18 @@
+---
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: ''
+assignees: ''
+
+---
+
 Hi there,
 
 Thank you for opening an issue. Please note that we try to keep the Terraform issue tracker reserved for bug reports and feature requests. For general usage questions, please see: https://www.terraform.io/community.html.
 
 ### Terraform Version
-Run `terraform -v` to show the version. If you are not running the latest version of Terraform, please upgrade because your issue may have already been fixed.
+Run `terraform -v` to show the version. If you are not running the latest version of Terraform, please upgrade because your issue may have already been fixed. 
 
 This command will also output the provider version, please include that as well.
 
@@ -11,7 +20,7 @@ This command will also output the provider version, please include that as well.
 Run `nomad server members` in your target node to view which version of Nomad is running. Make sure to include the entire version output.
 
 ### Provider Configuration
-Which values are you setting in the provider configuration?
+Which values are you setting in the provider configuration? 
 
 ```hcl
 provider "nomad" {
@@ -62,4 +71,3 @@ Are there anything atypical about your accounts that we should know? For example
 ### References
 Are there any other GitHub issues (open or closed) or Pull Requests that should be linked here? For example:
 - GH-1234
-
