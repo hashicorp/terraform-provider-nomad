@@ -24,7 +24,7 @@ func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"data.nomad_job.test-job", "name", job),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "type", "batch"),
+						"data.nomad_job.test-job", "type", "service"),
 					resource.TestCheckResourceAttr(
 						"data.nomad_job.test-job", "priority", "50"),
 					resource.TestCheckResourceAttr(
@@ -142,7 +142,16 @@ resource "nomad_job" "job-instance" {
 	jobspec = <<EOT
 		job "` + job + `" {
 			datacenters = ["dc1"]
-			type = "batch"
+			type = "service"
+			update {
+			    max_parallel = 2
+				min_healthy_time = "11s"
+				healthy_deadline = "6m"
+				progress_deadline = "11m"
+				auto_revert = true
+				auto_promote = true
+				canary = 1
+			}
 			group "foo" {
 				task "foo" {
 					driver = "raw_exec"
