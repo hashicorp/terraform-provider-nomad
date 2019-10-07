@@ -789,9 +789,7 @@ func testResourceJob_volumesCheck(s *terraform.State) error {
 			"Name": "data",
 			"Type": "host",
 			"ReadOnly": true,
-			"Config": {
-				"source": "data"
-			}
+			"Source": "data"
 		}
 	}`), &expVolumes)
 	if diff := cmp.Diff(expVolumes, taskGroup.Volumes); diff != "" {
@@ -1346,9 +1344,7 @@ resource "nomad_job" "test" {
 			volume "data" {
 				type = "host"
 				read_only = true
-				config {
-					source = "data"
-				}
+				source = "data"
 			}
 
 			task "foo" {

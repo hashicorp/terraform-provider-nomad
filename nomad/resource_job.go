@@ -195,9 +195,9 @@ func resourceJob() *schema.Resource {
 										Computed: true,
 										Type:     schema.TypeBool,
 									},
-									"config": {
+									"source": {
 										Computed: true,
-										Type:     schema.TypeMap,
+										Type:     schema.TypeString,
 									},
 								},
 							},
@@ -603,7 +603,7 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 			volumeM["name"] = v.Name
 			volumeM["type"] = v.Type
 			volumeM["read_only"] = v.ReadOnly
-			volumeM["config"] = v.Config
+			volumeM["source"] = v.Source
 
 			volumesI = append(volumesI, volumeM)
 		}
