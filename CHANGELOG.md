@@ -1,17 +1,17 @@
-## 1.4.2 (Unreleased)
+## 1.4.2 (October 11, 2019)
 
 IMPROVEMENTS:
 
-* **Target Nomad 0.10.0**: updated the noomad client to support Nomad API version 0.10.0 [GH-77]
+* **Target Nomad 0.10.0**: updated the noomad client to support Nomad API version 0.10.0 ([#77](https://github.com/terraform-providers/terraform-provider-nomad/issues/77))
 
 BUG FIXES:
 
-* resource/nomad_namespace: Prevent Terraform from trying to delete the `default` namespace since this operation is not allowed [GH-72]
-* resource/nomad_job: Don't fail planning if the Nomad server is not available [GH-66]
+* resource/nomad_namespace: Prevent Terraform from trying to delete the `default` namespace since this operation is not allowed ([#72](https://github.com/terraform-providers/terraform-provider-nomad/issues/72))
+* resource/nomad_job: Don't fail planning if the Nomad server is not available ([#66](https://github.com/terraform-providers/terraform-provider-nomad/issues/66))
 
 NOTES:
 
-* The provider has switched to the standalone TF SDK, there should be no noticeable impact on compatibility. [GH-78]
+* The provider has switched to the standalone TF SDK, there should be no noticeable impact on compatibility. ([#78](https://github.com/terraform-providers/terraform-provider-nomad/issues/78))
 
 ## 1.4.1 (July 31, 2019)
 
