@@ -133,8 +133,9 @@ github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/terraform-config-inspect v0.0.0-20190821133035-82a99dc22ef4
 github.com/hashicorp/terraform-config-inspect/tfconfig
-# github.com/hashicorp/terraform-plugin-sdk v1.0.0
+# github.com/hashicorp/terraform-plugin-sdk v1.1.1
 github.com/hashicorp/terraform-plugin-sdk/plugin
+github.com/hashicorp/terraform-plugin-sdk/helper/customdiff
 github.com/hashicorp/terraform-plugin-sdk/helper/resource
 github.com/hashicorp/terraform-plugin-sdk/helper/schema
 github.com/hashicorp/terraform-plugin-sdk/helper/validation
