@@ -73,7 +73,7 @@ func dataSourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 		// rather than a nil result, so we must check this way.
 		if strings.Contains(err.Error(), "404") {
 			d.SetId("")
-			return err
+			return nil
 		}
 
 		return fmt.Errorf("error reading ACL token %q: %s", accessor, err.Error())
