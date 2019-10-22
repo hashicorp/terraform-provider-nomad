@@ -10,8 +10,7 @@ import (
 
 func dataSourceACLToken() *schema.Resource {
 	return &schema.Resource{
-		Read:   dataSourceACLTokenRead,
-		Exists: dataSourceACLTokenExists,
+		Read: dataSourceACLTokenRead,
 		Schema: map[string]*schema.Schema{
 			"accessor_id": {
 				Description: "Non-sensitive identifier for this token.",
@@ -69,11 +68,19 @@ func dataSourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading ACL Token %q", accessor)
 	token, _, err := client.ACLTokens().Info(accessor, nil)
 	if err != nil {
-		// we have Exists, so no need to handle 404
+
+		// As of Nomad 0.4.1, the API client returns an error for 404
+		// rather than a nil result, so we must check this way.
+		if strings.Contains(err.Error(), "404") {
+			d.SetId("")
+			return err
+		}
+
 		return fmt.Errorf("error reading ACL token %q: %s", accessor, err.Error())
 	}
 	log.Printf("[DEBUG] Read ACL token %q", accessor)
 
+	d.SetId(accessor)
 	d.Set("name", token.Name)
 	d.Set("type", token.Type)
 	d.Set("policies", token.Policies)
@@ -82,24 +89,4 @@ func dataSourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("create_time", token.CreateTime)
 
 	return nil
-}
-
-func dataSourceACLTokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
-	accessor := d.Id()
-
-	log.Printf("[DEBUG] Checking if ACL token %q exists", accessor)
-	_, _, err := client.ACLTokens().Info(accessor, nil)
-	if err != nil {
-		// As of Nomad 0.4.1, the API client returns an error for 404
-		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
-			return false, nil
-		}
-
-		return true, fmt.Errorf("error checking for ACL token %q: %#v", accessor, err)
-	}
-
-	return true, nil
 }

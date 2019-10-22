@@ -8,7 +8,7 @@ description: |-
 
 # nomad_acl_token
 
-Get information on an ACL token
+Get information on an ACL token.
 
 ~> **Warning:** this data source will store tokens in the Terraform state. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
