@@ -43,7 +43,8 @@ func dataSourceAclPolicyRead(d *schema.ResourceData, meta interface{}) error {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
 		if strings.Contains(err.Error(), "404") {
-			return err
+			d.SetId("")
+			return nil
 		}
 
 		return fmt.Errorf("error getting ACL policy: %#v", err)

@@ -10,6 +10,7 @@ import (
 
 func TestAccDataSourceNomadAclPolicy_Basic(t *testing.T) {
 	policyName := "testpolicy"
+	resourceName := "data.nomad_acl_policy.test-policy"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
@@ -18,11 +19,12 @@ func TestAccDataSourceNomadAclPolicy_Basic(t *testing.T) {
 			{
 				Config: testAccNomadAclPolicyConfig(policyName),
 				Check: resource.ComposeTestCheckFunc(
-					testAccDataSourceNomadAclPolicyExists("data.nomad_acl_policy.test-policy"),
+					testAccDataSourceNomadAclPolicyExists(resourceName),
 					resource.TestCheckResourceAttr(
-						"data.nomad_acl_policy.test-policy", "name", policyName),
+						resourceName, "name", policyName),
 					resource.TestCheckResourceAttr(
-						"data.nomad_acl_policy.test-policy", "description", "Test ACL Policy"),
+						resourceName, "description", "Test ACL Policy"),
+					resource.TestCheckResourceAttrSet(resourceName, "rules"),
 				),
 			},
 		},
@@ -51,7 +53,7 @@ func testAccDataSourceNomadAclPolicyExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("ACL Policy not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
