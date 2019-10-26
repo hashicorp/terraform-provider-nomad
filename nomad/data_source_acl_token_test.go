@@ -21,6 +21,7 @@ func TestDataSourceACLToken_Basic(t *testing.T) {
 					testDataSourceACLTokenExists(resourceName),
 					resource.TestCheckResourceAttrSet(resourceName, "secret_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "accessor_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
 					resource.TestCheckResourceAttr(resourceName, "name", "Terraform Test Token"),
 					resource.TestCheckResourceAttr(resourceName, "type", "client"),
 					resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
