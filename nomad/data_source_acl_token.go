@@ -86,7 +86,7 @@ func dataSourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("policies", token.Policies)
 	d.Set("secret_id", token.SecretID)
 	d.Set("global", token.Global)
-	d.Set("create_time", token.CreateTime)
+	d.Set("create_time", token.CreateTime.UTC().String())
 
 	return nil
 }
