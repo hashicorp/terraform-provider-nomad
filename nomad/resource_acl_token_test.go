@@ -112,6 +112,10 @@ func testResourceACLToken_initialCheck() resource.TestCheckFunc {
 		if instanceState.Attributes["global"] != global {
 			return fmt.Errorf("expected global to be %q, is %q in state", global, instanceState.Attributes["global"])
 		}
+
+		if instanceState.Attributes["create_time"] == "" {
+			return fmt.Errorf("expected create_time to be set, got %q", instanceState.Attributes["create_time"])
+		}
 		// because policies is a set, it's a pain to try and check the values here
 		if instanceState.Attributes["policies.#"] != policies {
 			return fmt.Errorf("expected policies.# to be %q, is %q in state", policies, instanceState.Attributes["policies.#"])

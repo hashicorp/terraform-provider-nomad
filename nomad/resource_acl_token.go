@@ -61,6 +61,12 @@ func resourceACLToken() *schema.Resource {
 				ForceNew:    true,
 				Default:     false,
 			},
+
+			"create_time": {
+				Description: "The timestamp the token was created.",
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -96,6 +102,7 @@ func resourceACLTokenCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Set("type", resp.Type)
 	d.Set("policies", resp.Policies)
 	d.Set("global", resp.Global)
+	d.Set("create_time", resp.CreateTime.UTC().String())
 
 	return resourceACLTokenRead(d, meta)
 }
@@ -163,6 +170,7 @@ func resourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("accessor_id", token.AccessorID)
 	d.Set("secret_id", token.SecretID)
 	d.Set("global", token.Global)
+	d.Set("create_time", token.CreateTime.UTC().String())
 
 	return nil
 }

@@ -87,3 +87,5 @@ can be referenced:
 
 - `secret_id` `(string)` - The token value itself, which is presented for
   access to the cluster.
+
+- `create_time` `(string)` - The timestamp the token was created.
