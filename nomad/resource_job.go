@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+
 	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/jobspec"
 )
 
@@ -607,6 +609,11 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 
 			volumesI = append(volumesI, volumeM)
 		}
+		sort.Slice(volumesI, func(i, j int) bool {
+			return volumesI[i].(map[string]interface{})["name"].(string) <
+				volumesI[j].(map[string]interface{})["name"].(string)
+		})
+
 		tgM["volumes"] = volumesI
 
 		ret = append(ret, tgM)

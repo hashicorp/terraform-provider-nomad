@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/nomad/api"
 
@@ -21,6 +22,8 @@ import (
 
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+
+	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/helper"
 )
 
 func TestResourceJob_basic(t *testing.T) {
@@ -1015,6 +1018,42 @@ func TestResourceJob_serverNotAvailableForPlan(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestVolumeSorting(t *testing.T) {
+	require := require.New(t)
+
+	vols := []*api.VolumeRequest{
+		{
+			Name:     "red",
+			Type:     "host",
+			Source:   "/tmp/red",
+			ReadOnly: false,
+		},
+		{
+			Name:     "blue",
+			Type:     "host",
+			Source:   "/tmp/blue",
+			ReadOnly: true,
+		},
+	}
+	tgs := []*api.TaskGroup{
+		{
+			Name: helper.StringToPtr("group-with-volumes"),
+			Volumes: map[string]*api.VolumeRequest{
+				vols[0].Name: vols[0],
+				vols[1].Name: vols[1],
+			},
+		},
+	}
+	tg1 := jobTaskGroupsRaw(tgs)
+	tgs[0].Volumes = map[string]*api.VolumeRequest{
+		vols[1].Name: vols[1],
+		vols[0].Name: vols[0],
+	}
+	tg2 := jobTaskGroupsRaw(tgs)
+
+	require.ElementsMatch(tg1, tg2)
 }
 
 var testResourceJob_validVaultConfig = `
