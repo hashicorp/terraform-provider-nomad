@@ -1,4 +1,10 @@
-## 1.5.0 (Unreleased)
+## 1.4.3 (Unreleased)
+
+BUG FIXES:
+
+* resource/nomad_Job: Sort TaskGroup volumes to avoid `inconsistent final plan` errors ([#93](https://github.com/terraform-providers/terraform-provider-nomad/issues/93))
+
+
 ## 1.4.2 (October 11, 2019)
 
 IMPROVEMENTS:
