@@ -1,9 +1,12 @@
 ## 1.4.3 (Unreleased)
 
+IMPROVEMENTS:
+* data source for ACL tokens ([#88](https://github.com/terraform-providers/terraform-provider-nomad/pull/88))
+* data source for ACL policies ([#89](https://github.com/terraform-providers/terraform-provider-nomad/pull/89))
+
 BUG FIXES:
 
 * resource/nomad_Job: Sort TaskGroup volumes to avoid `inconsistent final plan` errors ([#93](https://github.com/terraform-providers/terraform-provider-nomad/issues/93))
-
 
 ## 1.4.2 (October 11, 2019)
 
