@@ -1,4 +1,4 @@
-## 1.4.3 (Unreleased)
+## 1.4.3 (February 07, 2020)
 
 IMPROVEMENTS:
 * data source for ACL tokens ([#88](https://github.com/terraform-providers/terraform-provider-nomad/pull/88))
