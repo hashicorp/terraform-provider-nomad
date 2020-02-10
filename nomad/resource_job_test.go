@@ -1397,6 +1397,7 @@ resource "nomad_job" "test" {
 					volume = "data"
 					destination = "/var/lib/data"
 					read_only = true
+					propagation_mode = "private"
 				}
 			}
 		}
@@ -1430,6 +1431,7 @@ resource "nomad_job" "test" {
 								local_bind_port = 8080
 							}
 						}
+						tags = ["bar", "foo"]
 					}
 				}
 			}
