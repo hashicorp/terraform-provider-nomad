@@ -101,6 +101,21 @@ func TestResourceJob_volumes(t *testing.T) {
 
 }
 
+func TestResourceJob_scalingPolicy(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_scalingPolicyConfig,
+				Check:  testResourceJob_scalingPolicyCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-scaling"),
+	})
+
+}
+
 func TestResourceJob_consulConnect(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -235,7 +250,7 @@ func TestResourceJob_change_namespace(t *testing.T) {
 func TestResourceJob_policyOverride(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_policyOverrideConfig(),
@@ -814,11 +829,77 @@ func testResourceJob_volumesCheck(s *terraform.State) error {
 		{
 			"Volume": "data",
             "Destination": "/var/lib/data",
-            "ReadOnly": true
+            "ReadOnly": true,
+			"PropagationMode": "private"
 		}
 	]`), &expVolumeMounts)
 	if diff := cmp.Diff(expVolumeMounts, task.VolumeMounts); diff != "" {
 		return fmt.Errorf("task volume mount mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has expected volume declared
+	taskGroupName := "foo"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expScaling := api.ScalingPolicy{}
+	json.Unmarshal([]byte(`{
+      "Min": 10,
+      "Max": 20,
+      "Enabled": false,
+      "Policy": {
+         "opaque": true
+      },
+      "Target": {
+         "Namespace": "default",
+  	     "Job": "foo-scaling",
+         "Group": "foo"
+      }
+	}`), &expScaling)
+
+	// ignore the following fields
+	taskGroup.Scaling.ID = ""
+	taskGroup.Scaling.ModifyIndex = 0
+	taskGroup.Scaling.CreateIndex = 0
+
+	if diff := cmp.Diff(expScaling, *taskGroup.Scaling); diff != "" {
+		return fmt.Errorf("task group scaling policy mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -871,6 +952,7 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 			"AddressMode": "auto",
 			"Connect": {
 				"SidecarService": {
+					"Tags": ["bar", "foo"],
 					"Proxy": {
 						"Upstreams": [
 							{
@@ -1455,6 +1537,33 @@ resource "nomad_job" "test" {
 					 sidecar_service {}
 				 }
 			 }
+			task "foo" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+			}
+		}
+	}
+	EOT
+}
+`
+
+var testResourceJob_scalingPolicyConfig = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+	job "foo-scaling" {
+		datacenters = ["dc1"]
+		group "foo" {
+            scaling {
+                min = 10
+                max = 20
+                enabled = false
+                policy {
+                   opaque = true
+                }
+            }
 			task "foo" {
 				driver = "raw_exec"
 				config {

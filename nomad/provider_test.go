@@ -55,12 +55,16 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
+func testCheckEnterpriseModules(t *testing.T) {
+	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "modules" })
+}
+
 func testCheckEnt(t *testing.T) {
 	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "ent" })
 }
 
-func testCheckPro(t *testing.T) {
-	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "pro" || v.Metadata() == "ent" })
+func testCheckEnterprisePlatform(t *testing.T) {
+	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "modules" || v.Metadata() == "platform" })
 }
 
 func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
