@@ -34,6 +34,10 @@ func TestProvider(t *testing.T) {
 	}
 }
 
+func TestProvider_impl(t *testing.T) {
+	var _ terraform.ResourceProvider = Provider()
+}
+
 var testProvider *schema.Provider
 var testProviders map[string]terraform.ResourceProvider
 
