@@ -116,6 +116,36 @@ func TestResourceJob_scalingPolicy(t *testing.T) {
 
 }
 
+func TestResourceJob_lifecycle(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_lifecycle,
+				Check:  testResourceJob_lifecycleCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-lifecycle"),
+	})
+
+}
+
+func TestResourceJob_csiController(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_csiController,
+				Check:  testResourceJob_csiControllerCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-lifecycle"),
+	})
+
+}
+
 func TestResourceJob_consulConnect(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -905,6 +935,125 @@ func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJob_lifecycleCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has expected volume declared
+	taskGroupName := "foo"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expTaskLifecycle := api.TaskLifecycle{}
+	json.Unmarshal([]byte(`{
+        "Hook": "prestart",
+        "Sidecar": true
+	}`), &expTaskLifecycle)
+
+	// merge of group.restart and task.restart
+	expTaskRestart := api.RestartPolicy{}
+	json.Unmarshal([]byte(`{
+        "Interval": 600000000000,
+		"Delay": 15000000000,
+		"Mode": "delay",
+ 	    "Attempts": 10
+	}`), &expTaskRestart)
+
+	if diff := cmp.Diff(expTaskLifecycle, *taskGroup.Tasks[0].Lifecycle); diff != "" {
+		return fmt.Errorf("task lifecycle mismatch (-want +got):\n%s", diff)
+	}
+
+	if diff := cmp.Diff(expTaskRestart, *taskGroup.Tasks[0].RestartPolicy); diff != "" {
+		return fmt.Errorf("task restart policy mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_csiControllerCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has expected volume declared
+	taskGroupName := "foo-controller"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expCSIPluginConfig := api.TaskCSIPluginConfig{}
+	json.Unmarshal([]byte(`{
+        "ID": "aws-ebs0",
+        "Type": "controller",
+        "MountDir": "/csi"
+	}`), &expCSIPluginConfig)
+	if taskGroup.Tasks[0].CSIPluginConfig == nil {
+		return fmt.Errorf("error; actual CSIPluginConfig was nil")
+	}
+
+	if diff := cmp.Diff(expCSIPluginConfig, *taskGroup.Tasks[0].CSIPluginConfig); diff != "" {
+		return fmt.Errorf("task csi plugin config mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
 func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	resourcePath := "nomad_job.test"
 
@@ -1494,6 +1643,7 @@ resource "nomad_job" "test" {
 	job "foo-consul-connect" {
 		datacenters = ["dc1"]
 		group "foo" {
+			shutdown_delay = "10s"
 			network {
 				mode = "bridge"
 				port "foo" {
@@ -1573,6 +1723,77 @@ resource "nomad_job" "test" {
 			}
 		}
 	}
+	EOT
+}
+`
+
+var testResourceJob_lifecycle = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+	job "foo-lifecycle" {
+		datacenters = ["dc1"]
+		group "foo" {
+            restart {
+              attempts = 5
+              interval = "10m"
+              delay    = "15s"
+              mode     = "delay"
+            }
+
+			task "sidecar" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+                restart {
+                  attempts = 10
+                }
+                lifecycle {
+                  hook    = "prestart"
+                  sidecar = true
+                }
+			}
+		}
+	}
+	EOT
+}
+`
+
+var testResourceJob_csiController = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+// from https://github.com/hashicorp/nomad/tree/master/e2e/csi/input
+job "foo-csi-controller" {
+  datacenters = ["dc1"]
+  group "foo-controller" {
+    task "plugin" {
+      driver = "docker"
+
+      config {
+        image = "amazon/aws-ebs-csi-driver:latest"
+
+        args = [
+          "controller",
+          "--endpoint=unix://csi/csi.sock",
+          "--logtostderr",
+          "--v=5",
+        ]
+      }
+
+      csi_plugin {
+        id        = "aws-ebs0"
+        type      = "controller"
+        mount_dir = "/csi"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
 	EOT
 }
 `
