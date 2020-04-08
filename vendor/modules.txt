@@ -132,7 +132,7 @@ github.com/hashicorp/hcl2/hclwrite
 github.com/hashicorp/hil/ast
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/nomad/api v0.0.0-20200401211951-3e99ef7b1f7c
+# github.com/hashicorp/nomad/api v0.0.0-20200407142900-e7d563e9e04f
 ## explicit
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts

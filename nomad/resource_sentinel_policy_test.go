@@ -19,7 +19,7 @@ func TestResourceSentinelPolicy_import(t *testing.T) {
 	enforcementLevel := "advisory"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceSentinelPolicy_config(name, description, policy, scope, enforcementLevel),
@@ -44,7 +44,7 @@ func TestResourceSentinelPolicy_basic(t *testing.T) {
 	enforcementLevel := "advisory"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceSentinelPolicy_config(name, description, policy, scope, enforcementLevel),
@@ -65,7 +65,7 @@ func TestResourceSentinelPolicy_nameChange(t *testing.T) {
 	enforcementLevel := "advisory"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceSentinelPolicy_config(name, description, policy, scope, enforcementLevel),
@@ -105,7 +105,7 @@ all_drivers_exec = rule {
 	newEnforcementLevel := "hard-mandatory"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceSentinelPolicy_config(name, description, policy, scope, enforcementLevel),

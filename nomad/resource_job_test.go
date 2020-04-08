@@ -280,7 +280,7 @@ func TestResourceJob_change_namespace(t *testing.T) {
 func TestResourceJob_policyOverride(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnterpriseModules(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_policyOverrideConfig(),
