@@ -1,5 +1,9 @@
 ## 1.4.5 (Unreleased)
 
+IMPROVEMENTS:
+
+* **Target Nomad 0.11.0**: updated the nomad client to support Nomad API version 0.11.0 ([#99](https://github.com/terraform-providers/terraform-provider-nomad/pulls/99))
+
 ## 1.4.4 (February 10, 2020)
 
 IMPROVEMENTS:
