@@ -34,6 +34,10 @@ func TestProvider(t *testing.T) {
 	}
 }
 
+func TestProvider_impl(t *testing.T) {
+	var _ terraform.ResourceProvider = Provider()
+}
+
 var testProvider *schema.Provider
 var testProviders map[string]terraform.ResourceProvider
 
@@ -57,10 +61,6 @@ func testAccPreCheck(t *testing.T) {
 
 func testCheckEnt(t *testing.T) {
 	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "ent" })
-}
-
-func testCheckPro(t *testing.T) {
-	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "pro" || v.Metadata() == "ent" })
 }
 
 func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {

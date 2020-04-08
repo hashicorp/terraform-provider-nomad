@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -178,11 +179,21 @@ type TLSConfig struct {
 	// the Nomad server SSL certificate.
 	CAPath string
 
+	// CACertPem is the PEM-encoded CA cert to use to verify the Nomad server
+	// SSL certificate.
+	CACertPEM []byte
+
 	// ClientCert is the path to the certificate for Nomad communication
 	ClientCert string
 
+	// ClientCertPEM is the PEM-encoded certificate for Nomad communication
+	ClientCertPEM []byte
+
 	// ClientKey is the path to the private key for Nomad communication
 	ClientKey string
+
+	// ClientKeyPEM is the PEM-encoded private key for Nomad communication
+	ClientKeyPEM []byte
 
 	// TLSServerName, if set, is used to set the SNI host when connecting via
 	// TLS.
@@ -344,12 +355,24 @@ func ConfigureTLS(httpClient *http.Client, tlsConfig *TLSConfig) error {
 		} else {
 			return fmt.Errorf("Both client cert and client key must be provided")
 		}
+	} else if len(tlsConfig.ClientCertPEM) != 0 || len(tlsConfig.ClientKeyPEM) != 0 {
+		if len(tlsConfig.ClientCertPEM) != 0 && len(tlsConfig.ClientKeyPEM) != 0 {
+			var err error
+			clientCert, err = tls.X509KeyPair(tlsConfig.ClientCertPEM, tlsConfig.ClientKeyPEM)
+			if err != nil {
+				return err
+			}
+			foundClientCert = true
+		} else {
+			return fmt.Errorf("Both client cert and client key must be provided")
+		}
 	}
 
 	clientTLSConfig := httpClient.Transport.(*http.Transport).TLSClientConfig
 	rootConfig := &rootcerts.Config{
-		CAFile: tlsConfig.CACert,
-		CAPath: tlsConfig.CAPath,
+		CAFile:        tlsConfig.CACert,
+		CAPath:        tlsConfig.CAPath,
+		CACertificate: tlsConfig.CACertPEM,
 	}
 	if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
 		return err
@@ -908,8 +931,16 @@ func parseWriteMeta(resp *http.Response, q *WriteMeta) error {
 
 // decodeBody is used to JSON decode a body
 func decodeBody(resp *http.Response, out interface{}) error {
-	dec := json.NewDecoder(resp.Body)
-	return dec.Decode(out)
+	switch resp.ContentLength {
+	case 0:
+		if out == nil {
+			return nil
+		}
+		return errors.New("Got 0 byte response with non-nil decode object")
+	default:
+		dec := json.NewDecoder(resp.Body)
+		return dec.Decode(out)
+	}
 }
 
 // encodeBody is used to encode a request body

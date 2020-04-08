@@ -39,7 +39,7 @@ func TestAccDataSourceNomadJob_Namespaced(t *testing.T) {
 	ns := "jobds-test-namespace"
 	job := "testjobds-namespace"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t); testCheckPro(t) },
+		PreCheck:     func() { testAccPreCheck(t); testCheckEnt(t) },
 		Providers:    testProviders,
 		CheckDestroy: testResourceJob_forceDestroyWithPurge(job, ns),
 		Steps: []resource.TestStep{

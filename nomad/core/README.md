@@ -6,7 +6,7 @@ dependencies, but [Nomad](https://github.com/hashicorp/nomad/) is not
 fully migrated yet, so this directory contains dependencies from Nomad that
 are not exposed in the `github.com/hashicorp/nomad/api` module.
 
-Current base version: [0e6af1085602b642f174f5f11ecefe737708c912](https://github.com/hashicorp/nomad/tree/0e6af1085602b642f174f5f11ecefe737708c912)
+Current base version: [ca5cd15eeffd40b68043c94eefff1ec7e6dc703f](https://github.com/hashicorp/nomad/tree/ca5cd15eeffd40b68043c94eefff1ec7e6dc703f)
 
 ## Updating Nomad dependency
 
