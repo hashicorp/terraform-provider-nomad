@@ -1642,7 +1642,7 @@ resource "nomad_job" "test" {
 	jobspec = <<EOT
 	job "foo-consul-connect" {
 		datacenters = ["dc1"]
-                 consul_token = "2a422691-6989-42cf-bb3b-0058dbe1f5db"
+              consul_token = "2a422691-6989-42cf-bb3b-0058dbe1f5db"
 		group "foo" {
 			shutdown_delay = "10s"
 			network {
