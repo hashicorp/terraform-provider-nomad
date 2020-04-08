@@ -115,6 +115,8 @@ github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
 github.com/hashicorp/nomad/api v0.0.0-20200407142900-e7d563e9e04f h1:QosWOGkgR0wqmmcC4toVmsz4vAuiHxJo7NxG8fuLi+U=
 github.com/hashicorp/nomad/api v0.0.0-20200407142900-e7d563e9e04f/go.mod h1:WKCL+tLVhN1D+APwH3JiTRZoxcdwRk86bWu1LVCUPaE=
+github.com/hashicorp/nomad/api v0.0.0-20200408154219-ca5cd15eeffd h1:ynjioitc+6kMZZnvolY0q7wQ7Lrs+bJjm4yE/WsUDNY=
+github.com/hashicorp/nomad/api v0.0.0-20200408154219-ca5cd15eeffd/go.mod h1:WKCL+tLVhN1D+APwH3JiTRZoxcdwRk86bWu1LVCUPaE=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20190821133035-82a99dc22ef4 h1:fTkL0YwjohGyN7AqsDhz6bwcGBpT+xBqi3Qhpw58Juw=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20190821133035-82a99dc22ef4/go.mod h1:JDmizlhaP5P0rYTTZB0reDMefAiJyfWPEtugV4in1oI=
 github.com/hashicorp/terraform-plugin-sdk v1.0.0 h1:3AjuuV1LJKs1NlG+heUgqWN6/QCSx2kDhyS6K7F0fTw=
