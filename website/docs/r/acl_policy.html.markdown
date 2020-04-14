@@ -12,7 +12,17 @@ Manages an ACL policy registered in Nomad.
 
 ## Example Usage
 
-Registering a policy from an HCL file:
+Registering a policy from a HCL file with Terraform 0.12 or greater:
+
+```hcl
+resource "nomad_acl_policy" "dev" {
+  name        = "dev"
+  description = "Submit jobs to the dev environment."
+  rules_hcl   = file("${path.module}/dev.hcl"
+}
+```
+
+Registering a policy from a HCL file with Terraform 0.11 or prior:
 
 ```hcl
 resource "nomad_acl_policy" "dev" {
