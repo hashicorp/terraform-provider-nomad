@@ -12,12 +12,12 @@ exclude (
 )
 
 require (
-	github.com/google/go-cmp v0.3.0
+	github.com/google/go-cmp v0.3.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f
 	github.com/hashicorp/nomad/api v0.0.0-20200514212530-34c044e96bd9
-	github.com/hashicorp/terraform-plugin-sdk v1.0.0
+	github.com/hashicorp/terraform-plugin-sdk v1.12.0
 	github.com/hashicorp/vault v0.10.4
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/stretchr/testify v1.5.1
