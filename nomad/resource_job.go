@@ -259,7 +259,10 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
 	evalId := resp.EvalID
-	if !d.Get("detach").(bool) {
+	if d.Get("detach").(bool) {
+		d.Set("deployment_id", "")
+		d.Set("deployment_status", "")
+	} else {
 		log.Printf("[DEBUG] will monitor deployment of job '%s'", *job.ID)
 		stateConf := &resource.StateChangeConf{
 			Pending:    []string{"monitoring_deployment", "monitoring_evaluation"},
@@ -304,8 +307,6 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 	deploymentId := ""
 
 	return func() (interface{}, string, error) {
-		var deployment *api.Deployment
-		var state string
 		if deploymentId == "" {
 			// monitor the eval
 			log.Printf("[DEBUG] monitoring evaluation '%s'", evalId)
@@ -318,6 +319,7 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 			switch eval.Status {
 			case "complete":
 				// Monitor the next eval in the chain, if present
+				var state string
 				if eval.NextEval != "" {
 					log.Printf("[DEBUG] will monitor follow-up eval '%v'", evalId)
 					evalId = eval.NextEval
@@ -330,13 +332,15 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 					log.Printf("[WARN] job has been scheduled, but there is no deployment to monitor")
 					state = "job_scheduled_without_deployment"
 				}
+				return nil, state, nil
 			case "failed", "cancelled":
 				return nil, "", fmt.Errorf("evaluation failed: %v", eval.StatusDescription)
 			default:
-				state = "monitoring_evaluation"
+				return nil, "monitoring_evaluation", nil
 			}
 		} else {
 			// monitor the deployment
+			var state string
 			deployment, _, err := client.Deployments().Info(deploymentId, nil)
 			if err != nil {
 				log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
@@ -355,8 +359,8 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 				// don't overwhelm the API server
 				state = "monitoring_deployment"
 			}
+			return deployment, state, nil
 		}
-		return deployment, state, nil
 	}
 }
 
@@ -446,7 +450,22 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
+	if !d.NewValueKnown("jobspec") {
+		d.SetNewComputed("name")
+		d.SetNewComputed("modify_index")
+		d.SetNewComputed("namespace")
+		d.SetNewComputed("type")
+		d.SetNewComputed("region")
+		d.SetNewComputed("datacenters")
+		d.SetNewComputed("allocation_ids")
+		d.SetNewComputed("task_groups")
+		d.SetNewComputed("deployment_id")
+		d.SetNewComputed("deployment_status")
+		return nil
+	}
+
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
+
 	if oldSpecRaw.(string) == newSpecRaw.(string) {
 		// nothing to do!
 		return nil
