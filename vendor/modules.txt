@@ -76,10 +76,10 @@ github.com/google/go-cmp/cmp/internal/value
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
-# github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
-github.com/gorhill/cronexpr
 # github.com/gorilla/websocket v1.4.1
 github.com/gorilla/websocket
+# github.com/hashicorp/cronexpr v1.1.0
+github.com/hashicorp/cronexpr
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
@@ -132,7 +132,7 @@ github.com/hashicorp/hcl2/hclwrite
 github.com/hashicorp/hil/ast
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/nomad/api v0.0.0-20200407142900-e7d563e9e04f
+# github.com/hashicorp/nomad/api v0.0.0-20200514212530-34c044e96bd9
 ## explicit
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
@@ -227,7 +227,7 @@ github.com/posener/complete/match
 # github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/stretchr/testify v1.3.0
+# github.com/stretchr/testify v1.5.1
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
@@ -375,3 +375,5 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 google.golang.org/grpc/test/bufconn
+# gopkg.in/yaml.v2 v2.2.8
+gopkg.in/yaml.v2
