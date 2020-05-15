@@ -1,6 +1,10 @@
 ## 1.4.6 (Unreleased)
 
-* **Target Nomad 0.11.0**: updated the nomad client to support Nomad API version 0.11.2 ([#103](https://github.com/terraform-providers/terraform-provider-nomad/pull/103))
+* **Target Nomad 0.11.2**: updated the nomad client to support Nomad API version 0.11.2 ([#103](https://github.com/terraform-providers/terraform-provider-nomad/pull/103))
+
+BUG FIXES: 
+* resource/nomad_job: deployment info was not being set/unset according to `detach` ([#104](https://github.com/terraform-providers/terraform-provider-nomad/issues/104))
+* resource/nomad_job: customize diff cannot be run when new jobspec isn't available at time of diff ([#92](https://github.com/terraform-providers/terraform-provider-nomad/issues/92))
 
 ## 1.4.5 (April 08, 2020)
 
@@ -22,7 +26,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* resource/nomad_Job: Sort TaskGroup volumes to avoid `inconsistent final plan` errors ([#93](https://github.com/terraform-providers/terraform-provider-nomad/issues/93))
+* resource/nomad_job: Sort TaskGroup volumes to avoid `inconsistent final plan` errors ([#93](https://github.com/terraform-providers/terraform-provider-nomad/issues/93))
 
 ## 1.4.2 (October 11, 2019)
 
