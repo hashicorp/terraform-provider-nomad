@@ -1768,6 +1768,7 @@ resource "nomad_job" "test" {
 job "foo-csi-controller" {
   datacenters = ["dc1"]
   group "foo-controller" {
+    stop_after_client_disconnect = true
     task "plugin" {
       driver = "docker"
 
