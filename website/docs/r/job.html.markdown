@@ -64,6 +64,29 @@ EOT
 }
 ```
 
+## JSON jobspec
+
+The input jobspec can also be provided as JSON instead of HCL by setting the
+argument `json` to `true`:
+
+```hcl
+resource "nomad_job" "app" {
+  jobspec = "${file("${path.module}/job.json")}"
+  json    = true
+}
+```
+
+When using JSON, the input jobspec should have the same structured used by the
+[Nomad API](https://www.nomadproject.io/api-docs/json-jobs/). The Nomad CLI
+can translate HCL jobs to JSON:
+
+```shellsession
+nomad job run -output my-job.nomad > my-job.json
+```
+
+Or you can also use the [`/v1/jobs/parse`](https://www.nomadproject.io/api-docs/jobs/#parse-job)
+API endpoint.
+
 ## Argument Reference
 
 The following arguments are supported:
