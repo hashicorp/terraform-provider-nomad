@@ -548,21 +548,50 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 
 func parseJobspec(raw string, is_json bool, vaultToken *string) (*api.Job, error) {
 	var job *api.Job
+	var err error
+
 	if is_json {
-		err := json.Unmarshal([]byte(raw), &job)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing jobspec: %s", err)
-		}
+		job, err = parseJSONJobspec(raw)
 	} else {
-		var err error
 		job, err = jobspec.Parse(strings.NewReader(raw))
-		if err != nil {
-			return nil, fmt.Errorf("error parsing jobspec: %s", err)
-		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error parsing jobspec: %s", err)
+	}
+
+	// If job is empty after parsing, the input is not a valid Nomad job.
+	if reflect.DeepEqual(job, &api.Job{}) {
+		return nil, fmt.Errorf("error parsing jobspec: input JSON is not a valid Nomad jobspec")
 	}
 
 	// Inject the Vault token
 	job.VaultToken = vaultToken
+
+	return job, nil
+}
+
+func parseJSONJobspec(raw string) (*api.Job, error) {
+	// `nomad job run -output` returns a jobspec with a "Job" root, so
+	// partially parse the input JSON to detect if we have this root.
+	var root map[string]json.RawMessage
+
+	err := json.Unmarshal([]byte(raw), &root)
+	if err != nil {
+		return nil, err
+	}
+
+	jobBytes, ok := root["Job"]
+	if !ok {
+		// Parse the input as is if there's no "Job" root.
+		jobBytes = []byte(raw)
+	}
+
+	// Parse actual job.
+	var job *api.Job
+	err = json.Unmarshal(jobBytes, &job)
+	if err != nil {
+		return nil, err
+	}
 
 	return job, nil
 }
