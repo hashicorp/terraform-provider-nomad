@@ -587,13 +587,13 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 	}
 
 	// Parse actual job.
-	var job *api.Job
+	var job api.Job
 	err = json.Unmarshal(jobBytes, &job)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
