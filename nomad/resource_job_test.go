@@ -162,6 +162,40 @@ func TestResourceJob_consulConnect(t *testing.T) {
 }
 
 func TestResourceJob_json(t *testing.T) {
+	// Test invalid JSON inputs.
+	re := regexp.MustCompile("error parsing jobspec")
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config:      testResourceJob_invalidJSONConfig,
+				ExpectError: re,
+			},
+			{
+				Config:      testResourceJob_invalidJSONConfig_notJobspec,
+				ExpectError: re,
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
+	})
+
+	// Test jobspec with "Job" root.
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_jsonConfigWithRoot,
+				Check:  testResourceJob_initialCheck(t),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
+	})
+
+	// Test plain jobspec.
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -465,6 +499,63 @@ resource "nomad_job" "test" {
 			}
 		}
 	EOT
+}
+`
+
+var testResourceJob_invalidJSONConfig = `
+resource "nomad_job" "test" {
+  json = true
+  jobspec = "not json"
+}
+`
+
+var testResourceJob_invalidJSONConfig_notJobspec = `
+resource "nomad_job" "test" {
+  json = true
+  jobspec = <<EOT
+{
+  "not": "job"
+}
+EOT
+}
+`
+
+var testResourceJob_jsonConfigWithRoot = `
+resource "nomad_job" "test" {
+	json = true
+	jobspec = <<EOT
+{
+  "Job": {
+    "Datacenters": [ "dc1" ],
+    "ID": "foo-json",
+    "Name": "foo-json",
+    "Type": "service",
+    "TaskGroups": [
+      {
+        "Name": "foo",
+        "Tasks": [{
+          "Config": {
+            "command": "/bin/sleep",
+            "args": [ "1" ]
+          },
+          "Driver": "raw_exec",
+          "Leader": true,
+          "LogConfig": {
+            "MaxFileSizeMB": 10,
+            "MaxFiles": 3
+          },
+          "Name": "foo",
+          "Resources": {
+            "CPU": 100,
+            "MemoryMB": 10
+          }
+        }
+        ]
+      }
+    ]
+  }
+}
+EOT
 }
 `
 
