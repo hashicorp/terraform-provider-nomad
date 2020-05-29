@@ -560,7 +560,7 @@ func parseJobspec(raw string, is_json bool, vaultToken *string) (*api.Job, error
 	}
 
 	// If job is empty after parsing, the input is not a valid Nomad job.
-	if reflect.DeepEqual(job, &api.Job{}) {
+	if job == nil || reflect.DeepEqual(job, &api.Job{}) {
 		return nil, fmt.Errorf("error parsing jobspec: input JSON is not a valid Nomad jobspec")
 	}
 
