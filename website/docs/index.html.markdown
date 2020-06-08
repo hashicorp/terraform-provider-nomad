@@ -61,3 +61,33 @@ The following arguments are supported:
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
   environment variable.
+
+## Multi-Region Deployments
+
+Each instance of the `nomad` provider is associated with a single region. Use
+[`alias`](https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-instances)
+to specify multiple providers for multi-region clusters:
+
+```hcl
+provider "nomad" {
+  address = "http://127.0.0.1:4646"
+  region  = "us"
+  alias   = "us"
+}
+
+provider "nomad" {
+  address = "http://127.0.0.1:4646"
+  region  = "eu"
+  alias   = "eu"
+}
+
+resource "nomad_job" "nomad_us" {
+  provider = nomad.us
+  jobspec  = file("${path.module}/example-us.nomad")
+}
+
+resource "nomad_job" "nomad_eu" {
+  provider = nomad.eu
+  jobspec  = file("${path.module}/example-eu.nomad")
+}
+```
