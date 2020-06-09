@@ -19,8 +19,8 @@ Manages an ACL token in Nomad.
 Creating a token with limited policies:
 
 ```hcl
-resource "nomad_acl_token" "ron" {
-  name     = "Ron Weasley"
+resource "nomad_acl_token" "dakota" {
+  name     = "Dakota"
   type     = "client"
   policies = ["dev", "qa"]
 }
@@ -29,8 +29,8 @@ resource "nomad_acl_token" "ron" {
 Creating a global token that will be replicated to all regions:
 
 ```hcl
-resource "nomad_acl_token" "hermione" {
-  name     = "Hermione Granger"
+resource "nomad_acl_token" "dakota" {
+  name     = "Dakota"
   type     = "client"
   policies = ["dev", "qa"]
   global   = true
@@ -40,10 +40,8 @@ resource "nomad_acl_token" "hermione" {
 Creating a token with full access to the cluster:
 
 ```hcl
-resource "nomad_acl_token" "hagrid" {
-  name = "Rubeus Hagrid"
-
-  # Hagrid is the keeper of the keys
+resource "nomad_acl_token" "iman" {
+  name = "Iman"
   type = "management"
 }
 ```
@@ -57,7 +55,7 @@ resource "nomad_acl_token" "token" {
 }
 
 output "nomad_token" {
-  value = "${nomad_acl_token.token.secret_id}"
+  value = nomad_acl_token.token.secret_id
 }
 ```
 
