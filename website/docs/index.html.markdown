@@ -25,7 +25,7 @@ provider "nomad" {
 
 # Register a job
 resource "nomad_job" "monitoring" {
-  jobspec = "${file("${path.module}/jobspec.hcl")}"
+  jobspec = file("${path.module}/jobspec.hcl")
 }
 ```
 
@@ -70,24 +70,24 @@ to specify multiple providers for multi-region clusters:
 
 ```hcl
 provider "nomad" {
-  address = "http://127.0.0.1:4646"
+  address = "http://nomad.mycompany.com:4646"
   region  = "us"
   alias   = "us"
 }
 
 provider "nomad" {
-  address = "http://127.0.0.1:4646"
+  address = "http://nomad.mycompany.com:4646"
   region  = "eu"
   alias   = "eu"
 }
 
 resource "nomad_job" "nomad_us" {
   provider = nomad.us
-  jobspec  = file("${path.module}/example-us.nomad")
+  jobspec  = file("${path.module}/jobspec-us.nomad")
 }
 
 resource "nomad_job" "nomad_eu" {
   provider = nomad.eu
-  jobspec  = file("${path.module}/example-eu.nomad")
+  jobspec  = file("${path.module}/jobspec-eu.nomad")
 }
 ```

@@ -18,8 +18,8 @@ An error is triggered if zero or more than one result is returned by the query.
 Get the data about a snapshot:
 
 ```hcl
-data "nomad_job" "example1" {
-  job_id = "example_job"
+data "nomad_job" "example" {
+  job_id = "example"
 }
 ```
 

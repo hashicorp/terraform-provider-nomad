@@ -24,7 +24,7 @@ Registering a job from a jobspec file:
 
 ```hcl
 resource "nomad_job" "app" {
-  jobspec = "${file("${path.module}/job.hcl")}"
+  jobspec = file("${path.module}/jobpec.hcl")
 }
 ```
 
@@ -39,22 +39,22 @@ resource "nomad_job" "app" {
   jobspec = <<EOT
 job "foo" {
   datacenters = ["dc1"]
-  type = "service"
+  type        = "service"
   group "foo" {
     task "foo" {
       driver = "raw_exec"
       config {
         command = "/bin/sleep"
-        args = ["1"]
+        args    = ["1"]
       }
 
       resources {
-        cpu = 20
+        cpu    = 20
         memory = 10
       }
 
       logs {
-        max_files = 3
+        max_files     = 3
         max_file_size = 10
       }
     }
@@ -71,7 +71,7 @@ argument `json` to `true`:
 
 ```hcl
 resource "nomad_job" "app" {
-  jobspec = "${file("${path.module}/job.json")}"
+  jobspec = file("${path.module}/jobspec.json")
   json    = true
 }
 ```
@@ -98,9 +98,9 @@ The following arguments are supported:
 
 - `deregister_on_id_change` `(bool: true)` - Determines if the job will be
   deregistered if the ID of the job in the jobspec changes.
-  
+
 - `detach` `(bool: true)` - If true, the provider will return immediately
-  after creating or updating, instead of monitoring.  
+  after creating or updating, instead of monitoring.
 
 - `policy_override` `(bool: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.
