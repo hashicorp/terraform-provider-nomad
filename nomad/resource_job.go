@@ -276,7 +276,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		if deployment != nil {
 			d.Set("deployment_id", deployment.ID)
 			d.Set("deployment_status", deployment.Status)
-		} else if job.Type != nil && *job.Type == api.JobTypeService {
+		} else {
 			d.Set("deployment_id", nil)
 			d.Set("deployment_status", nil)
 		}
