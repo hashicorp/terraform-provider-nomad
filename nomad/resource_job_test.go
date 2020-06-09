@@ -44,7 +44,7 @@ func TestResourceJob_basic(t *testing.T) {
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespace,
@@ -153,13 +153,31 @@ func TestResourceJob_batchNoDetach(t *testing.T) {
 			{
 				Config: testResourceJob_batchNoDetach,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr(resourceName, "deployment_id"),
-					resource.TestCheckNoResourceAttr(resourceName, "deployment_status"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
+					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
 					resource.TestCheckResourceAttrSet(resourceName, "allocation_ids.#"),
 				),
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-batch"),
+	})
+}
+
+func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
+	resourceName := "nomad_job.service"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_serviceNoDeployment,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
+					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-service-without-deployment"),
 	})
 }
 
@@ -1900,6 +1918,32 @@ job "foo-service-with-deployment" {
     }
     task "sleep" {
       driver = "raw_exec"
+      config {
+        command = "sleep"
+        args = ["3600"]
+      }
+    }
+  }
+}
+EOT
+}`
+
+var testResourceJob_serviceNoDeployment = `
+resource "nomad_job" "service" {
+  detach = false
+  jobspec = <<EOT
+job "foo-service-without-deployment" {
+  type          = "service"
+  datacenters   = ["dc1"]
+  group "service" {
+    update {
+      max_parallel = 0
+    }
+    task "sleep" {
+      driver = "raw_exec"
+      env {
+        version = 2
+      }
       config {
         command = "sleep"
         args = ["3600"]
