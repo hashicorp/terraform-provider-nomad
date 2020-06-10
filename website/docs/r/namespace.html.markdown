@@ -26,14 +26,13 @@ Registering a namespace:
 resource "nomad_namespace" "dev" {
   name        = "dev"
   description = "Shared development environment."
-  quota = "dev"
+  quota       = "dev"
 }
 ```
 
-Registering a namespace with a quota
+Registering a namespace with a quota:
 
 ```hcl
-
 resource "nomad_quota_specification" "web_team" {
   name        = "web-team"
   description = "web team quota"
@@ -49,9 +48,9 @@ resource "nomad_quota_specification" "web_team" {
 }
 
 resource "nomad_namespace" "web" {
-  name = "web"
+  name        = "web"
   description = "Web team production environment."
-  quota = "${nomad_quota_specification.web_team.name}"
+  quota       = nomad_quota_specification.web_team.name
 }
 ```
 
