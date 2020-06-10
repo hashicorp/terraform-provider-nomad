@@ -121,6 +121,8 @@ github.com/hashicorp/nomad/api v0.0.0-20200514212530-34c044e96bd9 h1:h3cc4iGhYvG
 github.com/hashicorp/nomad/api v0.0.0-20200514212530-34c044e96bd9/go.mod h1:DCi2k47yuUDzf2qWAK8E1RVmWgz/lc0jZQeEnICTxmY=
 github.com/hashicorp/nomad/api v0.0.0-20200603135026-846a2e55d44c h1:9jEI+DwRA0kNLZaQ7hm5nu5XeWnrlURgWyHxcqnnw5g=
 github.com/hashicorp/nomad/api v0.0.0-20200603135026-846a2e55d44c/go.mod h1:DCi2k47yuUDzf2qWAK8E1RVmWgz/lc0jZQeEnICTxmY=
+github.com/hashicorp/nomad/api v0.0.0-20200605190354-0af29f74af5b h1:+OtG7ecMlFJOQ9IICHmcoZN2kFWlPE/CJpLiZhtepH0=
+github.com/hashicorp/nomad/api v0.0.0-20200605190354-0af29f74af5b/go.mod h1:DCi2k47yuUDzf2qWAK8E1RVmWgz/lc0jZQeEnICTxmY=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20191115094559-17f92b0546e8 h1:+RyjwU+Gnd/aTJBPZVDNm903eXVjjqhbaR4Ypx3xYyY=
 github.com/hashicorp/terraform-config-inspect v0.0.0-20191115094559-17f92b0546e8/go.mod h1:p+ivJws3dpqbp1iP84+npOyAmTTOLMgCzrXd3GSdn/A=
 github.com/hashicorp/terraform-json v0.4.0 h1:KNh29iNxozP5adfUFBJ4/fWd0Cu3taGgjHB38JYqOF4=
