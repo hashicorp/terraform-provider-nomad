@@ -2,7 +2,11 @@
 
 * **Target Nomad 0.11.2**: updated the nomad client to support Nomad API version 0.11.2 ([#113](https://github.com/terraform-providers/terraform-provider-nomad/issues/113))
 
+IMPROVEMENTS:
+* resource/nomad_job: allow JSON input to have the same format as produced by the `nomad` CLI ([#111](https://github.com/terraform-providers/terraform-provider-nomad/pull/111))
+
 BUG FIXES:
+* resource/nomad_job: don't panic when JSON input is invalid ([#111](https://github.com/terraform-providers/terraform-provider-nomad/pull/111))
 * resource/nomad_job: modified job monitoring to account for scenarios where no deployment is created ([#116](https://github.com/terraform-providers/terraform-provider-nomad/issues/116))
 
 
