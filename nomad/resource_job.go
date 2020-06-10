@@ -215,6 +215,13 @@ func resourceJob() *schema.Resource {
 	}
 }
 
+const (
+	MonitoringEvaluation = "monitoring_evaluation"
+	EvaluationComplete   = "evaluation_complete"
+	MonitoringDeployment = "monitoring_deployment"
+	DeploymentSuccessful = "deployment_successful"
+)
+
 func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	timeout := d.Timeout(schema.TimeoutCreate)
 	if !d.IsNewResource() {
@@ -258,109 +265,129 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	d.Set("namespace", job.Namespace)
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
-	evalId := resp.EvalID
-	if d.Get("detach").(bool) {
-		d.Set("deployment_id", "")
-		d.Set("deployment_status", "")
-	} else {
-		log.Printf("[DEBUG] will monitor deployment of job '%s'", *job.ID)
-		stateConf := &resource.StateChangeConf{
-			Pending:    []string{"monitoring_deployment", "monitoring_evaluation"},
-			Target:     []string{"job_scheduled_without_deployment", "deployment_successful"},
-			Refresh:    deploymentStateRefreshFunc(client, evalId),
-			Timeout:    timeout,
-			Delay:      10 * time.Second,
-			MinTimeout: 3 * time.Second,
-		}
-
-		state, err := stateConf.WaitForState()
+	if d.Get("detach") == false && resp.EvalID != "" {
+		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s'", *job.ID)
+		deployment, err := monitorDeployment(client, timeout, resp.EvalID)
 		if err != nil {
 			return fmt.Errorf(
-				"error waiting for job '%s' to deploy successfully: %s",
+				"error waiting for job '%s' to schedule/deploy successfully: %s",
 				*job.ID, err)
 		}
-
-		deployment := state.(*api.Deployment)
-
 		if deployment != nil {
 			d.Set("deployment_id", deployment.ID)
 			d.Set("deployment_status", deployment.Status)
 		} else {
-			d.Set("deployment_id", "")
-			d.Set("deployment_status", "")
+			d.Set("deployment_id", nil)
+			d.Set("deployment_status", nil)
 		}
 	}
 
 	return resourceJobRead(d, meta) // populate other computed attributes
 }
 
-// deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
-// the deployment from a job create/update
-func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resource.StateRefreshFunc {
+// monitorDeployment monitors the evalution(s) from a job create/update and,
+// if they result in a deployment, monitors that deployment until completion.
+func monitorDeployment(client *api.Client, timeout time.Duration, initialEvalID string) (*api.Deployment, error) {
 
-	// evalId is the evaluation that we are currently monitoring. This will change
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{MonitoringEvaluation},
+		Target:     []string{EvaluationComplete},
+		Refresh:    evaluationStateRefreshFunc(client, initialEvalID),
+		Timeout:    timeout,
+		Delay:      0,
+		MinTimeout: 3 * time.Second,
+	}
+
+	state, err := stateConf.WaitForState()
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
+	}
+
+	evaluation := state.(*api.Evaluation)
+	if evaluation.DeploymentID == "" {
+		log.Printf("[WARN] job has been scheduled, but there is no deployment to monitor")
+		return nil, nil
+	}
+
+	stateConf = &resource.StateChangeConf{
+		Pending:    []string{MonitoringDeployment},
+		Target:     []string{DeploymentSuccessful},
+		Refresh:    deploymentStateRefreshFunc(client, evaluation.DeploymentID),
+		Timeout:    timeout,
+		Delay:      0,
+		MinTimeout: 5 * time.Second,
+	}
+
+	state, err = stateConf.WaitForState()
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
+	}
+	return state.(*api.Deployment), nil
+}
+
+// evaluationStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// the evaluation(s) from a job create/update
+func evaluationStateRefreshFunc(client *api.Client, initialEvalID string) resource.StateRefreshFunc {
+
+	// evalID is the evaluation that we are currently monitoring. This will change
 	// along with follow-up evaluations.
-	evalId := initialEvalId
-
-	// deploymentId is the deployment that we are monitoring. This is captured from the
-	// final evaluation.
-	deploymentId := ""
+	evalID := initialEvalID
 
 	return func() (interface{}, string, error) {
-		if deploymentId == "" {
-			// monitor the eval
-			log.Printf("[DEBUG] monitoring evaluation '%s'", evalId)
-			eval, _, err := client.Evaluations().Info(evalId, nil)
-			if err != nil {
-				log.Printf("[ERROR] error on Evaluation.Info during deploymentStateRefresh: %s", err)
-				return nil, "", err
-			}
-
-			switch eval.Status {
-			case "complete":
-				// Monitor the next eval in the chain, if present
-				var state string
-				if eval.NextEval != "" {
-					log.Printf("[DEBUG] will monitor follow-up eval '%v'", evalId)
-					evalId = eval.NextEval
-					state = "monitoring_evaluation"
-				} else if eval.DeploymentID != "" {
-					log.Printf("[DEBUG] job has been scheduled, will monitor deployment '%s'", eval.DeploymentID)
-					deploymentId = eval.DeploymentID
-					state = "monitoring_deployment"
-				} else {
-					log.Printf("[WARN] job has been scheduled, but there is no deployment to monitor")
-					state = "job_scheduled_without_deployment"
-				}
-				return nil, state, nil
-			case "failed", "cancelled":
-				return nil, "", fmt.Errorf("evaluation failed: %v", eval.StatusDescription)
-			default:
-				return nil, "monitoring_evaluation", nil
-			}
-		} else {
-			// monitor the deployment
-			var state string
-			deployment, _, err := client.Deployments().Info(deploymentId, nil)
-			if err != nil {
-				log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
-				return nil, "", err
-			}
-			switch deployment.Status {
-			case "successful":
-				log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
-				state = "deployment_successful"
-			case "failed", "cancelled":
-				log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
-				return deployment, "",
-					fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
-						deployment.ID, deployment.Status, deployment.StatusDescription)
-			default:
-				// don't overwhelm the API server
-				state = "monitoring_deployment"
-			}
-			return deployment, state, nil
+		// monitor the eval
+		log.Printf("[DEBUG] monitoring evaluation '%s'", evalID)
+		eval, _, err := client.Evaluations().Info(evalID, nil)
+		if err != nil {
+			log.Printf("[ERROR] error on Evaluation.Info during deploymentStateRefresh: %s", err)
+			return nil, "", err
 		}
+
+		var state string
+		switch eval.Status {
+		case "complete":
+			// Monitor the next eval in the chain, if present
+			log.Printf("[DEBUG] evaluation '%v' complete", eval.ID)
+			if eval.NextEval != "" {
+				log.Printf("[DEBUG] will monitor follow-up eval '%v'", eval.ID)
+				evalID = eval.NextEval
+				state = MonitoringEvaluation
+			} else {
+				state = EvaluationComplete
+			}
+		case "failed", "cancelled":
+			return nil, "", fmt.Errorf("evaluation failed: %v", eval.StatusDescription)
+		default:
+			state = MonitoringEvaluation
+		}
+		return eval, state, nil
+	}
+}
+
+// deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// the deployment from a job create/update
+func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		// monitor the deployment
+		var state string
+		deployment, _, err := client.Deployments().Info(deploymentID, nil)
+		if err != nil {
+			log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
+			return nil, "", err
+		}
+		switch deployment.Status {
+		case "successful":
+			log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
+			state = DeploymentSuccessful
+		case "failed", "cancelled":
+			log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
+			return deployment, "",
+				fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
+					deployment.ID, deployment.Status, deployment.StatusDescription)
+		default:
+			// don't overwhelm the API server
+			state = MonitoringDeployment
+		}
+		return deployment, state, nil
 	}
 }
 
@@ -424,9 +451,9 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
 	}
-	allocIds := make([]string, 0, len(allocStubs))
+	allocIDs := make([]string, 0, len(allocStubs))
 	for _, a := range allocStubs {
-		allocIds = append(allocIds, a.ID)
+		allocIDs = append(allocIDs, a.ID)
 	}
 
 	d.Set("name", job.ID)
@@ -434,7 +461,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("region", job.Region)
 	d.Set("datacenters", job.Datacenters)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
-	d.Set("allocation_ids", allocIds)
+	d.Set("allocation_ids", allocIDs)
 	d.Set("namespace", job.Namespace)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
@@ -539,6 +566,7 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	// _somehow_, but we won't know how much it will increment until
 	// after we complete registration.
 	d.SetNewComputed("modify_index")
+	// similarly, we won't know the allocation ids until after the job registration eval
 	d.SetNewComputed("allocation_ids")
 
 	d.SetNew("task_groups", jobTaskGroupsRaw(job.TaskGroups))

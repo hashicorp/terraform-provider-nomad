@@ -44,7 +44,7 @@ func TestResourceJob_basic(t *testing.T) {
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespace,
@@ -128,7 +128,57 @@ func TestResourceJob_lifecycle(t *testing.T) {
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-lifecycle"),
 	})
+}
 
+func TestResourceJob_serviceDeploymentInfo(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_serviceDeploymentInfo,
+				Check:  testResourceJob_serviceDeploymentInfoCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-service-with-deployment"),
+	})
+}
+
+func TestResourceJob_batchNoDetach(t *testing.T) {
+	resourceName := "nomad_job.batch_no_detach"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_batchNoDetach,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
+					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
+					resource.TestCheckResourceAttrSet(resourceName, "allocation_ids.#"),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-batch"),
+	})
+}
+
+func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
+	resourceName := "nomad_job.service"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_serviceNoDeployment,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
+					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-service-without-deployment"),
+	})
 }
 
 func TestResourceJob_csiController(t *testing.T) {
@@ -289,7 +339,7 @@ func TestResourceJob_rename(t *testing.T) {
 func TestResourceJob_change_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespace,
@@ -1021,6 +1071,40 @@ func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
 
 	if diff := cmp.Diff(expScaling, *taskGroup.Scaling); diff != "" {
 		return fmt.Errorf("task group scaling policy mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_serviceDeploymentInfoCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.service"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	deployment, _, err := client.Jobs().LatestDeployment(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+	if deployment == nil {
+		return fmt.Errorf("missing latest deployment")
+	}
+
+	if got, want := instanceState.Attributes["deployment_id"], deployment.ID; got != want {
+		return fmt.Errorf("deployment_info is %q; want %q", got, want)
+	}
+	if got, want := instanceState.Attributes["deployment_status"], deployment.Status; got != want {
+		return fmt.Errorf("deployment_info is %q; want %q", got, want)
 	}
 
 	return nil
@@ -1818,6 +1902,76 @@ resource "nomad_job" "test" {
 	EOT
 }
 `
+
+var testResourceJob_serviceDeploymentInfo = `
+resource "nomad_job" "service" {
+  detach = false
+  jobspec = <<EOT
+job "foo-service-with-deployment" {
+  type          = "service"
+  datacenters   = ["dc1"]
+  group "service" {
+    update {
+      min_healthy_time = "1s"
+      healthy_deadline = "2s"
+      progress_deadline = "3s"
+    }
+    task "sleep" {
+      driver = "raw_exec"
+      config {
+        command = "sleep"
+        args = ["3600"]
+      }
+    }
+  }
+}
+EOT
+}`
+
+var testResourceJob_serviceNoDeployment = `
+resource "nomad_job" "service" {
+  detach = false
+  jobspec = <<EOT
+job "foo-service-without-deployment" {
+  type          = "service"
+  datacenters   = ["dc1"]
+  group "service" {
+    update {
+      max_parallel = 0
+    }
+    task "sleep" {
+      driver = "raw_exec"
+      env {
+        version = 2
+      }
+      config {
+        command = "sleep"
+        args = ["3600"]
+      }
+    }
+  }
+}
+EOT
+}`
+
+var testResourceJob_batchNoDetach = `
+resource "nomad_job" "batch_no_detach" {
+  detach = false
+  jobspec = <<EOT
+job "foo-batch" {
+  type          = "batch"
+  datacenters   = ["dc1"]
+  group "service" {
+    task "env" {
+      driver = "raw_exec"
+      config {
+        command = "env"
+      }
+    }
+  }
+}
+EOT
+}`
 
 var testResourceJob_lifecycle = `
 resource "nomad_job" "test" {
