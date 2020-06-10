@@ -1,4 +1,11 @@
 ## 1.4.7 (Unreleased)
+
+* **Target Nomad 0.11.2**: updated the nomad client to support Nomad API version 0.11.2 ([#113](https://github.com/terraform-providers/terraform-provider-nomad/issues/113))
+
+BUG FIXES:
+* resource/nomad_job: modified job monitoring to account for scenarios where no deployment is created ([#116](https://github.com/terraform-providers/terraform-provider-nomad/issues/116))
+
+
 ## 1.4.6 (May 18, 2020)
 
 * **Target Nomad 0.11.2**: updated the nomad client to support Nomad API version 0.11.2 ([#103](https://github.com/terraform-providers/terraform-provider-nomad/pull/103))
