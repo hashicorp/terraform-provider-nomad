@@ -1,7 +1,7 @@
 ## 1.4.8 (Unreleased)
 ## 1.4.7 (June 12, 2020)
 
-* **Target Nomad 0.11.2**: updated the nomad client to support Nomad API version 0.11.2 ([#113](https://github.com/terraform-providers/terraform-provider-nomad/issues/113))
+* **Target Nomad 0.11.3**: updated the nomad client to support Nomad API version 0.11.3 ([#113](https://github.com/terraform-providers/terraform-provider-nomad/issues/113))
 
 IMPROVEMENTS:
 * resource/nomad_job: allow JSON input to have the same format as produced by the `nomad` CLI ([#111](https://github.com/terraform-providers/terraform-provider-nomad/pull/111))
