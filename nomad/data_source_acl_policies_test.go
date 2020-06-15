@@ -1,0 +1,68 @@
+package nomad
+
+import (
+	"fmt"
+	"regexp"
+	"testing"
+
+	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+)
+
+func TestAccDataSourceNomadAclPolicies_Basic(t *testing.T) {
+	dataSourceName := "data.nomad_acl_policies.test"
+	numPolicies := 2
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				PreConfig:   testAccCreateNomadAclPolicies(t, numPolicies),
+				Config:      testAccNomadAclPoliciesConfig("non-existent"),
+				ExpectError: regexp.MustCompile(`query returned an empty list of ACL policies`),
+			},
+			{
+				Config: testAccNomadAclPoliciesConfig("tf-acc-test"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "2"),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.0.name", regexp.MustCompile("tf-acc-test")),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.0.description", regexp.MustCompile("Test ACL Policy tf-acc-test")),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.1.name", regexp.MustCompile("tf-acc-test")),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.1.description", regexp.MustCompile("Test ACL Policy tf-acc-test")),
+				),
+			},
+		},
+	})
+}
+
+func testAccNomadAclPoliciesConfig(prefix string) string {
+	return fmt.Sprintf(`
+data "nomad_acl_policies" "test" {
+	prefix = "%s"
+}
+`, prefix)
+}
+
+func testAccCreateNomadAclPolicies(t *testing.T, n int) func() {
+	return func() {
+		client := testProvider.Meta().(ProviderConfig).client
+		for i := 0; i < n; i++ {
+			rName := acctest.RandomWithPrefix("tf-acc-test")
+			policy := api.ACLPolicy{
+				Name:        rName,
+				Description: fmt.Sprintf("Test ACL Policy %s", rName),
+				Rules: `
+				namespace "default" {
+				  policy = "write"
+				}
+				`,
+			}
+			_, err := client.ACLPolicies().Upsert(&policy, nil)
+			if err != nil {
+				t.Fatalf("error inserting ACLPolicy %q: %s", policy.Name, err.Error())
+			}
+		}
+	}
+}
