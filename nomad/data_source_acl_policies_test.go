@@ -28,13 +28,18 @@ func TestAccDataSourceNomadAclPolicies_Basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "2"),
 					resource.TestMatchResourceAttr(dataSourceName, "policies.0.name", regexp.MustCompile("tf-acc-test")),
-					resource.TestMatchResourceAttr(dataSourceName, "policies.0.description", regexp.MustCompile("Test ACL Policy tf-acc-test")),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.0.description", regexp.MustCompile("Terraform ACL Policy tf-acc-test")),
 					resource.TestMatchResourceAttr(dataSourceName, "policies.1.name", regexp.MustCompile("tf-acc-test")),
-					resource.TestMatchResourceAttr(dataSourceName, "policies.1.description", regexp.MustCompile("Test ACL Policy tf-acc-test")),
+					resource.TestMatchResourceAttr(dataSourceName, "policies.1.description", regexp.MustCompile("Terraform ACL Policy tf-acc-test")),
 				),
 			},
 		},
 	})
+	// ACL Policy Resource Clean-up
+	err := sweepACLPolicies()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func testAccNomadAclPoliciesConfig(prefix string) string {
@@ -52,7 +57,7 @@ func testAccCreateNomadAclPolicies(t *testing.T, n int) func() {
 			rName := acctest.RandomWithPrefix("tf-acc-test")
 			policy := api.ACLPolicy{
 				Name:        rName,
-				Description: fmt.Sprintf("Test ACL Policy %s", rName),
+				Description: fmt.Sprintf("Terraform ACL Policy %s", rName),
 				Rules: `
 				namespace "default" {
 				  policy = "write"
@@ -65,4 +70,19 @@ func testAccCreateNomadAclPolicies(t *testing.T, n int) func() {
 			}
 		}
 	}
+}
+
+func sweepACLPolicies() error {
+	client := testProvider.Meta().(ProviderConfig).client
+	policies, _, err := client.ACLPolicies().List(&api.QueryOptions{})
+	if err != nil {
+		return err
+	}
+	for _, policy := range policies {
+		_, err := client.ACLPolicies().Delete(policy.Name, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

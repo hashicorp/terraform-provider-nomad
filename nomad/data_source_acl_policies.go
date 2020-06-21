@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -73,7 +73,7 @@ func dataSourceAclPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 		return errors.New("query returned an empty list of ACL policies")
 	}
 
-	d.SetId(time.Now().UTC().String())
+	d.SetId(resource.UniqueId())
 	if err := d.Set("policies", flattenAclPolicies(policies)); err != nil {
 		return fmt.Errorf("error setting policies: %#v", err)
 	}
