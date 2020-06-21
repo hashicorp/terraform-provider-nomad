@@ -56,7 +56,7 @@ func dataSourceAclPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	if queryOpts.Prefix != "" {
 		debugMsg += fmt.Sprintf(" for prefix: %s", queryOpts.Prefix)
 	}
-	log.Printf(debugMsg)
+	log.Print(debugMsg)
 
 	policies, _, err := client.ACLPolicies().List(queryOpts)
 	if err != nil {
