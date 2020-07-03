@@ -181,6 +181,20 @@ func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
 	})
 }
 
+func TestResourceJob_multiregion(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.12.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_multiregion,
+				Check:  testResourceJob_multiregionCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-multiregion"),
+	})
+}
+
 func TestResourceJob_csiController(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -1310,6 +1324,40 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJob_multiregionCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.multiregion"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check that job has a multiregion stanza
+	if job.Multiregion == nil {
+		return fmt.Errorf("multiregion config not found")
+	}
+
+	return nil
+}
+
 func testResourceJob_checkExistsNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
@@ -2032,6 +2080,35 @@ job "foo-csi-controller" {
         id        = "aws-ebs0"
         type      = "controller"
         mount_dir = "/csi"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
+	EOT
+}
+`
+
+var testResourceJob_multiregion = `
+resource "nomad_job" "multiregion" {
+	jobspec = <<EOT
+job "foo-multiregion" {
+  multiregion {
+    region "global" {
+       datacenters = ["dc1"]
+       count = 2
+    }
+  }
+  group "foo" {
+    task "foo" {
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
       }
 
       resources {
