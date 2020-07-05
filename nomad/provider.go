@@ -71,6 +71,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_job":         dataSourceJob(),
 			"nomad_namespaces":  dataSourceNamespaces(),
 			"nomad_regions":     dataSourceRegions(),
+			"nomad_volumes":     dataSourceVolumes(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
