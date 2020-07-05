@@ -396,7 +396,6 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	// If deregistration is disabled, then do nothing
-
 	deregister_on_destroy := d.Get("deregister_on_destroy").(bool)
 	if !deregister_on_destroy {
 		log.Printf(

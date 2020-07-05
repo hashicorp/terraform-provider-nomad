@@ -3,6 +3,7 @@ package nomad
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -17,7 +18,7 @@ func dataSourceVolumes() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Volume type",
+				Description: "Volume Type (currently only 'csi')",
 				Default:     "csi",
 				Elem: &schema.Schema{
 					Type:         schema.TypeString,
@@ -75,15 +76,23 @@ func volumesDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading volumes from Nomad: %s", err)
 	}
-	volumes := make([]map[string]string, 0, len(resp))
+	volumes := make([]map[string]interface{}, 0, len(resp))
 	for _, v := range resp {
-		volume := map[string]string{
-			"ID":             v.ID,
-			"ExternalID":     v.ExternalID,
-			"Namespace":      v.Namespace,
-			"Name":           v.Name,
-			"AccessMode":     string(v.AccessMode),
-			"AttachmentMode": string(v.AttachmentMode),
+		volume := map[string]interface{}{
+			"id":                   v.ID,
+			"namespace":            v.Namespace,
+			"name":                 v.Name,
+			"external_id":          v.ExternalID,
+			"access_mode":          v.AccessMode,
+			"attachement_mode":     v.AttachmentMode,
+			"schedulable":          strconv.FormatBool(v.Schedulable),
+			"plugin_id":            v.PluginID,
+			"plugin_provider":      v.Provider,
+			"controller_required":  strconv.FormatBool(v.ControllerRequired),
+			"controllers_healthy":  strconv.Itoa(v.ControllersHealthy),
+			"controllers_expected": strconv.Itoa(v.ControllersExpected),
+			"nodes_healthy":        strconv.Itoa(v.NodesHealthy),
+			"nodes_expected":       strconv.Itoa(v.NodesExpected),
 		}
 		volumes = append(volumes, volume)
 	}
