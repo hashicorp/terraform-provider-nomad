@@ -70,6 +70,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_deployments": dataSourceDeployments(),
 			"nomad_job":         dataSourceJob(),
 			"nomad_namespaces":  dataSourceNamespaces(),
+			"nomad_plugins":     dataSourcePlugins(),
 			"nomad_regions":     dataSourceRegions(),
 			"nomad_volumes":     dataSourceVolumes(),
 		},
@@ -81,6 +82,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_namespace":           resourceNamespace(),
 			"nomad_quota_specification": resourceQuotaSpecification(),
 			"nomad_sentinel_policy":     resourceSentinelPolicy(),
+			"nomad_volume":              resourceVolume(),
 		},
 	}
 }
