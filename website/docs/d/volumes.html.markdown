@@ -16,6 +16,15 @@ Retrieve a list of volumes in Nomad.
 data "nomad_volumes" "example" {}
 ```
 
+## Argument Reference
+
+The following arguments are supported:
+
+* `type`: `(string: "csi")` Volume type (currently only supports `csi`)
+* `node_id`: `(string: optional)` Volume node filter. 
+* `plugin_id`: `(string: optional)` Plugin ID filter. 
+* `namespace`: `(string: "default")` Nomad namespace.
+
 ## Attribute Reference
 
 The following attributes are exported:

@@ -178,14 +178,9 @@ func resourceVolume() *schema.Resource {
 				Type:     schema.TypeInt,
 			},
 
-			"resource_exhausted": {
-				Computed: true,
-				Type:     schema.TypeInt,
-			},
-
 			"schedulable": {
 				Computed: true,
-				Type:     schema.TypeString,
+				Type:     schema.TypeBool,
 			},
 		},
 	}
@@ -256,7 +251,7 @@ func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	err := client.CSIVolumes().Deregister(id, true, nil)
+	err := client.CSIVolumes().Deregister(id, true, opts)
 	if err != nil {
 		return fmt.Errorf("error deregistering volume: %s", err)
 	}
@@ -299,7 +294,6 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("plugin_provider_version", volume.ProviderVersion)
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
-	d.Set("resource_exhausted", volume.ResourceExhausted)
 	d.Set("schedulable", volume.Schedulable)
 
 	return nil
