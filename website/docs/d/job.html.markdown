@@ -8,7 +8,7 @@ description: |-
 
 # nomad_job
 
-Get information on an job ID. The aim of this datasource is to enable
+Get information on a job ID. The aim of this datasource is to enable
 you to act on various settings and states of a particular job.
 
 An error is triggered if zero or more than one result is returned by the query.

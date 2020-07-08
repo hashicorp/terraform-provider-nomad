@@ -17,7 +17,21 @@ This can be used to register external volumes in a Nomad cluster.
 Registering a volume:
 
 ```hcl
-resource "nomad_volume" "vol1" {
+// it can sometimes be helpful to wait for a particular plugin to be available
+data "nomad_plugin" "ebs" {
+  plugin_id = "aws-ebs0"
+  wait_for_healthy = true
+}
+
+resource "nomad_volume" "mysql_volume" {
+  depends_on = [data.nomad_plugin.ebs]
+  type = "csi"
+  plugin_id = "aws-ebs0"
+  volume_id = "mysql_volume"
+  name = "mysql_volume"
+  external_id = module.hashistack.ebs_test_volume_id
+  access_mode = "single-node-writer"
+  attachment_mode = "file-system"
 }
 ```
 
@@ -25,19 +39,27 @@ resource "nomad_volume" "vol1" {
 
 The following arguments are supported:
 
-- `jobspec` `(string: <required>)` - The contents of the jobspec to register.
+- `type`: `(string: <required>)` The type of the volume. Currently, only `csi` is supported.
+- `namespace`: `(string: "default")` The namespace in which to register the volume.
+- `volume_id`: `(string: <required>)` The unique ID of the volume.
+- `name`: `(string: <required>)` The display name for the volume.
+- `plugin_id`: `(string: <required>)` The ID if the Nomad plugin for registering this volume.
+- `external_id`: `(string: <required>)` The ID of the physical volume from the storage provider.
+- `access_mode`: `(string: <required>)` Defines whether a volume should be available concurrently.
+- `attachment_mode`: `(string: <required>)` The storage API that will be used by the volume.
+- `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
+- `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
+- `context`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
+- `deregister_on_destroy`: `(boolean: false)` If true, the volume will be deregistered on destroy.
 
-- `deregister_on_destroy` `(bool: true)` - Determines if the job will be
-  deregistered when this resource is destroyed in Terraform.
+In addition to the above arguments, the following attributes are exported and
+can be referenced:
 
-- `deregister_on_id_change` `(bool: true)` - Determines if the job will be
-  deregistered if the ID of the job in the jobspec changes.
-
-- `detach` `(bool: true)` - If true, the provider will return immediately
-  after creating or updating, instead of monitoring.
-
-- `policy_override` `(bool: false)` - Determines if the job will override any
-  soft-mandatory Sentinel policies and register even if they fail.
-
-- `json` `(bool: false)` - Set this to true if your jobspec is structured with
-  JSON instead of the default HCL.
+- `controller_required`: `(boolean)` 
+- `controllers_expected`: `(integer)`
+- `controllers_healthy`: `(integer)`
+- `plugin_provider`: `(string)`
+- `plugin_provider_version`: `(string)`
+- `nodes_healthy`: `(integer)`
+- `nodes_expected`: `(integer)`
+- `schedulable`: `(boolean)`
