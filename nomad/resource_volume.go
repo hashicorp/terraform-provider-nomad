@@ -113,6 +113,7 @@ func resourceVolume() *schema.Resource {
 				Description: "An optional key-value map of strings used as credentials for publishing and unpublishing volumes.",
 				Optional:    true,
 				Type:        schema.TypeMap,
+				Sensitive:   true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
