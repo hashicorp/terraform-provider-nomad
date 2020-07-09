@@ -6,7 +6,7 @@ description: |-
   Retrieve a list of plugins.
 ---
 
-# nomad_volumes
+# nomad_plugins
 
 Retrieve a list of dynamic plugins in Nomad.
 
