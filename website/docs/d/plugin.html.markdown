@@ -23,7 +23,7 @@ Check for the existence of a plugin:
 
 ```hcl
 data "nomad_plugin" "ebs" {
-  plugin_id = "aws-ebs0"
+  plugin_id        = "aws-ebs0"
   wait_for_healthy = true
 }
 ```
@@ -51,4 +51,3 @@ The following attributes are exported:
 * `controllers_healthy`: `(integer)` The number of healthy controllers.
 * `nodes_expected`: `(integer)` The number of registered nodes.
 * `nodes_healthy`: `(integer)` The number of healthy nodes.
-
