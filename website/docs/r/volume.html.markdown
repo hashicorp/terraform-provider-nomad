@@ -6,7 +6,7 @@ description: |-
   Manages the lifecycle of registering and deregistering Nomad volumes.
 ---
 
-# nomad_job
+# nomad_volume
 
 Manages an external volume in Nomad.
 
