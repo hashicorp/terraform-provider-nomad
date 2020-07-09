@@ -19,20 +19,20 @@ Registering a volume:
 ```hcl
 // it can sometimes be helpful to wait for a particular plugin to be available
 data "nomad_plugin" "ebs" {
-  plugin_id = "aws-ebs0"
+  plugin_id        = "aws-ebs0"
   wait_for_healthy = true
 }
-
 resource "nomad_volume" "mysql_volume" {
-  depends_on = [data.nomad_plugin.ebs]
-  type = "csi"
-  plugin_id = "aws-ebs0"
-  volume_id = "mysql_volume"
-  name = "mysql_volume"
-  external_id = module.hashistack.ebs_test_volume_id
-  access_mode = "single-node-writer"
+  depends_on      = [data.nomad_plugin.ebs]
+  type            = "csi"
+  plugin_id       = "aws-ebs0"
+  volume_id       = "mysql_volume"
+  name            = "mysql_volume"
+  external_id     = module.hashistack.ebs_test_volume_id
+  access_mode     = "single-node-writer"
   attachment_mode = "file-system"
 }
+
 ```
 
 ## Argument Reference
