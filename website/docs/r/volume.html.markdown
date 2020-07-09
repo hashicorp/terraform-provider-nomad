@@ -45,7 +45,12 @@ The following arguments are supported:
 - `name`: `(string: <required>)` The display name for the volume.
 - `plugin_id`: `(string: <required>)` The ID of the Nomad plugin for registering this volume.
 - `external_id`: `(string: <required>)` The ID of the physical volume from the storage provider.
-- `access_mode`: `(string: <required>)` Defines whether a volume should be available concurrently.
+- `access_mode`: `(string: <required>)` Defines whether a volume should be available concurrently. Possible values are:
+  - `single-node-reader-only`
+  - `single-node-writer`
+  - `multi-node-reader-only`
+  - `multi-node-single-writer`
+  - `multi-node-multi-writer`
 - `attachment_mode`: `(string: <required>)` The storage API that will be used by the volume.
 - `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
 - `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
