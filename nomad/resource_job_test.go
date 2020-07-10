@@ -401,6 +401,34 @@ func TestResourceJob_parameterizedJob(t *testing.T) {
 	})
 }
 
+func TestResourceJob_purgeOnDelete(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			// create the resource
+			{
+				Config: testResourceJob_purgeOnDelete,
+				Check:  testResourceJob_initialCheck(t),
+			},
+			// make sure it is purged once deleted
+			{
+				Destroy: true,
+				Config:  testResourceJob_purgeOnDelete,
+				Check: func(s *terraform.State) error {
+					providerConfig := testProvider.Meta().(ProviderConfig)
+					client := providerConfig.client
+					job, _, err := client.Jobs().Info("purge-test", nil)
+					if !assert.EqualError(t, err, "Unexpected response code: 404 (job not found)") {
+						return fmt.Errorf("Job found: %#v", job)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func testResourceJob_parameterizedCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["nomad_job.parameterized"]
 	if resourceState == nil {
@@ -695,6 +723,37 @@ resource "nomad_job" "test" {
 var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
     deregister_on_destroy = false
+    jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["30"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_purgeOnDelete = `
+resource "nomad_job" "test" {
+    purge_on_delete = true
     jobspec = <<EOT
 		job "foo" {
 			datacenters = ["dc1"]

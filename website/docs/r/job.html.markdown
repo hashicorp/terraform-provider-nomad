@@ -107,3 +107,6 @@ The following arguments are supported:
 
 - `json` `(boolean: false)` - Set this to true if your jobspec is structured with
   JSON instead of the default HCL.
+
+- `purge_on_delete` `(boolean: false)` - Set this to true if you want the job to
+  be purged when the resource is deleted.
