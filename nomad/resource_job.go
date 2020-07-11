@@ -211,6 +211,12 @@ func resourceJob() *schema.Resource {
 					},
 				},
 			},
+
+			"purge_on_delete": {
+				Description: "Whether to purge the job when the resource is deleted.",
+				Optional:    true,
+				Type:        schema.TypeBool,
+			},
 		},
 	}
 }
@@ -412,7 +418,8 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	_, _, err := client.Jobs().Deregister(id, false, opts)
+	purge := d.Get("purge_on_delete").(bool)
+	_, _, err := client.Jobs().Deregister(id, purge, opts)
 	if err != nil {
 		return fmt.Errorf("error deregistering job: %s", err)
 	}

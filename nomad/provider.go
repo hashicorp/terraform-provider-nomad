@@ -70,6 +70,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_acl_tokens":  dataSourceACLTokens(),
 			"nomad_deployments": dataSourceDeployments(),
 			"nomad_job":         dataSourceJob(),
+			"nomad_namespace":   dataSourceNamespace(),
 			"nomad_namespaces":  dataSourceNamespaces(),
 			"nomad_plugin":      dataSourcePlugin(),
 			"nomad_plugins":     dataSourcePlugins(),
