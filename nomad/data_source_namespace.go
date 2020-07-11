@@ -43,6 +43,6 @@ func namespaceDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Failed to set 'quota': %v", err)
 	}
 
-	d.SetId(client.Address() + "/namespaces")
+	d.SetId(client.Address() + "/namespace/" + name)
 	return nil
 }
