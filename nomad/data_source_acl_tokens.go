@@ -2,8 +2,8 @@ package nomad
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -57,25 +57,24 @@ func dataSourceACLTokens() *schema.Resource {
 func aclTokensDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
-	tokens, _, err := client.ACLTokens().List(nil)
+	qOpts := &api.QueryOptions{
+		Prefix: d.Get("prefix").(string),
+	}
+	tokens, _, err := client.ACLTokens().List(qOpts)
 	if err != nil {
 		return fmt.Errorf("error while getting the list of tokens: %v", err)
 	}
 
-	prefix := d.Get("prefix").(string)
-	result := make([]map[string]interface{}, 0)
-	for _, t := range tokens {
-		if !strings.HasPrefix(t.AccessorID, prefix) {
-			continue
-		}
-		result = append(result, map[string]interface{}{
+	result := make([]map[string]interface{}, len(tokens))
+	for i, t := range tokens {
+		result[i] = map[string]interface{}{
 			"accessor_id": t.AccessorID,
 			"name":        t.Name,
 			"type":        t.Type,
 			"policies":    t.Policies,
 			"global":      t.Global,
 			"create_time": t.CreateTime.String(),
-		})
+		}
 	}
 
 	d.SetId("nomad-tokens")
