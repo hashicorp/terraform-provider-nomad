@@ -1,4 +1,11 @@
 ## 1.4.9 (Unreleased)
+
+IMPROVEMENTS: 
+* resource/nomad_job: added `purge_on_delete` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127))
+* data source/nomad_namespace: added new data source to fetch info a Nomad namespace ([#126](https://github.com/terraform-providers/terraform-provider-nomad/issues/126))
+* data source/nomad_acl_tokens: added new data source to fetch Nomad ACL tokens ([#128](https://github.com/terraform-providers/terraform-provider-nomad/issues/128))
+
+
 ## 1.4.8 (July 09, 2020)
 
 * **Target Nomad 0.12.0**: updated the nomad client to support Nomad API version 0.12.0 ([#121](https://github.com/terraform-providers/terraform-provider-nomad/issues/121))
