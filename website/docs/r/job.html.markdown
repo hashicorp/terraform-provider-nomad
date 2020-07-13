@@ -96,6 +96,9 @@ The following arguments are supported:
 - `deregister_on_destroy` `(boolean: true)` - Determines if the job will be
   deregistered when this resource is destroyed in Terraform.
 
+- `purge_on_destroy` `(boolean: false)` - Set this to true if you want the job to
+  be purged when the resource is destroyed.
+
 - `deregister_on_id_change` `(boolean: true)` - Determines if the job will be
   deregistered if the ID of the job in the jobspec changes.
 
@@ -107,6 +110,3 @@ The following arguments are supported:
 
 - `json` `(boolean: false)` - Set this to true if your jobspec is structured with
   JSON instead of the default HCL.
-
-- `purge_on_delete` `(boolean: false)` - Set this to true if you want the job to
-  be purged when the resource is deleted.
