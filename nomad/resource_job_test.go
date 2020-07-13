@@ -401,20 +401,20 @@ func TestResourceJob_parameterizedJob(t *testing.T) {
 	})
 }
 
-func TestResourceJob_purgeOnDelete(t *testing.T) {
+func TestResourceJob_purgeOnDestroy(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			// create the resource
 			{
-				Config: testResourceJob_purgeOnDelete,
+				Config: testResourceJob_purgeOnDestroy,
 				Check:  testResourceJob_initialCheck(t),
 			},
-			// make sure it is purged once deleted
+			// make sure it is purged once deregistered
 			{
 				Destroy: true,
-				Config:  testResourceJob_purgeOnDelete,
+				Config:  testResourceJob_purgeOnDestroy,
 				Check: func(s *terraform.State) error {
 					providerConfig := testProvider.Meta().(ProviderConfig)
 					client := providerConfig.client
@@ -751,9 +751,9 @@ resource "nomad_job" "test" {
 }
 `
 
-var testResourceJob_purgeOnDelete = `
+var testResourceJob_purgeOnDestroy = `
 resource "nomad_job" "test" {
-    purge_on_delete = true
+    purge_on_destroy = true
     jobspec = <<EOT
 		job "foo" {
 			datacenters = ["dc1"]

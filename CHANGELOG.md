@@ -1,7 +1,7 @@
 ## 1.4.9 (Unreleased)
 
 IMPROVEMENTS: 
-* resource/nomad_job: added `purge_on_delete` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127))
+* resource/nomad_job: added `purge_on_destroy` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127)][[#130](https://github.com/terraform-providers/terraform-provider-nomad/issues/130))
 * data source/nomad_namespace: added new data source to fetch info a Nomad namespace ([#126](https://github.com/terraform-providers/terraform-provider-nomad/issues/126))
 * data source/nomad_acl_tokens: added new data source to fetch Nomad ACL tokens ([#128](https://github.com/terraform-providers/terraform-provider-nomad/issues/128))
 
