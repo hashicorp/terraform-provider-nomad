@@ -12,6 +12,7 @@ install:
 # packages that live there.
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
+- bash scripts/getnomad.sh
 
 script:
 - make test
