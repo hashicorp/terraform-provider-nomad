@@ -16,8 +16,8 @@ install:
 - bash scripts/getvault.sh
 
 script:
-- make test
 - make vet
+- make localtestacc
 - make website-test
 
 branches:
