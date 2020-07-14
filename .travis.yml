@@ -12,6 +12,7 @@ install:
 # packages that live there.
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
+- apt-get install httpie jq
 - bash scripts/getnomad.sh
 - bash scripts/getvault.sh
 
