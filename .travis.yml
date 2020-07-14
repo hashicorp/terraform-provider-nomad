@@ -6,13 +6,16 @@ language: go
 go:
   - "1.11.x"
 
+before_install:
+- sudo apt-get update
+- sudo apt-get -y install httpie jq
+
 install:
 # This script is used by the Travis build to install a cookie for
 # go.googlesource.com so rate limits are higher when using `go get` to fetch
 # packages that live there.
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
-- apt-get install httpie jq
 - bash scripts/getnomad.sh
 - bash scripts/getvault.sh
 
