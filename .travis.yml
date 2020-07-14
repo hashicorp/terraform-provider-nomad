@@ -13,6 +13,7 @@ install:
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
 - bash scripts/getnomad.sh
+- bash scripts/getvault.sh
 
 script:
 - make test
