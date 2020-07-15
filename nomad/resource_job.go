@@ -96,6 +96,11 @@ func resourceJob() *schema.Resource {
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
+			"alloc_changed": {
+				Description: "Indicated that job need new evaluate to have expected state..",
+				Computed:    true,
+				Type:        schema.TypeBool,
+			},
 
 			"type": {
 				Description: "The type of the job, as derived from the jobspec.",
@@ -469,6 +474,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 	d.Set("allocation_ids", allocIDs)
 	d.Set("namespace", job.Namespace)
+	d.Set("alloc_changed", false)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
 	} else {
@@ -495,6 +501,12 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		d.SetNewComputed("deployment_id")
 		d.SetNewComputed("deployment_status")
 		return nil
+	}
+	change, err := checkAllocChanges(d, client)
+	_isAllocsChanged := err == nil && change
+	log.Printf("[DEBUG]: Change: %t, err: %+v, _isAllocsChanged: %t", change, err, _isAllocsChanged)
+	if _isAllocsChanged {
+		d.SetNewComputed("alloc_changed")
 	}
 
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
@@ -635,7 +647,6 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 
 	for _, tg := range tgs {
 		tgM := make(map[string]interface{})
-
 		if tg.Name != nil {
 			tgM["name"] = *tg.Name
 		} else {
@@ -726,4 +737,57 @@ func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 
 	// Check for jobspec equality
 	return reflect.DeepEqual(oldJob, newJob)
+}
+
+func checkAllocChanges(d *schema.ResourceDiff, client *api.Client) (bool, error) {
+	id := d.Id()
+	opts := &api.QueryOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = "default"
+	}
+	log.Printf("[DEBUG] reading information for job %q in namespace %q", id, opts.Namespace)
+	job, _, err := client.Jobs().Info(id, opts)
+	if err != nil {
+		// As of Nomad 0.4.1, the API client returns an error for 404
+		// rather than a nil result, so we must check this way.
+		if strings.Contains(err.Error(), "404") {
+			log.Printf("[DEBUG] job %q does not exist, so removing", id)
+			return true, nil
+		}
+
+		return false, fmt.Errorf("error checking for job: %s", err)
+	}
+	log.Printf("[DEBUG] found job %q in namespace %q", *job.Name, *job.Namespace)
+
+	allocStubs, _, err := client.Jobs().Allocations(id, false, nil)
+	if err != nil {
+		log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
+	}
+	changed := compareAllocs(job, allocStubs)
+	return changed, nil
+}
+
+func compareAllocs(job *api.Job, allocStubs []*api.AllocationListStub) bool {
+	maptgCurRunningCnt := make(map[string]int)
+	maptgExptRunningCnt := make(map[string]int, len(job.TaskGroups))
+	for _, tg := range job.TaskGroups {
+		maptgExptRunningCnt[(*tg.Name)] = len(tg.Tasks) * (*tg.Count)
+	}
+
+	allocIDs := make([]string, 0, len(allocStubs))
+	for _, a := range allocStubs {
+		allocIDs = append(allocIDs, a.ID)
+		if strings.EqualFold("running", a.ClientStatus) {
+			if val, ok := maptgCurRunningCnt[a.TaskGroup]; ok {
+				maptgCurRunningCnt[a.TaskGroup] = val + 1
+			} else {
+				maptgCurRunningCnt[a.TaskGroup] = 1
+			}
+		}
+	}
+	log.Printf("[DEBUG] cur: %+v, exp: %+v", maptgCurRunningCnt, maptgExptRunningCnt)
+	updateAllocs := !reflect.DeepEqual(maptgCurRunningCnt, maptgExptRunningCnt)
+	return updateAllocs
 }
