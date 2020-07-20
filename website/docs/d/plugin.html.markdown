@@ -36,7 +36,7 @@ is healthy before returning.
 The following arguments are supported:
 
 * `plugin_id`: `(string)` ID of the plugin.
-* `wait_for_registeration`: `(boolean)` if the plugin doesn't exist, retry until it does
+* `wait_for_registration`: `(boolean)` if the plugin doesn't exist, retry until it does
 * `wait_for_healthy`: `(boolean)` retry until the plugin exists and all controllers are healthy
 
 ## Attributes Reference
