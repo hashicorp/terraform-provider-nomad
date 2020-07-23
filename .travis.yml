@@ -4,7 +4,11 @@ services:
 - docker
 language: go
 go:
-  - "1.11.x"
+  - "1.14.x"
+
+before_install:
+- sudo apt-get update
+- sudo apt-get -y install httpie jq
 
 install:
 # This script is used by the Travis build to install a cookie for
@@ -12,10 +16,12 @@ install:
 # packages that live there.
 # See: https://github.com/golang/go/issues/12933
 - bash scripts/gogetcookie.sh
+- bash scripts/getnomad.sh
+- bash scripts/getvault.sh
 
 script:
-- make test
 - make vet
+- make localtestacc
 - make website-test
 
 branches:
