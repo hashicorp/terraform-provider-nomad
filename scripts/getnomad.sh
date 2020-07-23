@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NOMAD_BINARY=https://releases.hashicorp.com/nomad/0.12.0+ent/nomad_0.12.0+ent_linux_amd64.zip
+NOMAD_BINARY=https://releases.hashicorp.com/nomad/0.12.1+ent/nomad_0.12.1+ent_linux_amd64.zip
 
 curl -L $NOMAD_BINARY > nomad.zip
 sudo unzip -o nomad.zip -d /usr/local/bin
