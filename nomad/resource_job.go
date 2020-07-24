@@ -94,6 +94,7 @@ func resourceJob() *schema.Resource {
 			"namespace": {
 				Description: "The namespace of the job, as derived from the jobspec.",
 				Optional:    true,
+				Computed:    true,
 				Type:        schema.TypeString,
 			},
 
@@ -249,7 +250,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	namespace := d.Get("namespace").(string)
 	if namespace != "" {
 		job.Namespace = &namespace
-	} else {
+	} else if job.Namespace == nil || *job.Namespace == "" {
 		defaultNamespace := "default"
 		job.Namespace = &defaultNamespace
 	}
@@ -503,24 +504,35 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
 	oldNamespaceRaw, newNamespaceRaw := d.GetChange("namespace")
-	if oldSpecRaw.(string) == newSpecRaw.(string) && oldNamespaceRaw.(string) == newNamespaceRaw.(string) {
-		// nothing to do!
-		return nil
-	}
+	newNamespace := newNamespaceRaw.(string)
 
+	// must parse to get namespace from job to determine what the "effective namespace" is
 	is_json := d.Get("json").(bool)
 	job, err := parseJobspec(newSpecRaw.(string), is_json, providerConfig.vaultToken) // catch syntax errors client-side during plan
 	if err != nil {
 		return err
 	}
 
-	if namespace := d.Get("namespace").(string); namespace != "" {
-		job.Namespace = &namespace
-	} else if job.Namespace == nil || *job.Namespace == "" {
-		defaultNamespace := "default"
-		job.Namespace = &defaultNamespace
+	// if absent, find the new namespace
+	if newNamespace == "" {
+		if job.Namespace != nil && *job.Namespace != "" {
+			newNamespace = *job.Namespace
+		} else {
+			newNamespace = "default"
+		}
 	}
 
+	// short-circuit?
+	if oldSpecRaw.(string) == newSpecRaw.(string) && oldNamespaceRaw.(string) == newNamespace {
+		// nothing to do!
+		return nil
+	}
+
+	if oldNamespaceRaw.(string) != newNamespace {
+		d.SetNew("namespace", newNamespace)
+	}
+
+	job.Namespace = &newNamespace
 	resp, _, err := client.Jobs().PlanOpts(job, &api.PlanOptions{
 		Diff:           false,
 		PolicyOverride: d.Get("policy_override").(bool),
@@ -542,6 +554,7 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	// If the identity has changed and the config asks us to deregister on identity
 	// change then the id field "forces new resource".
 	if d.Get("namespace").(string) != *job.Namespace {
+		// TODO: should add deregister_on_namespace_change for parity
 		log.Printf("[DEBUG] namespace change forces new resource")
 		d.SetNew("namespace", job.Namespace)
 		d.ForceNew("namespace")
@@ -732,4 +745,22 @@ func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 
 	// Check for jobspec equality
 	return reflect.DeepEqual(oldJob, newJob)
+}
+
+// namespaceDiffSuppress is the DiffSuppressFunc used by the schema to
+// check if two jobspecs are equal.
+func namespaceDiffSuppress(k, oldNamespace, newNamespace string, d *schema.ResourceData) bool {
+	if newNamespace == "" {
+		job, err := jobspec.Parse(strings.NewReader(d.Get("jobspec").(string)))
+		if err != nil {
+			return false
+		}
+		if job.Namespace != nil {
+			newNamespace = *job.Namespace
+		}
+	}
+	if newNamespace == "" {
+		newNamespace = "default"
+	}
+	return newNamespace == oldNamespace
 }

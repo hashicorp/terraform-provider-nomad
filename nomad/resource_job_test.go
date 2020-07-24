@@ -63,11 +63,11 @@ func TestResourceJob_namespace_declared(t *testing.T) {
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespaceDeclared,
-				Check:  testResourceJob_initialCheckNS(t, "jobresource-test-namespace"),
+				Check:  testResourceJob_initialCheckNS(t, "jobresource-test-namespace-declared"),
 			},
 		},
 
-		CheckDestroy: testResourceJob_checkDestroyNS("foo", "jobresource-test-namespace"),
+		CheckDestroy: testResourceJob_checkDestroyNS("foo-namespace", "jobresource-test-namespace-declared"),
 	})
 }
 
@@ -571,17 +571,17 @@ resource "nomad_job" "test" {
 `
 
 var testResourceJob_initialConfigNamespaceDeclared = `
-resource "nomad_namespace" "test_namespace" {
-  name = "jobresource-test-namespace"
+resource "nomad_namespace" "test_namespace_declared" {
+  name = "jobresource-test-namespace-declared"
 }
 
 resource "nomad_job" "test" {
-	namespace = nomad_namespace.test_namespace.name
+	namespace = nomad_namespace.test_namespace_declared.name
 	jobspec = <<EOT
-		job "foo" {
+		job "foo-namespace" {
 			datacenters = ["dc1"]
 			type = "batch"
-			namespace = "default"
+			namespace = "does_not_exist"
 			group "foo" {
 				task "foo" {
 					driver = "raw_exec"
@@ -767,6 +767,7 @@ resource "nomad_job" "test" {
 		        }
 		    }
 		}
+
 	EOT
 }
 `
