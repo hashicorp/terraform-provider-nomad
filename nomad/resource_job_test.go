@@ -56,6 +56,21 @@ func TestResourceJob_namespace(t *testing.T) {
 	})
 }
 
+func TestResourceJob_namespace_declared(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_initialConfigNamespaceDeclared,
+				Check:  testResourceJob_initialCheckNS(t, "jobresource-test-namespace"),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroyNS("foo", "jobresource-test-namespace"),
+	})
+}
+
 func TestResourceJob_v086(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -531,6 +546,42 @@ resource "nomad_job" "test" {
 			datacenters = ["dc1"]
 			type = "batch"
 			namespace = "${nomad_namespace.test-namespace.name}"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["10"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_initialConfigNamespaceDeclared = `
+resource "nomad_namespace" "test_namespace" {
+  name = "jobresource-test-namespace"
+}
+
+resource "nomad_job" "test" {
+	namespace = nomad_namespace.test_namespace.name
+	jobspec = <<EOT
+		job "foo" {
+			datacenters = ["dc1"]
+			type = "batch"
+			namespace = "default"
 			group "foo" {
 				task "foo" {
 					driver = "raw_exec"

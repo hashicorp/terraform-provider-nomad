@@ -93,7 +93,7 @@ func resourceJob() *schema.Resource {
 
 			"namespace": {
 				Description: "The namespace of the job, as derived from the jobspec.",
-				Computed:    true,
+				Optional:    true,
 				Type:        schema.TypeString,
 			},
 
@@ -245,7 +245,11 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	if job.Namespace == nil || *job.Namespace == "" {
+	// Get namespace
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		job.Namespace = &namespace
+	} else {
 		defaultNamespace := "default"
 		job.Namespace = &defaultNamespace
 	}
@@ -463,12 +467,12 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("name", job.ID)
+	d.Set("namespace", job.Namespace)
 	d.Set("type", job.Type)
 	d.Set("region", job.Region)
 	d.Set("datacenters", job.Datacenters)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 	d.Set("allocation_ids", allocIDs)
-	d.Set("namespace", job.Namespace)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
 	} else {
@@ -483,10 +487,10 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	if !d.NewValueKnown("jobspec") {
+	if !d.NewValueKnown("jobspec") || !d.NewValueKnown("namespace") {
 		d.SetNewComputed("name")
-		d.SetNewComputed("modify_index")
 		d.SetNewComputed("namespace")
+		d.SetNewComputed("modify_index")
 		d.SetNewComputed("type")
 		d.SetNewComputed("region")
 		d.SetNewComputed("datacenters")
@@ -498,8 +502,8 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	}
 
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
-
-	if oldSpecRaw.(string) == newSpecRaw.(string) {
+	oldNamespaceRaw, newNamespaceRaw := d.GetChange("namespace")
+	if oldSpecRaw.(string) == newSpecRaw.(string) && oldNamespaceRaw.(string) == newNamespaceRaw.(string) {
 		// nothing to do!
 		return nil
 	}
@@ -510,8 +514,10 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		return err
 	}
 
-	defaultNamespace := "default"
-	if job.Namespace == nil || *job.Namespace == "" {
+	if namespace := d.Get("namespace").(string); namespace != "" {
+		job.Namespace = &namespace
+	} else if job.Namespace == nil || *job.Namespace == "" {
+		defaultNamespace := "default"
 		job.Namespace = &defaultNamespace
 	}
 
