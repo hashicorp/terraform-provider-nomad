@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
@@ -50,10 +51,12 @@ func dataSourceJobParserRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error parsing job: %#v", err)
 	}
 
+	jobJSONString := string(jobJSON)
+
 	d.SetId(*job.ID)
-	d.Set("hcl", hcl)
+	d.Set("hcl", strings.TrimSpace(hcl))
 	d.Set("canonicalize", canonicalize)
-	d.Set("json", string(jobJSON))
+	d.Set("json", strings.TrimSpace(jobJSONString))
 
 	return nil
 }
