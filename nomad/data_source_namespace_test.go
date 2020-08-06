@@ -17,7 +17,7 @@ func TestDataSourceNamespace(t *testing.T) {
 			{
 				Config: testDataSourceNamespaceConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "wrong"),
+					resource.TestCheckResourceAttr(resourceName, "name", "default"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Default shared namespace"),
 					resource.TestCheckResourceAttr(resourceName, "quota", ""),
 				),
