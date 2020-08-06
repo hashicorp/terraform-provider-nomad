@@ -12,8 +12,8 @@ import (
 )
 
 func TestAccDataSourceNomadJobParser_Basic(t *testing.T) {
-
 	resourceName := "data.nomad_job_parser.test_job"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testProviders,
@@ -80,12 +80,11 @@ func TestAccDataSourceNomadJobParser_MissingHCL(t *testing.T) {
 
 func testJobParserConfig() string {
 	return fmt.Sprintf(`
-	data "nomad_job_parser" "test_job" {
-	  hcl = <<EOT
+data "nomad_job_parser" "test_job" {
+  hcl = <<EOT
 %s
-	  EOT
-	}
-	`, testDataSourceJobParserHCL)
+EOT
+}`, testDataSourceJobParserHCL)
 
 }
 
