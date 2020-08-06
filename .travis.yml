@@ -19,10 +19,17 @@ install:
 - bash scripts/getnomad.sh
 - bash scripts/getvault.sh
 
+
+before_script:
+- bash scripts/start-nomad.sh
+
 script:
 - make vet
-- make localtestacc
+- NOMAD_TOKEN=$(cat /tmp/nomad-test.token) make testacc
 - make website-test
+
+after_scripts:
+- bash scripts/stop-nomad.sh
 
 branches:
   only:
