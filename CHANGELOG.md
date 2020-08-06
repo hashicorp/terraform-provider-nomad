@@ -4,6 +4,7 @@ IMPROVEMENTS:
 * resource/nomad_job: added `purge_on_destroy` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127)][[#130](https://github.com/terraform-providers/terraform-provider-nomad/issues/130))
 * data source/nomad_namespace: added new data source to fetch info a Nomad namespace ([#126](https://github.com/terraform-providers/terraform-provider-nomad/issues/126))
 * data source/nomad_acl_tokens: added new data source to fetch Nomad ACL tokens ([#128](https://github.com/terraform-providers/terraform-provider-nomad/issues/128))
+* data source/nomad_namespace: added new data source `nomad_job_parser` parses a jobspec from HCL to JSON ([#136](https://github.com/terraform-providers/terraform-provider-nomad/issues/136))
 
 
 ## 1.4.8 (July 09, 2020)
