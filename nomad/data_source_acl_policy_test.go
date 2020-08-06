@@ -23,7 +23,7 @@ func TestAccDataSourceNomadAclPolicy_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						resourceName, "name", policyName),
 					resource.TestCheckResourceAttr(
-						resourceName, "descrption", "Test ACL Policy"),
+						resourceName, "description", "Test ACL Policy"),
 					resource.TestCheckResourceAttrSet(resourceName, "rules"),
 				),
 			},
