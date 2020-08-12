@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f
-	github.com/hashicorp/nomad/api v0.0.0-20200708195712-3b59bc78ef12
+	github.com/hashicorp/nomad/api v0.0.0-20200812181322-71e8a68d9948
 	github.com/hashicorp/terraform-plugin-sdk v1.15.0
 	github.com/hashicorp/vault v0.10.4
 	github.com/mitchellh/mapstructure v1.1.2
