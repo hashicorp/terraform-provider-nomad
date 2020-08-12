@@ -291,6 +291,7 @@ func TestResourceJob_refresh(t *testing.T) {
 				Config:    testResourceJob_initialConfig,
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
@@ -385,6 +386,7 @@ func TestResourceJob_policyOverride(t *testing.T) {
 				Check:  testResourceJob_initialCheck(t),
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
@@ -426,6 +428,7 @@ func TestResourceJob_purgeOnDestroy(t *testing.T) {
 				},
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
