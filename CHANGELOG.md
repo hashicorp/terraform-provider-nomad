@@ -3,7 +3,7 @@
 * **Target Nomad 0.12.2**: updated the nomad client to support Nomad API version 0.12.2 ([#140](https://github.com/terraform-providers/terraform-provider-nomad/issues/140))
 
 IMPROVEMENTS:
-* resource/nomad_job: added `purge_on_destroy` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127)][[#130](https://github.com/terraform-providers/terraform-provider-nomad/issues/130))
+* resource/nomad_job: added `purge_on_destroy` option ([#127](https://github.com/terraform-providers/terraform-provider-nomad/issues/127) [#130](https://github.com/terraform-providers/terraform-provider-nomad/issues/130))
 * data source/nomad_namespace: added new data source to fetch info a Nomad namespace ([#126](https://github.com/terraform-providers/terraform-provider-nomad/issues/126))
 * data source/nomad_acl_tokens: added new data source to fetch Nomad ACL tokens ([#128](https://github.com/terraform-providers/terraform-provider-nomad/issues/128))
 * data source/nomad_namespace: added new data source `nomad_job_parser` parses a jobspec from HCL to JSON ([#136](https://github.com/terraform-providers/terraform-provider-nomad/issues/136))
