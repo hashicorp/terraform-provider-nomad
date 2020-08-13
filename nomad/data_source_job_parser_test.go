@@ -226,6 +226,7 @@ func testDataSourceJobParserJSON(t *testing.T) string {
   "Meta": null,
   "ConsulToken": null,
   "VaultToken": null,
+  "VaultNamespace": null,
   "NomadTokenID": null,
   "Status": null,
   "StatusDescription": null,

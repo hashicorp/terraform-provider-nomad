@@ -41,6 +41,21 @@ func TestResourceJob_basic(t *testing.T) {
 	})
 }
 
+func TestResourceJob_service(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_initialConfigService,
+				Check:  testResourceJob_initialCheck(t),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo-service"),
+	})
+}
+
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -291,6 +306,7 @@ func TestResourceJob_refresh(t *testing.T) {
 				Config:    testResourceJob_initialConfig,
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
@@ -385,6 +401,7 @@ func TestResourceJob_policyOverride(t *testing.T) {
 				Check:  testResourceJob_initialCheck(t),
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
@@ -426,6 +443,7 @@ func TestResourceJob_purgeOnDestroy(t *testing.T) {
 				},
 			},
 		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
 	})
 }
 
@@ -542,6 +560,187 @@ resource "nomad_job" "test" {
 					resources {
 						cpu = 100
 						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+var testResourceJob_initialConfigService = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "foo-service" {
+			datacenters = ["dc1"]
+			type = "service"
+			group "foo" {
+				service {
+					name = "foo-service"
+					port = "8080"
+					task = "foo"
+					address_mode = "driver"
+
+					tags = ["foor", "test", "tf"]
+					canary_tags = ["canary"]
+					enable_tag_override = false
+
+					meta {
+						key = "value"
+					}
+
+					canary_meta {
+						canary = "true"
+					}
+
+					check {
+						type = "tcp"
+						interval = "10s"
+						timeout = "2s"
+
+						address_mode = "host"
+						port = "8080"
+
+						initial_status = "passing"
+						success_before_passing = 3
+						failures_before_critical = 5
+
+						check_restart {
+							limit = 3
+							grace = "90s"
+							ignore_warnings = false
+						}
+					}
+
+					check {
+						type = "script"
+						interval = "10s"
+						timeout = "2s"
+
+						task = "foo"
+
+						command = "/bin/true"
+						args = ["-h"]
+					}
+
+					check {
+						type = "grpc"
+						interval = "10s"
+						timeout = "2s"
+
+						task = "foo"
+
+						grpc_service = "foo"
+						grpc_use_tls = false
+					}
+
+					check {
+						type = "http"
+						interval = "10s"
+						timeout = "2s"
+
+						method = "GET"
+						path = "/health"
+						protocol = "https"
+						tls_skip_verify = true
+						header {
+							Authorization = ["Basic ZWxhc3RpYzpjaGFuZ2VtZQ=="]
+						}
+					}
+				}
+
+				task "foo" {
+					leader = true ## new in Nomad 0.5.6
+
+					service {
+						name = "foo-task-service"
+						port = "db"
+						address_mode = "driver"
+
+						tags = ["foor", "test", "tf"]
+						canary_tags = ["canary"]
+						enable_tag_override = false
+
+						meta {
+							key = "value"
+						}
+
+						canary_meta {
+							canary = "true"
+						}
+
+						check {
+							type = "tcp"
+							interval = "10s"
+							timeout = "2s"
+							name = "tcp task check"
+
+							address_mode = "driver"
+							port = "8080"
+
+							initial_status = "passing"
+							success_before_passing = 3
+							failures_before_critical = 5
+
+							check_restart {
+								limit = 3
+								grace = "90s"
+								ignore_warnings = false
+							}
+						}
+
+						check {
+							type = "script"
+							interval = "10s"
+							timeout = "2s"
+							name = "script task check"
+
+							command = "/bin/true"
+							args = ["-h"]
+						}
+
+						check {
+							type = "grpc"
+							interval = "10s"
+							timeout = "2s"
+							name = "grpc task check"
+
+							grpc_service = "foo"
+							grpc_use_tls = false
+						}
+
+						check {
+							type = "http"
+							interval = "10s"
+							timeout = "2s"
+							name = "http task check"
+
+							method = "GET"
+							path = "/health"
+							protocol = "https"
+							tls_skip_verify = true
+							header {
+								Authorization = ["Basic ZWxhc3RpYzpjaGFuZ2VtZQ=="]
+							}
+						}
+					}
+
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["10"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+						network {
+							port "db" {}
+						}
 					}
 
 					logs {
@@ -1519,6 +1718,21 @@ func TestResourceJob_vault(t *testing.T) {
 	})
 }
 
+func TestResourceJob_vaultMultiNamespace(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckVaultEnabled(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_validVaultNamspaceConfig,
+				Check:  testResourceJob_initialCheck(t),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
+	})
+}
+
 func TestResourceJob_serverNotAvailableForPlan(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -1597,6 +1811,43 @@ resource "nomad_job" "test" {
 
 					vault {
 						policies = ["default"]
+					}
+				}
+			}
+		}
+	EOT
+}
+`
+
+var testResourceJob_validVaultNamspaceConfig = `
+provider "nomad" {
+}
+
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+		job "test" {
+			datacenters = ["dc1"]
+			type = "batch"
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/usr/bin/true"
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+
+					vault {
+						policies = ["default"]
+						namespace = "vault-ns"
 					}
 				}
 			}
