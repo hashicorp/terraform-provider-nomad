@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 	"github.com/mitchellh/mapstructure"
-	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/helper"
 )
 
 // ParseNetwork parses a collection containing exactly one NetworkResource
