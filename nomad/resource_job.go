@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
-	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/jobspec"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/core/jobspec"
 )
 
 func resourceJob() *schema.Resource {

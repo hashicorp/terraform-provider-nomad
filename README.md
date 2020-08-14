@@ -21,17 +21,17 @@ Requirements
 Building The Provider
 ---------------------
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-nomad`
+Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-nomad`
 
 ```sh
-$ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-nomad
+$ mkdir -p $GOPATH/src/github.com/hashicorp; cd $GOPATH/src/github.com/hashicorp
+$ git clone git@github.com:hashicorp/terraform-provider-nomad
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-nomad
+$ cd $GOPATH/src/github.com/hashicorp/terraform-provider-nomad
 $ make build
 ```
 
@@ -81,6 +81,6 @@ In order to run the full suite of Acceptance tests:
   NOMAD_TOKEN=<output of nomad acl bootstrap's Secret ID> NOMAD_ADDR=http://<host>:<port> make testacc
   ```
 
-Acceptance tests expect fresh instance of nomad agent, so all steps must be performed every time tests are executed. 
+Acceptance tests expect fresh instance of nomad agent, so all steps must be performed every time tests are executed.
 
 *Note:* Acceptance tests create real resources, and may cost money to run.

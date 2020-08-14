@@ -23,7 +23,7 @@ import (
 	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 
-	"github.com/terraform-providers/terraform-provider-nomad/nomad/core/helper"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 )
 
 func TestResourceJob_basic(t *testing.T) {
