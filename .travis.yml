@@ -26,7 +26,6 @@ before_script:
 script:
 - make vet
 - NOMAD_TOKEN=$(cat /tmp/nomad-test.token) make testacc
-- make website-test
 
 after_scripts:
 - bash scripts/stop-nomad.sh
