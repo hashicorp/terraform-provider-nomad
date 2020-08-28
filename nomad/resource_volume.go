@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -100,14 +101,23 @@ func resourceVolume() *schema.Resource {
 				},
 			},
 
-			// "mount_options": {
-			// 	Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
-			// 	Optional:    true,
-			// 	Type:        schema.TypeMap,
-			// 	Elem: &schema.Schema{
-			// 		Type: schema.TypeString,
-			// 	},
-			// },
+			"mount_options": {
+				Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"fs_type": {
+							Description: "The file system type.",
+							Type:        schema.TypeString,
+						},
+						"mount_flags": {
+							Description: "The flags passed to mount.",
+							Type:        schema.TypeList,
+						},
+					},
+				},
+			},
 
 			"secrets": {
 				Description: "An optional key-value map of strings used as credentials for publishing and unpublishing volumes.",
@@ -204,8 +214,6 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		ns = "default"
 	}
 
-	// TODO: mountOptions := d.Get("mount_options")
-
 	volume := &api.CSIVolume{
 		ID:             d.Get("volume_id").(string),
 		Name:           d.Get("name").(string),
@@ -216,6 +224,23 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		Parameters:     toMapStringString(d.Get("parameters")),
 		Context:        toMapStringString(d.Get("context")),
 		PluginID:       d.Get("plugin_id").(string),
+	}
+
+	// Unpack the mount_options if we have any and configure the volume struct.
+	mountOpts, ok := d.GetOk("mount_options")
+	if ok {
+		mountOptsMap, ok := mountOpts.(map[string]interface{})
+		if !ok {
+			return errors.New("failed to unpack mount_options configuration block")
+		}
+		volume.MountOptions = &api.CSIMountOptions{}
+
+		if val, ok := mountOptsMap["fs_type"].(string); ok {
+			volume.MountOptions.FSType = val
+		}
+		if val, ok := mountOptsMap["mount_flags"].([]string); ok {
+			volume.MountOptions.MountFlags = val
+		}
 	}
 
 	// Register the volume
@@ -296,6 +321,7 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
+	d.Set("mount_options", volume.MountOptions)
 
 	return nil
 }
