@@ -199,7 +199,11 @@ func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
 func TestResourceJob_multiregion(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.12.0-beta1") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "0.12.0-beta1")
+			testCheckEnt(t)
+		},
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_multiregion,
