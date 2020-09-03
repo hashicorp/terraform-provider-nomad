@@ -27,12 +27,33 @@ func resourceSchedulerConfig() *schema.Resource {
 							Type:        schema.TypeString,
 							Default:     "binpack",
 							Optional:    true,
-						},
+							ValidateFunc: validation.StringInSlice([]string{
+								"binpack",
+								"spread",
+								}, false),
 						"preemption_config": {
 							Required:    true,
 							Description: "Preemption for various schedulers",
 							Type:        schema.TypeSet,
-							Elem:        resourcePreemptionConfigSchema(),
+							Elem:        &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"system_scheduler_enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  true,
+									},
+									"service_scheduler_enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+									"batch_scheduler_enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -41,27 +62,7 @@ func resourceSchedulerConfig() *schema.Resource {
 	}
 }
 
-func resourcePreemptionConfigSchema() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"system_scheduler_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"service_scheduler_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"batch_scheduler_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-		},
-	}
-}
+
 
 func resourceSchedulerConfigurationWrite(d *schema.ResourceData, meta interface{}) error {
 	return resourceSchedulerConfigurationUpdate(d, meta)
@@ -70,16 +71,13 @@ func resourceSchedulerConfigurationUpdate(d *schema.ResourceData, meta interface
 	client := meta.(ProviderConfig).client
 	operator := client.Operator()
 
-	preemptionConfig := api.PreemptionConfig{
-		BatchSchedulerEnabled:   d.Get("batch_scheduler_enabled").(bool),
-		SystemSchedulerEnabled:  d.Get("system_scheduler_enabled").(bool),
-		ServiceSchedulerEnabled: d.Get("service_scheduler_enabled").(bool),
-	}
-
 	config := api.SchedulerConfiguration{
 		SchedulerAlgorithm: api.SchedulerAlgorithm(d.Get("scheduler_algorithm").(string)),
-		PreemptionConfig:   preemptionConfig,
 	}
+
+	pcfg, err := expandPreemptionConfig (d)
+	
+	config.PreemptionConfig = pcfg
 
 	log.Printf("[DEBUG] Upserting Scheduler configuration")
 	_, _, err := operator.SchedulerSetConfiguration(&config, nil)
@@ -121,4 +119,29 @@ func resourceSchedulerConfigurationRead(d *schema.ResourceData, meta interface{}
 	d.Set("scheduler_config", scfg)
 
 	return nil
+}
+
+
+func expandPreemptionConfig(d *schema.ResourceData) (*api.PreemptionConfig) {
+configs := d.Get("preemtion_config")
+cfgs := configs.(*schema.Set).List()
+
+if len(cfgs) < 1 {
+	return nil
+}
+
+cfg, ok := cfgs[0].(map[string]interface{})
+
+batch, ok := cfg["batch_scheduler_enabled"].(string)
+service, ok := cfg["service_scheduler_enabled"].(string)
+system, ok := cfg["system_scheduler_enabled"].(string)
+
+results := api.PreemptionConfig{
+	BatchSchedulerEnabled: batch,
+	ServiceSchedulerEnabled: service,
+	SystemSchedulerEnabled: system,
+}
+
+return results
+
 }
