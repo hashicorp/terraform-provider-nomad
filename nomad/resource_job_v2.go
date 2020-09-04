@@ -1075,7 +1075,7 @@ func readGroups(d *schema.ResourceData, groups []*api.TaskGroup) (interface{}, e
 	res := make([]interface{}, 0)
 
 	// we have to look for the groups the user created in its configuration as
-	// we will need to set the "ephemeral_disk" and "restart" block only if he
+	// we will need to set the "ephemeral_disk" and "restart" block only if they
 	// created one or the value for the block is different from the default one
 
 	groupsConfig := d.Get("group").([]interface{})
