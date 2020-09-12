@@ -1094,13 +1094,13 @@ func readGroups(d *schema.ResourceData, groups []*api.TaskGroup) (interface{}, e
 			return nil, err
 		}
 
-		isSet := len(currentConfig["reschedule"].([]interface{})) > 0
-		reschedule, err := readReschedule(d, isSet, g.ReschedulePolicy)
+		isRescheduleSet := len(currentConfig["reschedule"].([]interface{})) > 0
+		reschedule, err := readReschedule(d, isRescheduleSet, g.ReschedulePolicy)
 		if err != nil {
 			return nil, err
 		}
 
-		isSet = len(currentConfig["migrate"].([]interface{})) > 0
+		isMigrateSet := len(currentConfig["migrate"].([]interface{})) > 0
 
 		group := map[string]interface{}{
 			"name":           g.Name,
@@ -1110,7 +1110,7 @@ func readGroups(d *schema.ResourceData, groups []*api.TaskGroup) (interface{}, e
 			"affinity":       readAffinities(g.Affinities),
 			"spread":         readSpreads(g.Spreads),
 			"ephemeral_disk": ephemeralDisk,
-			"migrate":        readMigrate(isSet, g.Migrate),
+			"migrate":        readMigrate(isMigrateSet, g.Migrate),
 			"network":        readNetworks(g.Networks),
 			"reschedule":     reschedule,
 			"restart":        restart,
@@ -1257,9 +1257,9 @@ func readUpdate(d *schema.ResourceData, update *api.UpdateStrategy) (interface{}
 		return nil, fmt.Errorf("%q is not supported", _type)
 	}
 
-	isSet := len(d.Get("update").([]interface{})) > 0
+	isUpdateSet := len(d.Get("update").([]interface{})) > 0
 
-	if !isSet && reflect.DeepEqual(res, defaultValue) {
+	if !isUpdateSet && reflect.DeepEqual(res, defaultValue) {
 		return nil, nil
 	}
 	return []interface{}{res}, nil
