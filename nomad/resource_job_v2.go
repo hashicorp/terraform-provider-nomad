@@ -158,6 +158,14 @@ func getMapOfString(d interface{}) map[string]string {
 	return res
 }
 
+func getListOfString(d interface{}) []string {
+	res := make([]string, 0)
+	for _, e := range d.([]interface{}) {
+		res = append(res, e.(string))
+	}
+	return res
+}
+
 func getDuration(d interface{}) (*time.Duration, error) {
 	s := d.(string)
 
@@ -176,28 +184,16 @@ func getDuration(d interface{}) (*time.Duration, error) {
 // resource_job_v2_fields to make it easy to check we did not forget anything
 
 func getJob(d *schema.ResourceData) (*api.Job, error) {
-	datacenters := make([]string, 0)
-	for _, dc := range d.Get("datacenters").([]interface{}) {
-		datacenters = append(datacenters, dc.(string))
-	}
+	datacenters := getListOfString(d.Get("datacenters"))
 
 	var parametrizedJob *api.ParameterizedJobConfig
 	for _, pj := range d.Get("parameterized").([]interface{}) {
 		p := pj.(map[string]interface{})
 
-		metaRequired := make([]string, 0)
-		for _, s := range p["meta_required"].([]interface{}) {
-			metaRequired = append(metaRequired, s.(string))
-		}
-
-		metaOptional := make([]string, 0)
-		for _, s := range p["meta_optional"].([]interface{}) {
-			metaOptional = append(metaOptional, s.(string))
-		}
 		parametrizedJob = &api.ParameterizedJobConfig{
 			Payload:      p["payload"].(string),
-			MetaRequired: metaRequired,
-			MetaOptional: metaOptional,
+			MetaRequired: getListOfString(p["meta_required"]),
+			MetaOptional: getListOfString(p["meta_optional"]),
 		}
 	}
 
@@ -677,18 +673,9 @@ func getNetworks(d interface{}) []*api.NetworkResource {
 
 			network.DNS = &api.DNSConfig{}
 
-			servers := make([]string, 0)
-			for _, s := range d["servers"].([]interface{}) {
-				network.DNS.Servers = append(servers, s.(string))
-			}
-			searches := make([]string, 0)
-			for _, s := range d["searches"].([]interface{}) {
-				network.DNS.Searches = append(searches, s.(string))
-			}
-			options := make([]string, 0)
-			for _, s := range d["options"].([]interface{}) {
-				network.DNS.Options = append(options, s.(string))
-			}
+			network.DNS.Servers = getListOfString(d["servers"])
+			network.DNS.Searches = getListOfString(d["searches"])
+			network.DNS.Options = getListOfString(d["options"])
 		}
 
 		networks = append(networks, network)
@@ -703,24 +690,9 @@ func getServices(d interface{}) ([]*api.Service, error) {
 	for _, svc := range d.([]interface{}) {
 		s := svc.(map[string]interface{})
 
-		tags := make([]string, 0)
-		for _, t := range s["tags"].([]interface{}) {
-			tags = append(tags, t.(string))
-		}
-
-		canaryTags := make([]string, 0)
-		for _, t := range s["canary_tags"].([]interface{}) {
-			canaryTags = append(canaryTags, t.(string))
-		}
-
 		checks := make([]api.ServiceCheck, 0)
 		for _, cks := range s["check"].([]interface{}) {
 			c := cks.(map[string]interface{})
-
-			args := make([]string, 0)
-			for _, a := range c["args"].([]interface{}) {
-				args = append(args, a.(string))
-			}
 
 			var checkRestart *api.CheckRestart
 			for _, crt := range c["check_restart"].([]interface{}) {
@@ -739,7 +711,7 @@ func getServices(d interface{}) ([]*api.Service, error) {
 
 			check := api.ServiceCheck{
 				AddressMode:            c["address_mode"].(string),
-				Args:                   args,
+				Args:                   getListOfString(c["args"]),
 				Command:                c["command"].(string),
 				GRPCService:            c["grpc_service"].(string),
 				GRPCUseTLS:             c["grpc_use_tls"].(bool),
@@ -818,11 +790,6 @@ func getServices(d interface{}) ([]*api.Service, error) {
 			for _, sservice := range cn["sidecar_service"].([]interface{}) {
 				ss := sservice.(map[string]interface{})
 
-				tags := make([]string, 0)
-				for _, t := range ss["tags"].([]interface{}) {
-					tags = append(tags, t.(string))
-				}
-
 				var consulProxy *api.ConsulProxy
 				for _, proxy := range ss["proxy"].([]interface{}) {
 					p := proxy.(map[string]interface{})
@@ -878,7 +845,7 @@ func getServices(d interface{}) ([]*api.Service, error) {
 				}
 
 				sidecarService = &api.ConsulSidecarService{
-					Tags:  tags,
+					Tags:  getListOfString(ss["tags"]),
 					Port:  ss["port"].(string),
 					Proxy: consulProxy,
 				}
@@ -895,8 +862,8 @@ func getServices(d interface{}) ([]*api.Service, error) {
 			Meta:              getMapOfString(s["meta"]),
 			Name:              s["name"].(string),
 			PortLabel:         s["port"].(string),
-			Tags:              tags,
-			CanaryTags:        canaryTags,
+			Tags:              getListOfString(s["tags"]),
+			CanaryTags:        getListOfString(s["canary_tags"]),
 			EnableTagOverride: s["enable_tag_override"].(bool),
 			AddressMode:       s["address_mode"].(string),
 			TaskName:          s["task"].(string),
@@ -958,13 +925,8 @@ func getVault(d interface{}) *api.Vault {
 	for _, vlt := range d.([]interface{}) {
 		v := vlt.(map[string]interface{})
 
-		policies := make([]string, 0)
-		for _, p := range v["policies"].([]interface{}) {
-			policies = append(policies, p.(string))
-		}
-
 		return &api.Vault{
-			Policies:     policies,
+			Policies:     getListOfString(v["policies"]),
 			Namespace:    getString(v, "namespace"),
 			Env:          getBool(v, "env"),
 			ChangeMode:   getString(v, "change_mode"),
