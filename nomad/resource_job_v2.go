@@ -343,18 +343,17 @@ func getTaskGroups(d interface{}) ([]*api.TaskGroup, error) {
 				Mode:     getString(r, "mode"),
 			}
 
-			var duration *time.Duration
-			duration, err = getDuration(r["delay"])
+			delay, err := getDuration(r["delay"])
 			if err != nil {
 				return nil, err
 			}
-			restartPolicy.Delay = duration
+			restartPolicy.Delay = delay
 
-			duration, err = getDuration(r["interval"])
+			interval, err := getDuration(r["interval"])
 			if err != nil {
 				return nil, err
 			}
-			restartPolicy.Interval = duration
+			restartPolicy.Interval = interval
 		}
 		volumes := make(map[string]*api.VolumeRequest)
 		for _, vr := range g["volume"].([]interface{}) {
@@ -395,18 +394,17 @@ func getTaskGroups(d interface{}) ([]*api.TaskGroup, error) {
 			Volumes:          volumes,
 		}
 
-		var duration *time.Duration
-		duration, err = getDuration(g["shutdown_delay"])
+		shutdownDelay, err := getDuration(g["shutdown_delay"])
 		if err != nil {
 			return nil, err
 		}
-		group.ShutdownDelay = duration
+		group.ShutdownDelay = shutdownDelay
 
-		duration, err = getDuration(g["stop_after_client_disconnect"])
+		stopAfterClientDisconnect, err := getDuration(g["stop_after_client_disconnect"])
 		if err != nil {
 			return nil, err
 		}
-		group.StopAfterClientDisconnect = duration
+		group.StopAfterClientDisconnect = stopAfterClientDisconnect
 
 		taskGroups = append(taskGroups, group)
 	}
@@ -423,18 +421,17 @@ func getMigrate(d interface{}) (*api.MigrateStrategy, error) {
 			HealthCheck: getString(m, "health_check"),
 		}
 
-		var duration *time.Duration
-		duration, err := getDuration(m["min_healthy_time"])
+		minHealthyTime, err := getDuration(m["min_healthy_time"])
 		if err != nil {
 			return nil, err
 		}
-		migrateStrategy.MinHealthyTime = duration
+		migrateStrategy.MinHealthyTime = minHealthyTime
 
-		duration, err = getDuration(m["healthy_deadline"])
+		healthyDeadline, err := getDuration(m["healthy_deadline"])
 		if err != nil {
 			return nil, err
 		}
-		migrateStrategy.HealthyDeadline = duration
+		migrateStrategy.HealthyDeadline = healthyDeadline
 
 		return migrateStrategy, nil
 	}
@@ -452,24 +449,23 @@ func getReschedule(d interface{}) (*api.ReschedulePolicy, error) {
 			Unlimited:     getBool(r, "unlimited"),
 		}
 
-		var duration *time.Duration
-		duration, err := getDuration(r["interval"])
+		interval, err := getDuration(r["interval"])
 		if err != nil {
 			return nil, err
 		}
-		reschedulePolicy.Interval = duration
+		reschedulePolicy.Interval = interval
 
-		duration, err = getDuration(r["delay"])
+		delay, err := getDuration(r["delay"])
 		if err != nil {
 			return nil, err
 		}
-		reschedulePolicy.Delay = duration
+		reschedulePolicy.Delay = delay
 
-		duration, err = getDuration(r["max_delay"])
+		maxDelay, err := getDuration(r["max_delay"])
 		if err != nil {
 			return nil, err
 		}
-		reschedulePolicy.MaxDelay = duration
+		reschedulePolicy.MaxDelay = maxDelay
 
 		return reschedulePolicy, nil
 	}
@@ -489,30 +485,29 @@ func getUpdate(d interface{}) (*api.UpdateStrategy, error) {
 			AutoPromote: getBool(u, "auto_promote"),
 		}
 
-		var duration *time.Duration
-		duration, err := getDuration(u["stagger"])
+		stagger, err := getDuration(u["stagger"])
 		if err != nil {
 			return nil, err
 		}
-		update.Stagger = duration
+		update.Stagger = stagger
 
-		duration, err = getDuration(u["min_healthy_time"])
+		minHealthyTime, err := getDuration(u["min_healthy_time"])
 		if err != nil {
 			return nil, err
 		}
-		update.MinHealthyTime = duration
+		update.MinHealthyTime = minHealthyTime
 
-		duration, err = getDuration(u["healthy_deadline"])
+		healthyDeadline, err := getDuration(u["healthy_deadline"])
 		if err != nil {
 			return nil, err
 		}
-		update.HealthyDeadline = duration
+		update.HealthyDeadline = healthyDeadline
 
-		duration, err = getDuration(u["progress_deadline"])
+		progressDeadline, err := getDuration(u["progress_deadline"])
 		if err != nil {
 			return nil, err
 		}
-		update.ProgressDeadline = duration
+		update.ProgressDeadline = progressDeadline
 
 		return update, nil
 	}
@@ -574,17 +569,17 @@ func getTasks(d interface{}) ([]*api.Task, error) {
 				SourcePath:   getString(tp, "source"),
 			}
 
-			duration, err := getDuration(tp["splay"])
+			splay, err := getDuration(tp["splay"])
 			if err != nil {
 				return nil, err
 			}
-			template.Splay = duration
+			template.Splay = splay
 
-			duration, err = getDuration(tp["vault_grace"])
+			vaultGrace, err := getDuration(tp["vault_grace"])
 			if err != nil {
 				return nil, err
 			}
-			template.VaultGrace = duration
+			template.VaultGrace = vaultGrace
 
 			templates = append(templates, template)
 		}
@@ -636,18 +631,18 @@ func getTasks(d interface{}) ([]*api.Task, error) {
 			VolumeMounts:    volumeMounts,
 		}
 
-		duration, err := getDuration(t["kill_timeout"])
+		killTimeout, err := getDuration(t["kill_timeout"])
 		if err != nil {
 			return nil, err
 		}
-		task.KillTimeout = duration
+		task.KillTimeout = killTimeout
 
-		duration, err = getDuration(t["shutdown_delay"])
+		shutdownDelay, err := getDuration(t["shutdown_delay"])
 		if err != nil {
 			return nil, err
 		}
-		if duration != nil {
-			task.ShutdownDelay = *duration
+		if shutdownDelay != nil {
+			task.ShutdownDelay = *shutdownDelay
 		}
 
 		tasks = append(tasks, task)
@@ -730,20 +725,20 @@ func getServices(d interface{}) ([]*api.Service, error) {
 				CheckRestart:           checkRestart,
 			}
 
-			duration, err := getDuration(c["timeout"])
+			timeout, err := getDuration(c["timeout"])
 			if err != nil {
 				return nil, err
 			}
-			if duration != nil {
-				check.Timeout = *duration
+			if timeout != nil {
+				check.Timeout = *timeout
 			}
 
-			duration, err = getDuration(c["interval"])
+			interval, err := getDuration(c["interval"])
 			if err != nil {
 				return nil, err
 			}
-			if duration != nil {
-				check.Interval = *duration
+			if interval != nil {
+				check.Interval = *interval
 			}
 
 			checks = append(checks, check)
