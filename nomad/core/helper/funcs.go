@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
-// boolToPtr returns the pointer to a boolean
+// BoolToPtr returns the pointer to a boolean
 func BoolToPtr(b bool) *bool {
 	return &b
 }
@@ -24,6 +24,11 @@ func StringToPtr(str string) *string {
 // TimeToPtr returns the pointer to a time stamp
 func TimeToPtr(t time.Duration) *time.Duration {
 	return &t
+}
+
+// IntToPtr returns the pointer to an int
+func IntToPtr(i int) *int {
+	return &i
 }
 
 func CheckHCLKeys(node ast.Node, valid []string) error {

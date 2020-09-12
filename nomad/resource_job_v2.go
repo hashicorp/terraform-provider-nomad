@@ -129,14 +129,6 @@ func strToPtr(s string) *string {
 	return &s
 }
 
-func boolToPtr(b bool) *bool {
-	return &b
-}
-
-func intToPtr(i int) *int {
-	return &i
-}
-
 func getString(d interface{}, name string) *string {
 	if m, ok := d.(map[string]interface{}); ok {
 		return strToPtr(m[name].(string))
@@ -146,16 +138,16 @@ func getString(d interface{}, name string) *string {
 
 func getBool(d interface{}, name string) *bool {
 	if m, ok := d.(map[string]interface{}); ok {
-		return boolToPtr(m[name].(bool))
+		return helper.BoolToPtr(m[name].(bool))
 	}
-	return boolToPtr(d.(*schema.ResourceData).Get(name).(bool))
+	return helper.BoolToPtr(d.(*schema.ResourceData).Get(name).(bool))
 }
 
 func getInt(d interface{}, name string) *int {
 	if m, ok := d.(map[string]interface{}); ok {
-		return intToPtr(m[name].(int))
+		return helper.IntToPtr(m[name].(int))
 	}
-	return intToPtr(d.(*schema.ResourceData).Get(name).(int))
+	return helper.IntToPtr(d.(*schema.ResourceData).Get(name).(int))
 }
 
 func getMapOfString(d interface{}) map[string]string {
@@ -213,7 +205,7 @@ func getJob(d *schema.ResourceData) (*api.Job, error) {
 	for _, pc := range d.Get("periodic").([]interface{}) {
 		p := pc.(map[string]interface{})
 		periodic = &api.PeriodicConfig{
-			Enabled:         boolToPtr(true),
+			Enabled:         helper.BoolToPtr(true),
 			Spec:            getString(p, "cron"),
 			SpecType:        strToPtr("cron"),
 			ProhibitOverlap: getBool(p, "prohibit_overlap"),
