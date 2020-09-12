@@ -52,6 +52,9 @@ The following arguments are supported:
   - `multi-node-single-writer`
   - `multi-node-multi-writer`
 - `attachment_mode`: `(string: <required>)` The storage API that will be used by the volume.
+- `mount_options`: `(map[string]interface: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
+  - `fs_type`: `(string: optional)` - The file system type.
+  - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
 - `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
 - `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
 - `context`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
