@@ -8,6 +8,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 // boolToPtr returns the pointer to a boolean
@@ -107,4 +108,31 @@ func unusedKeysImpl(path []string, val reflect.Value) error {
 		}
 	}
 	return nil
+}
+
+type StateWriter struct {
+	d      *schema.ResourceData
+	errors []string
+}
+
+func NewStateWriter(d *schema.ResourceData) *StateWriter {
+	return &StateWriter{d: d}
+}
+
+func (sw *StateWriter) Set(key string, value interface{}) {
+	err := sw.d.Set(key, value)
+	if err != nil {
+		sw.errors = append(
+			sw.errors,
+			fmt.Sprintf(" - failed to set '%s': %v", key, err),
+		)
+	}
+}
+
+func (sw *StateWriter) Error() error {
+	if sw.errors == nil {
+		return nil
+	}
+	errors := strings.Join(sw.errors, "\n")
+	return fmt.Errorf("Failed to write the state:\n%s", errors)
 }

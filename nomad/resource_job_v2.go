@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 )
 
 func resourceJobV2() *schema.Resource {
@@ -40,6 +41,7 @@ func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 
 func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
+
 	job, _, err := client.Jobs().Info(d.Id(), nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -49,52 +51,31 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Failed to read the job: %v", err)
 	}
 
-	if err = d.Set("namespace", job.Namespace); err != nil {
-		return fmt.Errorf("Failed to set 'namespace': %v", err)
-	}
-	if err = d.Set("priority", job.Priority); err != nil {
-		return fmt.Errorf("Failed to set 'priority': %v", err)
-	}
-	if err = d.Set("type", job.Type); err != nil {
-		return fmt.Errorf("Failed to set 'type': %v", err)
-	}
-	if err = d.Set("region", job.Region); err != nil {
-		return fmt.Errorf("Failed to set 'region': %v", err)
-	}
-	if err = d.Set("meta", job.Meta); err != nil {
-		return fmt.Errorf("Failed to set 'meta': %v", err)
-	}
-	if err = d.Set("all_at_once", job.AllAtOnce); err != nil {
-		return fmt.Errorf("Failed to set 'all_at_once': %v", err)
-	}
-	if err = d.Set("datacenters", job.Datacenters); err != nil {
-		return fmt.Errorf("Failed to set 'datacenters': %v", err)
-	}
-	if err = d.Set("name", job.Name); err != nil {
-		return fmt.Errorf("Failed to set 'name': %v", err)
-	}
+	sw := helper.NewStateWriter(d)
+
+	sw.Set("namespace", job.Namespace)
+	sw.Set("priority", job.Priority)
+	sw.Set("type", job.Type)
+	sw.Set("region", job.Region)
+	sw.Set("meta", job.Meta)
+	sw.Set("all_at_once", job.AllAtOnce)
+	sw.Set("datacenters", job.Datacenters)
+	sw.Set("name", job.Name)
 	// if err = d.Set("vault_token", job.VaultToken); err != nil {
 	// 	return fmt.Errorf("Failed to set 'vault_token': %v", err)
 	// }
 	// if err = d.Set("consul_token", job.ConsulToken); err != nil {
 	// 	return fmt.Errorf("Failed to set 'consul_token': %v", err)
 	// }
-	if err = d.Set("constraint", readConstraints(job.Constraints)); err != nil {
-		return fmt.Errorf("Failed to set 'constraint': %v", err)
-	}
-	if err = d.Set("affinity", readAffinities(job.Affinities)); err != nil {
-		return fmt.Errorf("Failed to set 'affinity': %v", err)
-	}
-	if err = d.Set("spread", readSpreads(job.Spreads)); err != nil {
-		return fmt.Errorf("Failed to set 'spread': %v", err)
-	}
+	sw.Set("constraint", readConstraints(job.Constraints))
+	sw.Set("affinity", readAffinities(job.Affinities))
+	sw.Set("spread", readSpreads(job.Spreads))
+
 	groups, err := readGroups(d, job.TaskGroups)
 	if err != nil {
 		return err
 	}
-	if err = d.Set("group", groups); err != nil {
-		return fmt.Errorf("Failed to set 'group': %v", err)
-	}
+	sw.Set("group", groups)
 
 	parameterized := make([]interface{}, 0)
 	if job.ParameterizedJob != nil {
@@ -105,9 +86,7 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		parameterized = append(parameterized, p)
 	}
-	if err = d.Set("parameterized", parameterized); err != nil {
-		return fmt.Errorf("Failed to set 'parameterized': %v", err)
-	}
+	sw.Set("parameterized", parameterized)
 
 	periodic := make([]interface{}, 0)
 	if job.Periodic != nil {
@@ -118,20 +97,15 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		periodic = append(periodic, p)
 	}
-	if err = d.Set("periodic", periodic); err != nil {
-		return fmt.Errorf("Failed to set 'periodic': %v", err)
-	}
+	sw.Set("periodic", periodic)
 
 	update, err := readUpdate(d, job.Update)
 	if err != nil {
 		return err
 	}
+	sw.Set("update", update)
 
-	if err = d.Set("update", update); err != nil {
-		return fmt.Errorf("Failed to set 'update': %v", err)
-	}
-
-	return nil
+	return sw.Error()
 }
 
 func resourceJobV2Deregister(d *schema.ResourceData, meta interface{}) error {
