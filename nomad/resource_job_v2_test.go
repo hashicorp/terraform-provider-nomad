@@ -14,6 +14,11 @@ func TestResourceJobV2_basic(t *testing.T) {
 			{
 				Config: testResourceJob_basic,
 			},
+			{
+				Config:       testResourceJob_basic,
+				ResourceName: "nomad_job_v2.job",
+				ImportState:  true,
+			},
 		},
 	})
 }

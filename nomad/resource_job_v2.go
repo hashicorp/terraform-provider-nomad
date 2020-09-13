@@ -34,6 +34,9 @@ func resourceJobV2() *schema.Resource {
 		Update: resourceJobV2Register,
 		Read:   resourceJobV2Read,
 		Delete: resourceJobV2Deregister,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 	}
 }
 
@@ -84,40 +87,43 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		"spread":      readSpreads(job.Spreads),
 	}
 
-	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
-	groups, err := readGroups(jobDefinition, job.TaskGroups)
-	if err != nil {
-		return err
-	}
-	j["group"] = groups
-
-	parameterized := make([]interface{}, 0)
-	if job.ParameterizedJob != nil {
-		p := map[string]interface{}{
-			"meta_optional": job.ParameterizedJob.MetaOptional,
-			"meta_required": job.ParameterizedJob.MetaRequired,
-			"payload":       job.ParameterizedJob.Payload,
+	jobDefinition := map[string]interface{}{}
+	if len(d.Get("job").([]interface{})) > 0 {
+		jobDefinition = d.Get("job").([]interface{})[0].(map[string]interface{})
+		groups, err := readGroups(jobDefinition, job.TaskGroups)
+		if err != nil {
+			return err
 		}
-		parameterized = append(parameterized, p)
-	}
-	j["parameterized"] = parameterized
+		j["group"] = groups
 
-	periodic := make([]interface{}, 0)
-	if job.Periodic != nil {
-		p := map[string]interface{}{
-			"cron":             job.Periodic.Spec,
-			"prohibit_overlap": job.Periodic.ProhibitOverlap,
-			"time_zone":        job.Periodic.TimeZone,
+		parameterized := make([]interface{}, 0)
+		if job.ParameterizedJob != nil {
+			p := map[string]interface{}{
+				"meta_optional": job.ParameterizedJob.MetaOptional,
+				"meta_required": job.ParameterizedJob.MetaRequired,
+				"payload":       job.ParameterizedJob.Payload,
+			}
+			parameterized = append(parameterized, p)
 		}
-		periodic = append(periodic, p)
-	}
-	j["periodic"] = periodic
+		j["parameterized"] = parameterized
 
-	update, err := readUpdate(jobDefinition, job.Update)
-	if err != nil {
-		return err
+		periodic := make([]interface{}, 0)
+		if job.Periodic != nil {
+			p := map[string]interface{}{
+				"cron":             job.Periodic.Spec,
+				"prohibit_overlap": job.Periodic.ProhibitOverlap,
+				"time_zone":        job.Periodic.TimeZone,
+			}
+			periodic = append(periodic, p)
+		}
+		j["periodic"] = periodic
+
+		update, err := readUpdate(jobDefinition, job.Update)
+		if err != nil {
+			return err
+		}
+		j["update"] = update
 	}
-	j["update"] = update
 
 	sw.Set("job", []interface{}{j})
 
