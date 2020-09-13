@@ -235,8 +235,14 @@ func getJob(d map[string]interface{}) (*api.Job, error) {
 		return nil, err
 	}
 
+	ID := getString(d, "id")
+	if ID == nil {
+		ID = getString(d, "name")
+	}
+
 	return &api.Job{
-		ID:          getString(d, "id"),
+		ID:          ID,
+		Name:        getString(d, "name"),
 		Namespace:   getString(d, "namespace"),
 		Priority:    getInt(d, "priority"),
 		Type:        getString(d, "type"),

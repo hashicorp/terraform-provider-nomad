@@ -6,6 +6,7 @@ func getJobFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"id": {
 			Type:     schema.TypeString,
+			Computed: true,
 			Optional: true,
 		},
 		"namespace": {
