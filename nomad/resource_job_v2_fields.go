@@ -513,7 +513,7 @@ func getServiceFields() *schema.Schema {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"native": {
-								Type:     schema.TypeString,
+								Type:     schema.TypeBool,
 								Optional: true,
 							},
 							"sidecar_service": {
@@ -555,11 +555,11 @@ func getServiceFields() *schema.Schema {
 														MaxItems: 1,
 														Elem: &schema.Resource{
 															Schema: map[string]*schema.Schema{
-																"destination_name": {
-																	Type:     schema.TypeString,
+																"local_bind_port": {
+																	Type:     schema.TypeInt,
 																	Optional: true,
 																},
-																"local_bind_port": {
+																"destination_name": {
 																	Type:     schema.TypeString,
 																	Optional: true,
 																},
