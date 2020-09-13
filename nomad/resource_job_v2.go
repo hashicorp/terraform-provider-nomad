@@ -61,12 +61,6 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	sw.Set("all_at_once", job.AllAtOnce)
 	sw.Set("datacenters", job.Datacenters)
 	sw.Set("name", job.Name)
-	// if err = d.Set("vault_token", job.VaultToken); err != nil {
-	// 	return fmt.Errorf("Failed to set 'vault_token': %v", err)
-	// }
-	// if err = d.Set("consul_token", job.ConsulToken); err != nil {
-	// 	return fmt.Errorf("Failed to set 'consul_token': %v", err)
-	// }
 	sw.Set("constraint", readConstraints(job.Constraints))
 	sw.Set("affinity", readAffinities(job.Affinities))
 	sw.Set("spread", readSpreads(job.Spreads))
