@@ -1242,7 +1242,7 @@ func readUpdate(d map[string]interface{}, update *api.UpdateStrategy) (interface
 	// we must not create it
 	var defaultValue map[string]interface{}
 	_type := d["type"].(string)
-	// The default depends ont he job type
+	// The default depends ont the job type
 	if _type == "service" {
 		defaultValue = map[string]interface{}{
 			"auto_promote":      false,
