@@ -4,6 +4,10 @@ import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 func getJobFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
+		"id": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
 		"namespace": {
 			Type:     schema.TypeString,
 			Default:  "default",

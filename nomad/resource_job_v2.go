@@ -70,6 +70,7 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	sw := helper.NewStateWriter(d)
 
 	j := map[string]interface{}{
+		"id":          *job.ID,
 		"namespace":   job.Namespace,
 		"priority":    job.Priority,
 		"type":        job.Type,
@@ -235,6 +236,7 @@ func getJob(d map[string]interface{}) (*api.Job, error) {
 	}
 
 	return &api.Job{
+		ID:          getString(d, "id"),
 		Namespace:   getString(d, "namespace"),
 		Priority:    getInt(d, "priority"),
 		Type:        getString(d, "type"),
