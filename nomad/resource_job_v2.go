@@ -243,7 +243,6 @@ func getJob(d map[string]interface{}) (*api.Job, error) {
 		Meta:        getMapOfString(d["meta"]),
 		AllAtOnce:   getBool(d, "all_at_once"),
 		Datacenters: datacenters,
-		ID:          getString(d, "name"),
 		Region:      getString(d, "region"),
 		VaultToken:  getString(d, "vault_token"),
 		ConsulToken: getString(d, "consul_token"),
