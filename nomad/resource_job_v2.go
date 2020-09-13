@@ -14,7 +14,22 @@ import (
 
 func resourceJobV2() *schema.Resource {
 	return &schema.Resource{
-		Schema: getJobFields(),
+		Schema: map[string]*schema.Schema{
+			"purge_on_delete": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
+			"job": {
+				Type:     schema.TypeList,
+				Required: true,
+				MinItems: 1,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: getJobFields(),
+				},
+			},
+		},
 		Create: resourceJobV2Register,
 		Update: resourceJobV2Register,
 		Read:   resourceJobV2Read,
@@ -24,7 +39,8 @@ func resourceJobV2() *schema.Resource {
 
 func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
-	job, err := getJob(d)
+	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
+	job, err := getJob(jobDefinition)
 	if err != nil {
 		return fmt.Errorf("Failed to get job definition: %v", err)
 	}
@@ -34,7 +50,7 @@ func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Failed to create the job: %v", err)
 	}
 
-	d.SetId(d.Get("name").(string))
+	d.SetId(*job.ID)
 
 	return resourceJobV2Read(d, meta)
 }
@@ -53,23 +69,26 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 
 	sw := helper.NewStateWriter(d)
 
-	sw.Set("namespace", job.Namespace)
-	sw.Set("priority", job.Priority)
-	sw.Set("type", job.Type)
-	sw.Set("region", job.Region)
-	sw.Set("meta", job.Meta)
-	sw.Set("all_at_once", job.AllAtOnce)
-	sw.Set("datacenters", job.Datacenters)
-	sw.Set("name", job.Name)
-	sw.Set("constraint", readConstraints(job.Constraints))
-	sw.Set("affinity", readAffinities(job.Affinities))
-	sw.Set("spread", readSpreads(job.Spreads))
+	j := map[string]interface{}{
+		"namespace":   job.Namespace,
+		"priority":    job.Priority,
+		"type":        job.Type,
+		"region":      job.Region,
+		"meta":        job.Meta,
+		"all_at_once": job.AllAtOnce,
+		"datacenters": job.Datacenters,
+		"name":        job.Name,
+		"constraint":  readConstraints(job.Constraints),
+		"affinity":    readAffinities(job.Affinities),
+		"spread":      readSpreads(job.Spreads),
+	}
 
-	groups, err := readGroups(d, job.TaskGroups)
+	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
+	groups, err := readGroups(jobDefinition, job.TaskGroups)
 	if err != nil {
 		return err
 	}
-	sw.Set("group", groups)
+	j["group"] = groups
 
 	parameterized := make([]interface{}, 0)
 	if job.ParameterizedJob != nil {
@@ -80,7 +99,7 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		parameterized = append(parameterized, p)
 	}
-	sw.Set("parameterized", parameterized)
+	j["parameterized"] = parameterized
 
 	periodic := make([]interface{}, 0)
 	if job.Periodic != nil {
@@ -91,13 +110,15 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		periodic = append(periodic, p)
 	}
-	sw.Set("periodic", periodic)
+	j["periodic"] = periodic
 
-	update, err := readUpdate(d, job.Update)
+	update, err := readUpdate(jobDefinition, job.Update)
 	if err != nil {
 		return err
 	}
-	sw.Set("update", update)
+	j["update"] = update
+
+	sw.Set("job", []interface{}{j})
 
 	return sw.Error()
 }
@@ -105,7 +126,8 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 func resourceJobV2Deregister(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
-	_, _, err := client.Jobs().Deregister(d.Id(), true, nil)
+	purge := d.Get("purge_on_delete").(bool)
+	_, _, err := client.Jobs().Deregister(d.Id(), purge, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to deregister the job: %v", err)
 	}
@@ -177,11 +199,11 @@ func getDuration(d interface{}) (*time.Duration, error) {
 // Those functions should have a 1 to 1 correspondance with the ones in
 // resource_job_v2_fields to make it easy to check we did not forget anything
 
-func getJob(d *schema.ResourceData) (*api.Job, error) {
-	datacenters := getListOfString(d.Get("datacenters"))
+func getJob(d map[string]interface{}) (*api.Job, error) {
+	datacenters := getListOfString(d["datacenters"])
 
 	var parametrizedJob *api.ParameterizedJobConfig
-	for _, pj := range d.Get("parameterized").([]interface{}) {
+	for _, pj := range d["parameterized"].([]interface{}) {
 		p := pj.(map[string]interface{})
 
 		parametrizedJob = &api.ParameterizedJobConfig{
@@ -192,7 +214,7 @@ func getJob(d *schema.ResourceData) (*api.Job, error) {
 	}
 
 	var periodic *api.PeriodicConfig
-	for _, pc := range d.Get("periodic").([]interface{}) {
+	for _, pc := range d["periodic"].([]interface{}) {
 		p := pc.(map[string]interface{})
 		periodic = &api.PeriodicConfig{
 			Enabled:         helper.BoolToPtr(true),
@@ -203,11 +225,11 @@ func getJob(d *schema.ResourceData) (*api.Job, error) {
 		}
 	}
 
-	update, err := getUpdate(d.Get("update"))
+	update, err := getUpdate(d["update"])
 	if err != nil {
 		return nil, err
 	}
-	taskGroups, err := getTaskGroups(d.Get("group"))
+	taskGroups, err := getTaskGroups(d["group"])
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +238,7 @@ func getJob(d *schema.ResourceData) (*api.Job, error) {
 		Namespace:   getString(d, "namespace"),
 		Priority:    getInt(d, "priority"),
 		Type:        getString(d, "type"),
-		Meta:        getMapOfString(d.Get("meta")),
+		Meta:        getMapOfString(d["meta"]),
 		AllAtOnce:   getBool(d, "all_at_once"),
 		Datacenters: datacenters,
 		ID:          getString(d, "name"),
@@ -224,9 +246,9 @@ func getJob(d *schema.ResourceData) (*api.Job, error) {
 		VaultToken:  getString(d, "vault_token"),
 		ConsulToken: getString(d, "consul_token"),
 
-		Constraints: getConstraints(d.Get("constraint")),
-		Affinities:  getAffinities(d.Get("affinity")),
-		Spreads:     getSpreads(d.Get("spread")),
+		Constraints: getConstraints(d["constraint"]),
+		Affinities:  getAffinities(d["affinity"]),
+		Spreads:     getSpreads(d["spread"]),
 		TaskGroups:  taskGroups,
 
 		ParameterizedJob: parametrizedJob,
@@ -988,14 +1010,14 @@ func readSpreads(spreads []*api.Spread) interface{} {
 	return res
 }
 
-func readGroups(d *schema.ResourceData, groups []*api.TaskGroup) (interface{}, error) {
+func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{}, error) {
 	res := make([]interface{}, 0)
 
 	// we have to look for the groups the user created in its configuration as
 	// we will need to set the "ephemeral_disk" and "restart" block only if they
 	// created one or the value for the block is different from the default one
 
-	groupsConfig := d.Get("group").([]interface{})
+	groupsConfig := d["group"].([]interface{})
 
 	for i, g := range groups {
 		currentConfig := groupsConfig[i].(map[string]interface{})
@@ -1033,7 +1055,7 @@ func readGroups(d *schema.ResourceData, groups []*api.TaskGroup) (interface{}, e
 
 			// The default depends on the job type
 			var defaultValue map[string]interface{}
-			_type := d.Get("type").(string)
+			_type := d["type"].(string)
 			if _type == "service" {
 				defaultValue = map[string]interface{}{
 					"attempts": 2,
@@ -1152,7 +1174,7 @@ func readMigrate(isSet bool, migrate *api.MigrateStrategy) interface{} {
 	return []interface{}{res}
 }
 
-func readReschedule(d *schema.ResourceData, isSet bool, reschedule *api.ReschedulePolicy) (interface{}, error) {
+func readReschedule(d map[string]interface{}, isSet bool, reschedule *api.ReschedulePolicy) (interface{}, error) {
 	if reschedule == nil {
 		return nil, nil
 	}
@@ -1168,7 +1190,7 @@ func readReschedule(d *schema.ResourceData, isSet bool, reschedule *api.Reschedu
 
 	var defaultValue map[string]interface{}
 	// The default value depends on the type of job
-	_type := d.Get("type").(string)
+	_type := d["type"].(string)
 	if _type == "service" {
 		defaultValue = map[string]interface{}{
 			"attempts":       0,
@@ -1201,11 +1223,7 @@ func readReschedule(d *schema.ResourceData, isSet bool, reschedule *api.Reschedu
 	return []interface{}{res}, nil
 }
 
-func readUpdate(d *schema.ResourceData, update *api.UpdateStrategy) (interface{}, error) {
-	if update == nil {
-		return nil, nil
-	}
-
+func readUpdate(d map[string]interface{}, update *api.UpdateStrategy) (interface{}, error) {
 	res := map[string]interface{}{
 		"max_parallel":      *update.MaxParallel,
 		"health_check":      *update.HealthCheck,
@@ -1221,7 +1239,7 @@ func readUpdate(d *schema.ResourceData, update *api.UpdateStrategy) (interface{}
 	// If the value returned by the API and the user did not set the block
 	// we must not create it
 	var defaultValue map[string]interface{}
-	_type := d.Get("type").(string)
+	_type := d["type"].(string)
 	// The default depends ont he job type
 	if _type == "service" {
 		defaultValue = map[string]interface{}{
@@ -1251,7 +1269,7 @@ func readUpdate(d *schema.ResourceData, update *api.UpdateStrategy) (interface{}
 		return nil, fmt.Errorf("%q is not supported", _type)
 	}
 
-	isUpdateSet := len(d.Get("update").([]interface{})) > 0
+	isUpdateSet := len(d["update"].([]interface{})) > 0
 
 	if !isUpdateSet && reflect.DeepEqual(res, defaultValue) {
 		return nil, nil

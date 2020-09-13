@@ -22,18 +22,20 @@ const testResourceJob_basic = `
 // A job with the minimal configuration to test the value of all the default
 // blocks
 resource "nomad_job_v2" "job" {
-	name        = "example"
-	datacenters = ["dc1"]
+	job {
+		name        = "example"
+		datacenters = ["dc1"]
 
-	group {
-		name = "cache"
+		group {
+			name = "cache"
 
-		task {
-			name   = "redis"
-			driver = "docker"
-			config = jsonencode({
-				image = "redis:3.2"
-			})
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+			}
 		}
 	}
 }
@@ -41,19 +43,21 @@ resource "nomad_job_v2" "job" {
 // A job with the minimal configuration to test the defaults for the batch
 // scheduler
 resource "nomad_job_v2" "batch" {
-	name        = "example-batch"
-	datacenters = ["dc1"]
-	type        = "batch"
+	job {
+		name        = "example-batch"
+		datacenters = ["dc1"]
+		type        = "batch"
 
-	group {
-		name = "cache"
+		group {
+			name = "cache"
 
-		task {
-			name   = "redis"
-			driver = "docker"
-			config = jsonencode({
-				image = "redis:3.2"
-			})
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+			}
 		}
 	}
 }
@@ -61,68 +65,72 @@ resource "nomad_job_v2" "batch" {
 // A job with the minimal configuration to test the defaults for the system
 // scheduler
 resource "nomad_job_v2" "system" {
-	name        = "example-system"
-	datacenters = ["dc1"]
-	type        = "system"
+	job {
+		name        = "example-system"
+		datacenters = ["dc1"]
+		type        = "system"
 
-	group {
-		name = "cache"
+		group {
+			name = "cache"
 
-		task {
-			name   = "redis"
-			driver = "docker"
-			config = jsonencode({
-				image = "redis:3.2"
-			})
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+			}
 		}
 	}
 }
 
 // Setting a block to its default value should not confuse Terraform
 resource "nomad_job_v2" "default" {
-	name        = "example-default"
-	datacenters = ["dc1"]
-	type        = "service"
+	job {
+		name        = "example-default"
+		datacenters = ["dc1"]
+		type        = "service"
 
-	update {
-		auto_promote = false
-	}
-
-	group {
-		name = "cache"
-
-		ephemeral_disk {
-			migrate = false
-			size    = 300
-			sticky  = false
+		update {
+			auto_promote = false
 		}
 
-		migrate {
-			max_parallel = 1
-		}
+		group {
+			name = "cache"
 
-		restart {
-			attempts = 2
-			delay    = "15s"
-			interval = "30m0s"
-			mode     = "fail"
-		}
+			ephemeral_disk {
+				migrate = false
+				size    = 300
+				sticky  = false
+			}
 
-		reschedule {
-			attempts       = 0
-			delay          = "30s"
-			delay_function = "exponential"
-			interval       = "0s"
-			max_delay      = "1h0m0s"
-			unlimited      = true
-		}
+			migrate {
+				max_parallel = 1
+			}
 
-		task {
-			name   = "redis"
-			driver = "docker"
-			config = jsonencode({
-				image = "redis:3.2"
-			})
+			restart {
+				attempts = 2
+				delay    = "15s"
+				interval = "30m0s"
+				mode     = "fail"
+			}
+
+			reschedule {
+				attempts       = 0
+				delay          = "30s"
+				delay_function = "exponential"
+				interval       = "0s"
+				max_delay      = "1h0m0s"
+				unlimited      = true
+			}
+
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+			}
 		}
 	}
 }
