@@ -22,11 +22,13 @@ func getJobFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"id": {
 			Type:     schema.TypeString,
+			ForceNew: true,
 			Computed: true,
 			Optional: true,
 		},
 		"namespace": {
 			Type:     schema.TypeString,
+			ForceNew: true,
 			Default:  "default",
 			Optional: true,
 		},
@@ -37,6 +39,7 @@ func getJobFields() map[string]*schema.Schema {
 		},
 		"type": {
 			Type:     schema.TypeString,
+			ForceNew: true,
 			Default:  "service",
 			Optional: true,
 		},
