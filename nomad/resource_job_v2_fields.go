@@ -26,7 +26,7 @@ func getJobFields() map[string]*schema.Schema {
 		},
 		"region": {
 			Type:     schema.TypeString,
-			Default:  "global",
+			Computed: true,
 			Optional: true,
 		},
 		"meta": {

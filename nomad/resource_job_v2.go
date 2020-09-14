@@ -43,7 +43,7 @@ func resourceJobV2() *schema.Resource {
 func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
-	job, err := getJob(jobDefinition)
+	job, err := getJob(jobDefinition, meta)
 	if err != nil {
 		return fmt.Errorf("Failed to get job definition: %v", err)
 	}
@@ -206,7 +206,7 @@ func getDuration(d interface{}) (*time.Duration, error) {
 // Those functions should have a 1 to 1 correspondance with the ones in
 // resource_job_v2_fields to make it easy to check we did not forget anything
 
-func getJob(d map[string]interface{}) (*api.Job, error) {
+func getJob(d map[string]interface{}, meta interface{}) (*api.Job, error) {
 	datacenters := getListOfString(d["datacenters"])
 
 	var parametrizedJob *api.ParameterizedJobConfig
@@ -246,6 +246,11 @@ func getJob(d map[string]interface{}) (*api.Job, error) {
 		ID = getString(d, "name")
 	}
 
+	region := getString(d, "region")
+	if region == nil {
+		region = meta.(ProviderConfig).region
+	}
+
 	return &api.Job{
 		ID:          ID,
 		Name:        getString(d, "name"),
@@ -255,7 +260,7 @@ func getJob(d map[string]interface{}) (*api.Job, error) {
 		Meta:        getMapOfString(d["meta"]),
 		AllAtOnce:   getBool(d, "all_at_once"),
 		Datacenters: datacenters,
-		Region:      getString(d, "region"),
+		Region:      region,
 		VaultToken:  getString(d, "vault_token"),
 		ConsulToken: getString(d, "consul_token"),
 
