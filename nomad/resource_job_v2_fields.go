@@ -989,6 +989,10 @@ func getNetworkFields() *schema.Schema {
 					MaxItems: 1,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
+							"label": {
+								Type:     schema.TypeString,
+								Optional: true,
+							},
 							"static": {
 								Type:     schema.TypeInt,
 								Optional: true,
