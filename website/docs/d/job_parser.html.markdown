@@ -6,7 +6,7 @@ description: |-
   Parse a HCL jobspec and produce the equivalent JSON encoded job.
 ---
 
-# nomad_acl_policy
+# nomad_job_parser
 
 Parse a HCL jobspec and produce the equivalent JSON encoded job.
 
