@@ -29,6 +29,9 @@ func TestResourceJobV2_basic(t *testing.T) {
 				Config: testResourceJob_defaultBlock,
 			},
 			{
+				Config: testResourceJob_constraints,
+			},
+			{
 				Config: testResourceJob_allSet,
 			},
 		},
@@ -155,6 +158,38 @@ resource "nomad_job_v2" "default" {
 	}
 }`
 
+const testResourceJob_constraints = `
+resource "nomad_job_v2" "job" {
+	job {
+		name        = "example"
+		datacenters = ["dc1"]
+
+		group {
+			name = "cache"
+
+			constraint {
+				operator = "distinct_hosts"
+				value    = "true"
+			}
+
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+
+				template {
+					source        = "local/redis.conf.tpl"
+					destination   = "local/redis.conf"
+					change_mode   = "signal"
+					change_signal = "SIGINT"
+				}
+			}
+		}
+	}
+}`
+
 const testResourceJob_allSet = `
 // A job with all values set to try to test all code paths
 resource "nomad_job_v2" "all" {
@@ -209,17 +244,17 @@ resource "nomad_job_v2" "all" {
 			shutdown_delay               = "6s"
 			stop_after_client_disconnect = "1h"
 
-			// constraint {
-			// 	operator  = "distinct_hosts"
-			// 	value     = "true"
-			// }
+			constraint {
+				operator  = "distinct_hosts"
+				value     = "true"
+			}
 
-			// affinity {
-			// 	attribute = "$${node.datacenter}"
-			// 	operator  = "<"
-			// 	value     = "us-west1"
-			// 	weight    = 100
-			// }
+			affinity {
+				attribute = "$${node.datacenter}"
+				operator  = "<"
+				value     = "us-west1"
+				weight    = 100
+			}
 
 			spread {
 				attribute = "$${node.datacenter}"
