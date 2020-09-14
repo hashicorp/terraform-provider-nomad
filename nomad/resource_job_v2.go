@@ -696,7 +696,7 @@ func getNetworks(d interface{}) []*api.NetworkResource {
 			MBits: getInt(n, "mbits"),
 		}
 
-		for _, p := range n["port"].([]interface{}) {
+		for _, p := range n["port"].(*schema.Set).List() {
 			pt := p.(map[string]interface{})
 			port := api.Port{
 				Label:       pt["label"].(string),
@@ -1324,11 +1324,28 @@ func readNetworks(networks []*api.NetworkResource) interface{} {
 			dns = append(dns, d)
 		}
 
-		// TODO(remi): check what to do for the port
+		ports := make([]interface{}, 0)
+		for _, p := range n.DynamicPorts {
+			ports = append(ports, map[string]interface{}{
+				"label":        p.Label,
+				"static":       p.Value,
+				"to":           p.To,
+				"host_network": p.HostNetwork,
+			})
+		}
+		for _, p := range n.ReservedPorts {
+			ports = append(ports, map[string]interface{}{
+				"label":        p.Label,
+				"static":       p.Value,
+				"to":           p.To,
+				"host_network": p.HostNetwork,
+			})
+		}
+
 		network := map[string]interface{}{
 			"mbits": *n.MBits,
 			"mode":  n.Mode,
-			"port":  []interface{}{nil},
+			"port":  ports,
 			"dns":   dns,
 		}
 

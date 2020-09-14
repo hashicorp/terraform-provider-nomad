@@ -984,9 +984,8 @@ func getNetworkFields() *schema.Schema {
 					Optional: true,
 				},
 				"port": {
-					Type:     schema.TypeList,
+					Type:     schema.TypeSet,
 					Optional: true,
-					MaxItems: 1,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"label": {
