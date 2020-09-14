@@ -1,6 +1,22 @@
 package nomad
 
-import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+import (
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+)
+
+func diffSupressDuration(k, old, new string, d *schema.ResourceData) bool {
+	o, err := time.ParseDuration(old)
+	if err != nil {
+		return false
+	}
+	n, err := time.ParseDuration(new)
+	if err != nil {
+		return false
+	}
+	return o.Seconds() == n.Seconds()
+}
 
 func getJobFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -145,6 +161,7 @@ func getSpreadFields() *schema.Schema {
 func getConstraintFields() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
+		Computed: true,
 		Optional: true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
@@ -239,9 +256,10 @@ func getMigrateFields() *schema.Schema {
 					Optional: true,
 				},
 				"healthy_deadline": {
-					Type:     schema.TypeString,
-					Default:  "5m0s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "5m0s",
+					Optional:         true,
 				},
 				"max_parallel": {
 					Type:     schema.TypeInt,
@@ -249,9 +267,10 @@ func getMigrateFields() *schema.Schema {
 					Optional: true,
 				},
 				"min_healthy_time": {
-					Type:     schema.TypeString,
-					Default:  "10s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "10s",
+					Optional:         true,
 				},
 			},
 		},
@@ -265,23 +284,26 @@ func getRescheduleFields() *schema.Schema {
 		MaxItems: 1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"interval": {
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Optional:         true,
+				},
+				"delay": {
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Optional:         true,
+				},
+				"max_delay": {
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Optional:         true,
+				},
 				"attempts": {
 					Type:     schema.TypeInt,
 					Optional: true,
 				},
-				"interval": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"delay": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
 				"delay_function": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"max_delay": {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
@@ -405,6 +427,16 @@ func getServiceFields() *schema.Schema {
 					Optional: true,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
+							"interval": {
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Optional:         true,
+							},
+							"timeout": {
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Optional:         true,
+							},
 							"address_mode": {
 								Type:     schema.TypeString,
 								Optional: true,
@@ -438,10 +470,6 @@ func getServiceFields() *schema.Schema {
 								Type:     schema.TypeInt,
 								Optional: true,
 							},
-							"interval": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
 							"method": {
 								Type:     schema.TypeString,
 								Optional: true,
@@ -470,10 +498,6 @@ func getServiceFields() *schema.Schema {
 								Type:     schema.TypeString,
 								Optional: true,
 							},
-							"timeout": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
 							"type": {
 								Type:     schema.TypeString,
 								Optional: true,
@@ -488,12 +512,13 @@ func getServiceFields() *schema.Schema {
 								MaxItems: 1,
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
+										"grace": {
+											Type:             schema.TypeString,
+											DiffSuppressFunc: diffSupressDuration,
+											Optional:         true,
+										},
 										"limit": {
 											Type:     schema.TypeInt,
-											Optional: true,
-										},
-										"grace": {
-											Type:     schema.TypeString,
 											Optional: true,
 										},
 										"ignore_warnings": {
@@ -611,6 +636,16 @@ func getServiceFields() *schema.Schema {
 								MaxItems: 1,
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
+										"kill_timeout": {
+											Type:             schema.TypeString,
+											DiffSuppressFunc: diffSupressDuration,
+											Optional:         true,
+										},
+										"shutdown_delay": {
+											Type:             schema.TypeString,
+											DiffSuppressFunc: diffSupressDuration,
+											Optional:         true,
+										},
 										"meta": {
 											Type:     schema.TypeMap,
 											Elem:     &schema.Schema{Type: schema.TypeString},
@@ -636,14 +671,6 @@ func getServiceFields() *schema.Schema {
 										"env": {
 											Type:     schema.TypeMap,
 											Elem:     &schema.Schema{Type: schema.TypeString},
-											Optional: true,
-										},
-										"kill_timeout": {
-											Type:     schema.TypeString,
-											Optional: true,
-										},
-										"shutdown_delay": {
-											Type:     schema.TypeString,
 											Optional: true,
 										},
 										"kill_signal": {
@@ -674,6 +701,16 @@ func getGroupFields() *schema.Schema {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
+				"shutdown_delay": {
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Optional:         true,
+				},
+				"stop_after_client_disconnect": {
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Optional:         true,
+				},
 				"meta": {
 					Type:     schema.TypeMap,
 					Elem:     &schema.Schema{Type: schema.TypeString},
@@ -681,14 +718,6 @@ func getGroupFields() *schema.Schema {
 				},
 				"count": {
 					Type:     schema.TypeInt,
-					Optional: true,
-				},
-				"shutdown_delay": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"stop_after_client_disconnect": {
-					Type:     schema.TypeString,
 					Optional: true,
 				},
 				"constraint": getConstraintFields(),
@@ -724,16 +753,18 @@ func getGroupFields() *schema.Schema {
 					MaxItems: 1,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
-							"attempts": {
-								Type:     schema.TypeInt,
-								Optional: true,
-							},
 							"delay": {
-								Type:     schema.TypeString,
-								Optional: true,
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Optional:         true,
 							},
 							"interval": {
-								Type:     schema.TypeString,
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Optional:         true,
+							},
+							"attempts": {
+								Type:     schema.TypeInt,
 								Optional: true,
 							},
 							"mode": {
@@ -790,14 +821,16 @@ func getTaskFields() *schema.Schema {
 					Optional: true,
 				},
 				"kill_timeout": {
-					Type:     schema.TypeString,
-					Default:  "5s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "5s",
+					Optional:         true,
 				},
 				"shutdown_delay": {
-					Type:     schema.TypeString,
-					Default:  "0s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "0s",
+					Optional:         true,
 				},
 				"env": {
 					Type:     schema.TypeMap,
@@ -899,6 +932,33 @@ func getTaskFields() *schema.Schema {
 								Default:  "restart",
 								Optional: true,
 							},
+							"left_delimiter": {
+								Type:     schema.TypeString,
+								Default:  "{{",
+								Optional: true,
+							},
+							"perms": {
+								Type:     schema.TypeString,
+								Default:  "0644",
+								Optional: true,
+							},
+							"right_delimiter": {
+								Type:     schema.TypeString,
+								Default:  "}}",
+								Optional: true,
+							},
+							"splay": {
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Default:          "5s",
+								Optional:         true,
+							},
+							"vault_grace": {
+								Type:             schema.TypeString,
+								DiffSuppressFunc: diffSupressDuration,
+								Default:          "0s",
+								Optional:         true,
+							},
 							"change_signal": {
 								Type:     schema.TypeString,
 								Optional: true,
@@ -915,27 +975,7 @@ func getTaskFields() *schema.Schema {
 								Type:     schema.TypeBool,
 								Optional: true,
 							},
-							"left_delimiter": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
-							"perms": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
-							"right_delimiter": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
 							"source": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
-							"splay": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
-							"vault_grace": {
 								Type:     schema.TypeString,
 								Optional: true,
 							},
@@ -992,12 +1032,12 @@ func getNetworkFields() *schema.Schema {
 								Type:     schema.TypeString,
 								Optional: true,
 							},
-							"static": {
+							"to": {
 								Type:     schema.TypeInt,
 								Optional: true,
 							},
-							"to": {
-								Type:     schema.TypeString,
+							"static": {
+								Type:     schema.TypeInt,
 								Optional: true,
 							},
 							"host_network": {
@@ -1044,19 +1084,22 @@ func getUpdateFields() *schema.Schema {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"healthy_deadline": {
-					Type:     schema.TypeString,
-					Default:  "0s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "0s",
+					Optional:         true,
 				},
 				"min_healthy_time": {
-					Type:     schema.TypeString,
-					Default:  "0s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "0s",
+					Optional:         true,
 				},
 				"progress_deadline": {
-					Type:     schema.TypeString,
-					Default:  "0s",
-					Optional: true,
+					Type:             schema.TypeString,
+					DiffSuppressFunc: diffSupressDuration,
+					Default:          "0s",
+					Optional:         true,
 				},
 				"stagger": {
 					Type:     schema.TypeString,

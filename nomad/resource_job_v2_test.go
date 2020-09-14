@@ -141,288 +141,292 @@ resource "nomad_job_v2" "default" {
 }
 
 // A job with all values set to try to test all code paths
-// resource "nomad_job_v2" "all" {
-// 	namespace = "default"
-// 	priority  = 100
-// 	type      = "batch"
-// 	region    = "global"
-// 	meta = {
-// 		foo = "bar"
-// 	}
-// 	all_at_once  = true
-// 	datacenters  = ["dc1"]
-// 	name         = "all"
-// 	vault_token  = "foobar"
-// 	consul_token = "var"
+resource "nomad_job_v2" "all" {
 
-// 	constraint {
-// 		operator  = "distinct_hosts"
-//       	value     = "true"
-// 	}
+	job {
+		namespace = "default"
+		priority  = 100
+		type      = "batch"
+		region    = "global"
+		meta = {
+			foo = "bar"
+		}
+		all_at_once  = true
+		datacenters  = ["dc1"]
+		name         = "all"
+		vault_token  = "foobar"
+		consul_token = "var"
 
-// 	affinity {
-// 		attribute = "$${node.datacenter}"
-// 		operator  = ">="
-// 		value     = "us-west1"
-// 		weight    = 100
-// 	}
+		constraint {
+			operator  = "distinct_hosts"
+			value     = "true"
+		}
 
-// 	spread {
-// 		attribute = "$${node.datacenter}"
-// 		weight    = 100
+		affinity {
+			attribute = "$${node.datacenter}"
+			operator  = ">="
+			value     = "us-west1"
+			weight    = 100
+		}
 
-// 		target {
-// 			value   = "us-east1"
-// 			percent = 40
-// 		}
+		spread {
+			attribute = "$${node.datacenter}"
+			weight    = 100
 
-// 		target {
-// 			value   = "us-west1"
-// 			percent = 60
-// 		}
-// 	}
+			target {
+				value   = "us-east1"
+				percent = 40
+			}
 
-// 	group {
-// 		name = "cache"
-// 		meta = {
-// 			foo = "bar"
-// 		}
-// 		count                        = 3
-// 		shutdown_delay               = "6s"
-// 		stop_after_client_disconnect = "1h"
+			target {
+				value   = "us-west1"
+				percent = 60
+			}
+		}
 
-// 		constraint {
-// 			operator  = "distinct_hosts"
-// 			value     = "true"
-// 		}
+		group {
+			name = "cache"
+			meta = {
+				foo = "bar"
+			}
+			count                        = 3
+			shutdown_delay               = "6s"
+			stop_after_client_disconnect = "1h"
 
-// 		affinity {
-// 			attribute = "$${node.datacenter}"
-// 			operator  = "<"
-// 			value     = "us-west1"
-// 			weight    = 100
-// 		}
+			constraint {
+				operator  = "distinct_hosts"
+				value     = "true"
+			}
 
-// 		spread {
-// 			attribute = "$${node.datacenter}"
-// 			weight    = 100
-// 		}
+			affinity {
+				attribute = "$${node.datacenter}"
+				operator  = "<"
+				value     = "us-west1"
+				weight    = 100
+			}
 
-// 		ephemeral_disk {
-// 			migrate = true
-// 			size    = 500
-// 			sticky  = true
-// 		}
+			spread {
+				attribute = "$${node.datacenter}"
+				weight    = 100
+			}
 
-// 		network {
-// 			mbits = 20
-// 			mode  = "host"
+			ephemeral_disk {
+				migrate = true
+				size    = 500
+				sticky  = true
+			}
 
-// 			port {
-// 				to = 1234
-// 			}
+			network {
+				mbits = 20
+				mode  = "host"
 
-// 			dns {
-// 				servers  = ["1.2.3.4"]
-// 				searches = ["1.2.3.4"]
-// 				options  = ["1.2.3.4"]
-// 			}
-// 		}
+				port {
+					label = "http"
+					to    = 1234
+				}
 
-// 		restart {
-// 			attempts = 6
-// 			delay    = "4s"
-// 			interval = "70s"
-// 			mode     = "delay"
-// 		}
+				dns {
+					servers  = ["1.2.3.4"]
+					searches = ["1.2.3.4"]
+					options  = ["1.2.3.4"]
+				}
+			}
 
-// 		service {
-// 			meta = {
-// 				foo = "bar"
-// 			}
-// 			name                = "test"
-// 			port                = "http"
-// 			tags                = ["http", "test"]
-// 			canary_tags         = ["canay", "test"]
-// 			enable_tag_override = true
-// 			task                = "redis"
+			restart {
+				attempts = 6
+				delay    = "4s"
+				interval = "70s"
+				mode     = "delay"
+			}
 
-// 			check {
-// 				type     = "tcp"
-// 				port     = "db"
-// 				interval = "10s"
-// 				timeout  = "2s"
-// 			}
-// 		}
+			service {
+				meta = {
+					foo = "bar"
+				}
+				name                = "test"
+				port                = "http"
+				tags                = ["http", "test"]
+				canary_tags         = ["canay", "test"]
+				enable_tag_override = true
+				task                = "redis"
 
-// 		task {
-// 			name   = "redis"
-// 			config = jsonencode({
-// 				image = "redis:3.2"
-// 			})
-// 			env = {
-// 				foo = "bar"
-// 			}
-// 			meta = {
-// 				bar = "var"
-// 			}
-// 			driver         = "docker"
-// 			kill_timeout   = "1m"
-// 			kill_signal    = "SIGTERM"
-// 			leader         = true
-// 			shutdown_delay = "10s"
-// 			user           = "remi"
-// 			kind           = "foo"
+				check {
+					type     = "tcp"
+					port     = "db"
+					interval = "10s"
+					timeout  = "2s"
+				}
+			}
 
-// 			artifact {
-// 				destination = "test"
-// 				mode        = "file"
-// 				source      = "https://example.com/file.tar.gz"
-// 				options = {
-// 					checksum = "md5:df6a4178aec9fbdc1d6d7e3634d1bc33"
-// 				}
-// 			}
+			task {
+				name   = "redis"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+				env = {
+					foo = "bar"
+				}
+				meta = {
+					bar = "var"
+				}
+				driver         = "docker"
+				kill_timeout   = "1m"
+				kill_signal    = "SIGTERM"
+				leader         = true
+				shutdown_delay = "10s"
+				user           = "remi"
+				kind           = "foo"
 
-// 			artifact {
-// 				destination = "test2"
-// 				mode        = "dir"
-// 				source      = "https://example.com/file.tar.gz"
-// 				options = {
-// 					checksum = "md5:df6a4178aec9fbdc1d6d7e3634d1bc33"
-// 				}
-// 			}
+				artifact {
+					destination = "test"
+					mode        = "file"
+					source      = "https://example.com/file.tar.gz"
+					options = {
+						checksum = "md5:df6a4178aec9fbdc1d6d7e3634d1bc33"
+					}
+				}
 
-// 			constraint {
-// 				attribute = "foo"
-// 				operator  = "version"
-// 				value     = "1"
-// 			}
+				artifact {
+					destination = "test2"
+					mode        = "dir"
+					source      = "https://example.com/file.tar.gz"
+					options = {
+						checksum = "md5:df6a4178aec9fbdc1d6d7e3634d1bc33"
+					}
+				}
 
-// 			affinity {
-// 				attribute = "$${node.datacenter}"
-// 				operator  = "<"
-// 				value     = "us-west1"
-// 				weight    = 100
-// 			}
+				constraint {
+					attribute = "foo"
+					operator  = "version"
+					value     = "1"
+				}
 
-// 			dispatch_payload {
-// 				file = "config.json"
-// 			}
+				affinity {
+					attribute = "$${node.datacenter}"
+					operator  = "<"
+					value     = "us-west1"
+					weight    = 100
+				}
 
-// 			lifecycle {
-// 				hook    = "prestart"
-// 				sidecar = false
-// 			}
+				dispatch_payload {
+					file = "config.json"
+				}
 
-// 			logs {
-// 				max_files     = 1
-// 				max_file_size = 1
-// 			}
+				lifecycle {
+					hook    = "prestart"
+					sidecar = false
+				}
 
-// 			resources {
-// 				cpu    = 1234
-// 				memory = 28
+				logs {
+					max_files     = 1
+					max_file_size = 1
+				}
 
-// 				device {
-// 					name  = "foo"
-// 					count = 2
+				resources {
+					cpu    = 1234
+					memory = 28
 
-// 					constraint {
-// 						attribute = "$${device.attr.memory}"
-// 						operator  = ">="
-// 						value     = "2 GiB"
-// 					}
+					device {
+						name  = "foo"
+						count = 2
 
-// 					affinity {
-// 						attribute = "$${device.attr.memory}"
-// 						operator  = ">="
-// 						value     = "4 GiB"
-// 						weight    = 75
-// 					}
-// 				}
+						constraint {
+							attribute = "$${device.attr.memory}"
+							operator  = ">="
+							value     = "2 GiB"
+						}
 
-// 				network {
-// 					mbits = 20
-// 					mode  = "host"
+						affinity {
+							attribute = "$${device.attr.memory}"
+							operator  = ">="
+							value     = "4 GiB"
+							weight    = 75
+						}
+					}
 
-// 					port {
-// 						to = 1234
-// 					}
+					network {
+						mbits = 20
+						mode  = "host"
 
-// 					dns {
-// 						servers  = ["1.2.3.4"]
-// 						searches = ["1.2.3.4"]
-// 						options  = ["1.2.3.4"]
-// 					}
-// 				}
-// 			}
+						port {
+							to = 1234
+						}
 
-// 			// service {}
+						dns {
+							servers  = ["1.2.3.4"]
+							searches = ["1.2.3.4"]
+							options  = ["1.2.3.4"]
+						}
+					}
+				}
 
-// 			template {
-// 				source          = "local/redis.conf.tpl"
-// 				destination     = "local/redis.conf"
-// 				change_mode     = "signal"
-// 				change_signal   = "SIGINT"
-// 				splay           = "6s"
-// 				left_delimiter  = "[["
-// 				perms           = "755"
-// 				right_delimiter = "]]"
-// 				vault_grace     = "1s"
-// 			}
+				// service {}
 
-// 			template {
-// 				data = <<-EOH
-// 					FOO=bar
-// 				EOH
-// 				destination = "nowhere"
-// 				env         = true
-// 			}
+				template {
+					source          = "local/redis.conf.tpl"
+					destination     = "local/redis.conf"
+					change_mode     = "signal"
+					change_signal   = "SIGINT"
+					splay           = "6s"
+					left_delimiter  = "[["
+					perms           = "755"
+					right_delimiter = "]]"
+					vault_grace     = "1s"
+				}
 
-// 			// We cannot test vault here as it requires an appropriate config
-// 			// for the Nomad server
+				template {
+					data = <<-EOH
+						FOO=bar
+					EOH
+					destination = "nowhere"
+					env         = true
+				}
 
-// 			volume_mount {
-// 				volume      = "foo"
-// 				destination = "/etc/ssl/certs"
-// 				read_only   = true
-// 			}
-// 		}
+				// We cannot test vault here as it requires an appropriate config
+				// for the Nomad server
 
-// 		volume {
-// 			name      = "foo"
-// 			type      = "host"
-// 			source    = "ca-certificates"
-// 			read_only = true
-// 		}
-// 	}
+				volume_mount {
+					volume      = "foo"
+					destination = "/etc/ssl/certs"
+					read_only   = true
+				}
+			}
 
-// 	// migrate {
-// 	// 	max_parallel      = 6
-// 	// 	health_check      = "task_states"
-// 	// 	min_healthy_time  = "1m"
-// 	// 	healthy_deadline  = "1h"
-// 	// }
+			volume {
+				name      = "foo"
+				type      = "host"
+				source    = "ca-certificates"
+				read_only = true
+			}
+		}
 
-// 	parameterized {
-// 		meta_optional = ["one"]
-// 		meta_required = ["two"]
-// 		payload       = "required"
-// 	}
+		// migrate {
+		// 	max_parallel      = 6
+		// 	health_check      = "task_states"
+		// 	min_healthy_time  = "1m"
+		// 	healthy_deadline  = "1h"
+		// }
 
-// 	periodic {
-// 		cron             = "*/15 * * * * *"
-// 		prohibit_overlap = true
-// 		time_zone        = "America/New_York"
-// 	}
+		parameterized {
+			meta_optional = ["one"]
+			meta_required = ["two"]
+			payload       = "required"
+		}
 
-// 	// reschedule {
-// 	// 	attempts       = 5
-// 	// 	interval       = "1h"
-// 	// 	delay          = "10m"
-// 	// 	delay_function = "fibonacci"
-// 	// 	max_delay      = "120m"
-// 	// 	unlimited      = false
-// 	// }
-// }
+		periodic {
+			cron             = "*/15 * * * * *"
+			prohibit_overlap = true
+			time_zone        = "America/New_York"
+		}
+
+		// reschedule {
+		// 	attempts       = 5
+		// 	interval       = "1h"
+		// 	delay          = "10m"
+		// 	delay_function = "fibonacci"
+		// 	max_delay      = "120m"
+		// 	unlimited      = false
+		// }
+	}
+}
 `
