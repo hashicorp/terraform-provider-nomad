@@ -691,10 +691,25 @@ func getNetworks(d interface{}) []*api.NetworkResource {
 	for _, nr := range d.([]interface{}) {
 		n := nr.(map[string]interface{})
 
-		// TODO(remi): find what to do with the ports here
 		network := &api.NetworkResource{
 			Mode:  n["mode"].(string),
 			MBits: getInt(n, "mbits"),
+		}
+
+		for _, p := range n["port"].([]interface{}) {
+			pt := p.(map[string]interface{})
+			port := api.Port{
+				Label:       pt["label"].(string),
+				Value:       pt["static"].(int),
+				To:          pt["to"].(int),
+				HostNetwork: pt["host_network"].(string),
+			}
+
+			if port.Value > 0 {
+				network.ReservedPorts = append(network.ReservedPorts, port)
+			} else {
+				network.DynamicPorts = append(network.DynamicPorts, port)
+			}
 		}
 
 		for _, dns := range n["dns"].([]interface{}) {
