@@ -221,10 +221,10 @@ resource "nomad_job_v2" "all" {
 			// 	weight    = 100
 			// }
 
-			// spread {
-			// 	attribute = "$${node.datacenter}"
-			// 	weight    = 100
-			// }
+			spread {
+				attribute = "$${node.datacenter}"
+				weight    = 100
+			}
 
 			ephemeral_disk {
 				migrate = true

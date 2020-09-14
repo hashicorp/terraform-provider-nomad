@@ -347,7 +347,7 @@ func getSpreads(d interface{}) []*api.Spread {
 		)
 	}
 
-	return nil
+	return spreads
 }
 
 func getTaskGroups(d interface{}) ([]*api.TaskGroup, error) {
