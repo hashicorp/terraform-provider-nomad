@@ -12,18 +12,30 @@ func TestResourceJobV2_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceJob_basic,
+				Config: testResourceJob_basicService,
 			},
 			{
-				Config:       testResourceJob_basic,
+				Config:       testResourceJob_basicService,
 				ResourceName: "nomad_job_v2.job",
 				ImportState:  true,
+			},
+			{
+				Config: testResourceJob_basicBatch,
+			},
+			{
+				Config: testResourceJob_basicSystem,
+			},
+			{
+				Config: testResourceJob_defaultBlock,
+			},
+			{
+				Config: testResourceJob_allSet,
 			},
 		},
 	})
 }
 
-const testResourceJob_basic = `
+const testResourceJob_basicService = `
 // A job with the minimal configuration to test the value of all the default
 // blocks
 resource "nomad_job_v2" "job" {
@@ -43,11 +55,12 @@ resource "nomad_job_v2" "job" {
 			}
 		}
 	}
-}
+}`
 
+const testResourceJob_basicBatch = `
 // A job with the minimal configuration to test the defaults for the batch
 // scheduler
-resource "nomad_job_v2" "batch" {
+resource "nomad_job_v2" "job" {
 	job {
 		name        = "example-batch"
 		datacenters = ["dc1"]
@@ -65,8 +78,9 @@ resource "nomad_job_v2" "batch" {
 			}
 		}
 	}
-}
+}`
 
+const testResourceJob_basicSystem = `
 // A job with the minimal configuration to test the defaults for the system
 // scheduler
 resource "nomad_job_v2" "system" {
@@ -87,8 +101,9 @@ resource "nomad_job_v2" "system" {
 			}
 		}
 	}
-}
+}`
 
+const testResourceJob_defaultBlock = `
 // Setting a block to its default value should not confuse Terraform
 resource "nomad_job_v2" "default" {
 	job {
@@ -138,8 +153,9 @@ resource "nomad_job_v2" "default" {
 			}
 		}
 	}
-}
+}`
 
+const testResourceJob_allSet = `
 // A job with all values set to try to test all code paths
 resource "nomad_job_v2" "all" {
 
@@ -169,20 +185,20 @@ resource "nomad_job_v2" "all" {
 			weight    = 100
 		}
 
-		spread {
-			attribute = "$${node.datacenter}"
-			weight    = 100
+		// spread {
+		// 	attribute = "$${node.datacenter}"
+		// 	weight    = 100
 
-			target {
-				value   = "us-east1"
-				percent = 40
-			}
+		// 	target {
+		// 		value   = "us-east1"
+		// 		percent = 40
+		// 	}
 
-			target {
-				value   = "us-west1"
-				percent = 60
-			}
-		}
+		// 	target {
+		// 		value   = "us-west1"
+		// 		percent = 60
+		// 	}
+		// }
 
 		group {
 			name = "cache"
@@ -193,22 +209,22 @@ resource "nomad_job_v2" "all" {
 			shutdown_delay               = "6s"
 			stop_after_client_disconnect = "1h"
 
-			constraint {
-				operator  = "distinct_hosts"
-				value     = "true"
-			}
+			// constraint {
+			// 	operator  = "distinct_hosts"
+			// 	value     = "true"
+			// }
 
-			affinity {
-				attribute = "$${node.datacenter}"
-				operator  = "<"
-				value     = "us-west1"
-				weight    = 100
-			}
+			// affinity {
+			// 	attribute = "$${node.datacenter}"
+			// 	operator  = "<"
+			// 	value     = "us-west1"
+			// 	weight    = 100
+			// }
 
-			spread {
-				attribute = "$${node.datacenter}"
-				weight    = 100
-			}
+			// spread {
+			// 	attribute = "$${node.datacenter}"
+			// 	weight    = 100
+			// }
 
 			ephemeral_disk {
 				migrate = true
@@ -246,7 +262,7 @@ resource "nomad_job_v2" "all" {
 				name                = "test"
 				port                = "http"
 				tags                = ["http", "test"]
-				canary_tags         = ["canay", "test"]
+				canary_tags         = ["canary", "test"]
 				enable_tag_override = true
 				task                = "redis"
 

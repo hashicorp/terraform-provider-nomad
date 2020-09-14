@@ -390,6 +390,11 @@ func getServiceFields() *schema.Schema {
 					Elem:     &schema.Schema{Type: schema.TypeString},
 					Optional: true,
 				},
+				"address_mode": {
+					Type:     schema.TypeString,
+					Default:  "auto",
+					Optional: true,
+				},
 				"meta": {
 					Type:     schema.TypeMap,
 					Elem:     &schema.Schema{Type: schema.TypeString},
@@ -417,10 +422,6 @@ func getServiceFields() *schema.Schema {
 					Type:     schema.TypeBool,
 					Optional: true,
 				},
-				"address_mode": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
 				"task": {
 					Type:     schema.TypeString,
 					Optional: true,
@@ -439,6 +440,11 @@ func getServiceFields() *schema.Schema {
 								Type:             schema.TypeString,
 								DiffSuppressFunc: diffSupressDuration,
 								Optional:         true,
+							},
+							"name": {
+								Type:     schema.TypeString,
+								Computed: true,
+								Optional: true,
 							},
 							"address_mode": {
 								Type:     schema.TypeString,
@@ -474,10 +480,6 @@ func getServiceFields() *schema.Schema {
 								Optional: true,
 							},
 							"method": {
-								Type:     schema.TypeString,
-								Optional: true,
-							},
-							"name": {
 								Type:     schema.TypeString,
 								Optional: true,
 							},
@@ -1039,12 +1041,13 @@ func getNetworkFields() *schema.Schema {
 								Type:     schema.TypeInt,
 								Optional: true,
 							},
-							"static": {
-								Type:     schema.TypeInt,
-								Optional: true,
-							},
 							"host_network": {
 								Type:     schema.TypeString,
+								Default:  "default",
+								Optional: true,
+							},
+							"static": {
+								Type:     schema.TypeInt,
 								Optional: true,
 							},
 						},
