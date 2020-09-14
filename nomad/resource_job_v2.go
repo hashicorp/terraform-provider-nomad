@@ -123,6 +123,12 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 		j["update"] = update
+
+		// Since they are not write-only, neither consul_token and vault_token
+		// are returned by the Nomad API. We add them back to avoid having a
+		// perpetual diff.
+		j["consul_token"] = jobDefinition["consul_token"].(string)
+		j["vault_token"] = jobDefinition["vault_token"].(string)
 	}
 
 	sw.Set("job", []interface{}{j})
