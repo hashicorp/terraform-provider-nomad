@@ -90,7 +90,7 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	jobDefinition := map[string]interface{}{}
 	if len(d.Get("job").([]interface{})) > 0 {
 		jobDefinition = d.Get("job").([]interface{})[0].(map[string]interface{})
-		groups, err := readGroups(jobDefinition, job.TaskGroups)
+		groups, err := readGroups(job.TaskGroups)
 		if err != nil {
 			return err
 		}
@@ -118,17 +118,10 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		j["periodic"] = periodic
 
-		update, err := readUpdate(jobDefinition, job.Update)
-		if err != nil {
-			return err
-		}
+		update := readUpdate(job.Update)
 		j["update"] = update
 
-		// Since they are not write-only, neither consul_token and vault_token
-		// are returned by the Nomad API. We add them back to avoid having a
-		// perpetual diff.
-		j["consul_token"] = jobDefinition["consul_token"].(string)
-		j["vault_token"] = jobDefinition["vault_token"].(string)
+		normalizeJob(j, jobDefinition)
 	}
 
 	sw.Set("job", []interface{}{j})
@@ -207,6 +200,204 @@ func getDuration(d interface{}) (*time.Duration, error) {
 		return nil, err
 	}
 	return &duration, err
+}
+
+// The following function nomalize the job specification returned by Nomad to
+// what Terraform actually expect.
+
+func normalizeJob(job map[string]interface{}, jobDefinition map[string]interface{}) {
+
+	// Since they are not write-only, neither consul_token and vault_token
+	// are returned by the Nomad API. We add them back to avoid having a
+	// perpetual diff.
+	job["consul_token"] = jobDefinition["consul_token"].(string)
+	job["vault_token"] = jobDefinition["vault_token"].(string)
+
+	// When the user omit a block, Nomad will set it to its default value for
+	// this job type and include it in the response it sends back. When
+	// comparing it with what it sent Terraform will find a new block and will
+	// therefore produce a diff.
+	// Using DiffSuppressFunc does not work for lists so it can't be used to fix
+	// this, we could set the whole block as computed, but would then fail to
+	// notice any later change and end up with basically the same situation as
+	// https://github.com/hashicorp/terraform-provider-nomad/issues/1.
+	// The solution we adopt here is to change the response given by Nomad to
+	// make it match what Terraform is expected when there is no change. There
+	// is multiple cases to consider based on whether the user has set the block
+	// in its Terraform configuration and whether Nomad returned the default
+	// values for this block:
+	//   1. if the user has set the block, we write the values returned by Nomad
+	//     unconditionnaly.
+	//   2. if the user has not the the block and
+	//       a. Nomad returns the default values for this block: we omit this
+	//          block when updating the state as it would could a diff to be
+	//          produced.
+	//       b. Nomad returns something other than the defaults for this block:
+	//          an external change must have happened so we write the block to
+	//          the state so that Terraform can produce the diff.
+
+	_type := jobDefinition["type"].(string)
+
+	normalizeUpdate(job, jobDefinition, _type)
+
+	for i, group := range job["group"].([]interface{}) {
+		g := group.(map[string]interface{})
+		spec := jobDefinition["group"].([]interface{})[i].(map[string]interface{})
+
+		normalizeBlock(
+			"ephemeral_disk",
+			g,
+			spec,
+			map[string]interface{}{
+				"migrate": false,
+				"size":    300,
+				"sticky":  false,
+			},
+		)
+		normalizeBlock(
+			"migrate",
+			g,
+			spec,
+			map[string]interface{}{
+				"max_parallel":     1,
+				"health_check":     "checks",
+				"min_healthy_time": "10s",
+				"healthy_deadline": "5m0s",
+			},
+		)
+		normalizeRestart(g, spec, _type)
+		normalizeRestart(g, spec, _type)
+		normalizeReschedule(g, spec, _type)
+
+		for j, task := range g["task"].([]interface{}) {
+			t := task.(map[string]interface{})
+			spec = spec["task"].([]interface{})[j].(map[string]interface{})
+
+			normalizeBlock(
+				"logs",
+				t,
+				spec,
+				map[string]interface{}{
+					"max_files":     10,
+					"max_file_size": 10,
+				},
+			)
+			normalizeBlock(
+				"resources",
+				t,
+				spec,
+				map[string]interface{}{
+					"cpu":     100,
+					"device":  []interface{}{},
+					"memory":  300,
+					"network": []interface{}{},
+				},
+			)
+		}
+	}
+}
+
+// normalizeBlock implement the logic described in normalizeJob
+func normalizeBlock(name string, parent, spec, defaultValue map[string]interface{}) {
+	// 1. we skipped this part if the user wrote the block or Nomad did not
+	// return anything
+	if spec[name] != nil && len(spec[name].([]interface{})) > 0 {
+		return
+	}
+	if parent[name] == nil || len(parent[name].([]interface{})) == 0 {
+		return
+	}
+
+	block := parent[name].([]interface{})[0].(map[string]interface{})
+	if reflect.DeepEqual(block, defaultValue) {
+		// 2b. Nomad returned the default, we remove the block
+		parent[name] = []interface{}{}
+	}
+	// 2a. We keep the block
+}
+
+func normalizeRestart(parent, spec map[string]interface{}, _type string) {
+	// The default depends on the job type
+	var defaultValue map[string]interface{}
+	if _type == "service" || _type == "system" {
+		defaultValue = map[string]interface{}{
+			"attempts": 2,
+			"delay":    "15s",
+			"interval": "30m0s",
+			"mode":     "fail",
+		}
+	} else if _type == "batch" {
+		defaultValue = map[string]interface{}{
+			"attempts": 3,
+			"delay":    "15s",
+			"interval": "24h0m0s",
+			"mode":     "fail",
+		}
+	} else {
+		// This should not happen
+		defaultValue = map[string]interface{}{}
+	}
+
+	normalizeBlock("restart", parent, spec, defaultValue)
+}
+
+func normalizeReschedule(parent, spec map[string]interface{}, _type string) {
+	var defaultValue map[string]interface{}
+	if _type == "service" {
+		defaultValue = map[string]interface{}{
+			"attempts":       0,
+			"interval":       "0s",
+			"delay":          "30s",
+			"delay_function": "exponential",
+			"max_delay":      "1h0m0s",
+			"unlimited":      true,
+		}
+	} else if _type == "batch" {
+		defaultValue = map[string]interface{}{
+			"attempts":       1,
+			"interval":       "24h0m0s",
+			"delay":          "5s",
+			"delay_function": "constant",
+			"max_delay":      "0s",
+			"unlimited":      false,
+		}
+	} else if _type == "system" {
+		defaultValue = map[string]interface{}{}
+	}
+
+	normalizeBlock("reschedule", parent, spec, defaultValue)
+}
+
+func normalizeUpdate(parent, spec map[string]interface{}, _type string) {
+	var defaultValue map[string]interface{}
+
+	// The default depends ont the job type
+	if _type == "service" {
+		defaultValue = map[string]interface{}{
+			"auto_promote":      false,
+			"auto_revert":       false,
+			"canary":            0,
+			"health_check":      "",
+			"healthy_deadline":  "0s",
+			"max_parallel":      1,
+			"min_healthy_time":  "0s",
+			"progress_deadline": "0s",
+			"stagger":           "30s",
+		}
+	} else if _type == "batch" || _type == "system" {
+		defaultValue = map[string]interface{}{
+			"auto_promote":      false,
+			"auto_revert":       false,
+			"canary":            0,
+			"health_check":      "",
+			"healthy_deadline":  "0s",
+			"max_parallel":      0,
+			"min_healthy_time":  "0s",
+			"progress_deadline": "0s",
+			"stagger":           "0s",
+		}
+	}
+	normalizeBlock("update", parent, spec, defaultValue)
 }
 
 // Those functions should have a 1 to 1 correspondance with the ones in
@@ -1049,17 +1240,10 @@ func readSpreads(spreads []*api.Spread) interface{} {
 	return res
 }
 
-func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{}, error) {
+func readGroups(groups []*api.TaskGroup) (interface{}, error) {
 	res := make([]interface{}, 0)
 
-	// we have to look for the groups the user created in its configuration as
-	// we will need to set the "ephemeral_disk" and "restart" block only if they
-	// created one or the value for the block is different from the default one
-
-	groupsConfig := d["group"].([]interface{})
-
-	for i, g := range groups {
-		currentConfig := groupsConfig[i].(map[string]interface{})
+	for _, g := range groups {
 
 		ephemeralDisk := make([]interface{}, 0)
 
@@ -1069,18 +1253,7 @@ func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{},
 				"size":    *g.EphemeralDisk.SizeMB,
 				"sticky":  *g.EphemeralDisk.Sticky,
 			}
-
-			defaultValue := map[string]interface{}{
-				"migrate": false,
-				"size":    300,
-				"sticky":  false,
-			}
-
-			set := currentConfig["ephemeral_disk"].([]interface{})
-
-			if len(set) > 0 || !reflect.DeepEqual(disk, defaultValue) {
-				ephemeralDisk = append(ephemeralDisk, disk)
-			}
+			ephemeralDisk = append(ephemeralDisk, disk)
 		}
 
 		restart := make([]interface{}, 0)
@@ -1091,40 +1264,7 @@ func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{},
 				"interval": g.RestartPolicy.Interval.String(),
 				"mode":     *g.RestartPolicy.Mode,
 			}
-
-			// The default depends on the job type
-			var defaultValue map[string]interface{}
-			_type := d["type"].(string)
-			if _type == "service" {
-				defaultValue = map[string]interface{}{
-					"attempts": 2,
-					"delay":    "15s",
-					"interval": "30m0s",
-					"mode":     "fail",
-				}
-			} else if _type == "batch" {
-				defaultValue = map[string]interface{}{
-					"attempts": 3,
-					"delay":    "15s",
-					"interval": "24h0m0s",
-					"mode":     "fail",
-				}
-			} else if _type == "system" {
-				defaultValue = map[string]interface{}{
-					"attempts": 2,
-					"delay":    "15s",
-					"interval": "30m0s",
-					"mode":     "fail",
-				}
-			} else {
-				return nil, fmt.Errorf("%q is not supported", _type)
-			}
-
-			set := currentConfig["restart"].([]interface{})
-
-			if len(set) > 0 || !reflect.DeepEqual(r, defaultValue) {
-				restart = append(restart, r)
-			}
+			restart = append(restart, r)
 		}
 
 		volume := make([]interface{}, 0)
@@ -1149,13 +1289,7 @@ func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{},
 			return nil, err
 		}
 
-		isRescheduleSet := len(currentConfig["reschedule"].([]interface{})) > 0
-		reschedule, err := readReschedule(d, isRescheduleSet, g.ReschedulePolicy)
-		if err != nil {
-			return nil, err
-		}
-
-		isMigrateSet := len(currentConfig["migrate"].([]interface{})) > 0
+		reschedule := readReschedule(g.ReschedulePolicy)
 
 		group := map[string]interface{}{
 			"name":           g.Name,
@@ -1165,7 +1299,7 @@ func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{},
 			"affinity":       readAffinities(g.Affinities),
 			"spread":         readSpreads(g.Spreads),
 			"ephemeral_disk": ephemeralDisk,
-			"migrate":        readMigrate(isMigrateSet, g.Migrate),
+			"migrate":        readMigrate(g.Migrate),
 			"network":        readNetworks(g.Networks),
 			"reschedule":     reschedule,
 			"restart":        restart,
@@ -1187,9 +1321,9 @@ func readGroups(d map[string]interface{}, groups []*api.TaskGroup) (interface{},
 	return res, nil
 }
 
-func readMigrate(isSet bool, migrate *api.MigrateStrategy) interface{} {
+func readMigrate(migrate *api.MigrateStrategy) interface{} {
 	if migrate == nil {
-		return nil
+		return []interface{}{}
 	}
 
 	res := map[string]interface{}{
@@ -1199,23 +1333,12 @@ func readMigrate(isSet bool, migrate *api.MigrateStrategy) interface{} {
 		"healthy_deadline": migrate.HealthyDeadline.String(),
 	}
 
-	defaultValue := map[string]interface{}{
-		"max_parallel":     1,
-		"health_check":     "checks",
-		"min_healthy_time": "10s",
-		"healthy_deadline": "5m0s",
-	}
-
-	if !isSet && reflect.DeepEqual(res, defaultValue) {
-		return nil
-	}
-
 	return []interface{}{res}
 }
 
-func readReschedule(d map[string]interface{}, isSet bool, reschedule *api.ReschedulePolicy) (interface{}, error) {
+func readReschedule(reschedule *api.ReschedulePolicy) interface{} {
 	if reschedule == nil {
-		return nil, nil
+		return nil
 	}
 
 	res := map[string]interface{}{
@@ -1227,42 +1350,10 @@ func readReschedule(d map[string]interface{}, isSet bool, reschedule *api.Resche
 		"unlimited":      *reschedule.Unlimited,
 	}
 
-	var defaultValue map[string]interface{}
-	// The default value depends on the type of job
-	_type := d["type"].(string)
-	if _type == "service" {
-		defaultValue = map[string]interface{}{
-			"attempts":       0,
-			"interval":       "0s",
-			"delay":          "30s",
-			"delay_function": "exponential",
-			"max_delay":      "1h0m0s",
-			"unlimited":      true,
-		}
-	} else if _type == "batch" {
-		defaultValue = map[string]interface{}{
-			"attempts":       1,
-			"interval":       "24h0m0s",
-			"delay":          "5s",
-			"delay_function": "constant",
-			"max_delay":      "0s",
-			"unlimited":      false,
-		}
-	} else if _type == "system" {
-		defaultValue = map[string]interface{}{}
-	} else {
-		// This should not happen
-		return nil, fmt.Errorf("%q is not supported", _type)
-	}
-
-	if !isSet && reflect.DeepEqual(res, defaultValue) {
-		return nil, nil
-	}
-
-	return []interface{}{res}, nil
+	return []interface{}{res}
 }
 
-func readUpdate(d map[string]interface{}, update *api.UpdateStrategy) (interface{}, error) {
+func readUpdate(update *api.UpdateStrategy) interface{} {
 	res := map[string]interface{}{
 		"max_parallel":      *update.MaxParallel,
 		"health_check":      *update.HealthCheck,
@@ -1275,45 +1366,7 @@ func readUpdate(d map[string]interface{}, update *api.UpdateStrategy) (interface
 		"stagger":           update.Stagger.String(),
 	}
 
-	// If the value returned by the API and the user did not set the block
-	// we must not create it
-	var defaultValue map[string]interface{}
-	_type := d["type"].(string)
-	// The default depends ont the job type
-	if _type == "service" {
-		defaultValue = map[string]interface{}{
-			"auto_promote":      false,
-			"auto_revert":       false,
-			"canary":            0,
-			"health_check":      "",
-			"healthy_deadline":  "0s",
-			"max_parallel":      1,
-			"min_healthy_time":  "0s",
-			"progress_deadline": "0s",
-			"stagger":           "30s",
-		}
-	} else if _type == "batch" || _type == "system" {
-		defaultValue = map[string]interface{}{
-			"auto_promote":      false,
-			"auto_revert":       false,
-			"canary":            0,
-			"health_check":      "",
-			"healthy_deadline":  "0s",
-			"max_parallel":      0,
-			"min_healthy_time":  "0s",
-			"progress_deadline": "0s",
-			"stagger":           "0s",
-		}
-	} else {
-		return nil, fmt.Errorf("%q is not supported", _type)
-	}
-
-	isUpdateSet := len(d["update"].([]interface{})) > 0
-
-	if !isUpdateSet && reflect.DeepEqual(res, defaultValue) {
-		return nil, nil
-	}
-	return []interface{}{res}, nil
+	return []interface{}{res}
 }
 
 func readNetworks(networks []*api.NetworkResource) interface{} {
@@ -1598,21 +1651,12 @@ func readTasks(tasks []*api.Task) (interface{}, error) {
 
 func readLogs(logs *api.LogConfig) interface{} {
 	if logs == nil {
-		return nil
+		return []interface{}{}
 	}
 
 	res := map[string]interface{}{
 		"max_files":     *logs.MaxFiles,
 		"max_file_size": *logs.MaxFileSizeMB,
-	}
-
-	defaultValue := map[string]interface{}{
-		"max_files":     10,
-		"max_file_size": 10,
-	}
-
-	if reflect.DeepEqual(res, defaultValue) {
-		return nil
 	}
 
 	return []interface{}{res}
@@ -1640,17 +1684,6 @@ func readResources(resources *api.Resources) interface{} {
 		"memory":  *resources.MemoryMB,
 		"device":  devices,
 		"network": readNetworks(resources.Networks),
-	}
-
-	defaultValue := map[string]interface{}{
-		"cpu":     100,
-		"device":  []interface{}{},
-		"memory":  300,
-		"network": []interface{}{},
-	}
-
-	if reflect.DeepEqual(res, defaultValue) {
-		return nil
 	}
 
 	return []interface{}{res}
