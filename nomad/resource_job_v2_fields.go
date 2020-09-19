@@ -961,7 +961,7 @@ func getTaskFields() *schema.Schema {
 							"vault_grace": {
 								Type:             schema.TypeString,
 								DiffSuppressFunc: diffSupressDuration,
-								Default:          "0s",
+								Default:          "15s",
 								Optional:         true,
 							},
 							"change_signal": {
@@ -1092,29 +1092,30 @@ func getUpdateFields() *schema.Schema {
 				"healthy_deadline": {
 					Type:             schema.TypeString,
 					DiffSuppressFunc: diffSupressDuration,
-					Default:          "0s",
+					Default:          "5m",
 					Optional:         true,
 				},
 				"min_healthy_time": {
 					Type:             schema.TypeString,
 					DiffSuppressFunc: diffSupressDuration,
-					Default:          "0s",
+					Default:          "10s",
 					Optional:         true,
 				},
 				"progress_deadline": {
 					Type:             schema.TypeString,
 					DiffSuppressFunc: diffSupressDuration,
-					Default:          "0s",
+					Default:          "10m",
 					Optional:         true,
 				},
 				"stagger": {
 					Type:     schema.TypeString,
-					Default:  "0s",
+					Default:  "30s",
 					Optional: true,
 				},
 				"max_parallel": {
 					Type:     schema.TypeInt,
 					Optional: true,
+					Default:  1,
 				},
 				"health_check": {
 					Type:     schema.TypeString,
