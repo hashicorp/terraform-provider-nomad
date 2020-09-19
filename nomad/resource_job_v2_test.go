@@ -32,6 +32,9 @@ func TestResourceJobV2_basic(t *testing.T) {
 				Config: testResourceJob_constraints,
 			},
 			{
+				Config: testResourceJob_constraintsAlreadySet,
+			},
+			{
 				Config: testResourceJob_allSet,
 			},
 		},
@@ -170,6 +173,44 @@ resource "nomad_job_v2" "job" {
 			constraint {
 				operator = "distinct_hosts"
 				value    = "true"
+			}
+
+			task {
+				name   = "redis"
+				driver = "docker"
+				config = jsonencode({
+					image = "redis:3.2"
+				})
+
+				template {
+					source        = "local/redis.conf.tpl"
+					destination   = "local/redis.conf"
+					change_mode   = "signal"
+					change_signal = "SIGINT"
+				}
+			}
+		}
+	}
+}`
+
+const testResourceJob_constraintsAlreadySet = `
+resource "nomad_job_v2" "job" {
+	job {
+		name        = "example"
+		datacenters = ["dc1"]
+
+		group {
+			name = "cache"
+
+			constraint {
+				operator = "distinct_hosts"
+				value    = "true"
+			}
+
+			constraint {
+				attribute = "$${attr.os.signals}"
+				operator  = "set_contains"
+				value     = "SIGINT"
 			}
 
 			task {

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/nomad/nomad/structs"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 )
@@ -121,7 +123,7 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		update := readUpdate(job.Update)
 		j["update"] = update
 
-		normalizeJob(j, jobDefinition)
+		normalizeJob(job, j, jobDefinition)
 	}
 
 	sw.Set("job", []interface{}{j})
@@ -205,13 +207,13 @@ func getDuration(d interface{}) (*time.Duration, error) {
 // The following function nomalize the job specification returned by Nomad to
 // what Terraform actually expect.
 
-func normalizeJob(job map[string]interface{}, jobDefinition map[string]interface{}) {
+func normalizeJob(job *api.Job, j map[string]interface{}, jobDefinition map[string]interface{}) {
 
 	// Since they are not write-only, neither consul_token and vault_token
 	// are returned by the Nomad API. We add them back to avoid having a
 	// perpetual diff.
-	job["consul_token"] = jobDefinition["consul_token"].(string)
-	job["vault_token"] = jobDefinition["vault_token"].(string)
+	j["consul_token"] = jobDefinition["consul_token"].(string)
+	j["vault_token"] = jobDefinition["vault_token"].(string)
 
 	// When the user omit a block, Nomad will set it to its default value for
 	// this job type and include it in the response it sends back. When
@@ -238,9 +240,9 @@ func normalizeJob(job map[string]interface{}, jobDefinition map[string]interface
 
 	_type := jobDefinition["type"].(string)
 
-	normalizeUpdate(job, jobDefinition, _type)
+	normalizeUpdate(j, jobDefinition, _type)
 
-	for i, group := range job["group"].([]interface{}) {
+	for i, group := range j["group"].([]interface{}) {
 		g := group.(map[string]interface{})
 		spec := jobDefinition["group"].([]interface{})[i].(map[string]interface{})
 
@@ -268,6 +270,7 @@ func normalizeJob(job map[string]interface{}, jobDefinition map[string]interface
 		normalizeRestart(g, spec, _type)
 		normalizeRestart(g, spec, _type)
 		normalizeReschedule(g, spec, _type)
+		normalizeConstraints(job, g, spec)
 
 		for j, task := range g["task"].([]interface{}) {
 			t := task.(map[string]interface{})
@@ -398,6 +401,117 @@ func normalizeUpdate(parent, spec map[string]interface{}, _type string) {
 		}
 	}
 	normalizeBlock("update", parent, spec, defaultValue)
+}
+
+// requiredSignals is a copy of https://github.com/hashicorp/nomad/blob/fb170f37a05d712e3046d604c362804c7934cfc9/nomad/structs/structs.go#L4290-L4340
+// that we need for normalizeConstraints() but the one in Nomad operate on a
+// structs.Job instead of the api.Job we have.
+func requiredSignals(j *api.Job) map[string]map[string][]string {
+	signals := make(map[string]map[string][]string)
+
+	for _, tg := range j.TaskGroups {
+		for _, task := range tg.Tasks {
+			// Use this local one as a set
+			taskSignals := make(map[string]struct{})
+
+			// Check if the Vault change mode uses signals
+			if task.Vault != nil && *task.Vault.ChangeMode == "signal" {
+				taskSignals[*task.Vault.ChangeSignal] = struct{}{}
+			}
+
+			// If a user has specified a KillSignal, add it to required signals
+			if task.KillSignal != "" {
+				taskSignals[task.KillSignal] = struct{}{}
+			}
+
+			// Check if any template change mode uses signals
+			for _, t := range task.Templates {
+				if *t.ChangeMode != "signal" {
+					continue
+				}
+
+				taskSignals[*t.ChangeSignal] = struct{}{}
+			}
+
+			// Flatten and sort the signals
+			l := len(taskSignals)
+			if l == 0 {
+				continue
+			}
+
+			flat := make([]string, 0, l)
+			for sig := range taskSignals {
+				flat = append(flat, sig)
+			}
+
+			sort.Strings(flat)
+			tgSignals, ok := signals[*tg.Name]
+			if !ok {
+				tgSignals = make(map[string][]string)
+				signals[*tg.Name] = tgSignals
+			}
+			tgSignals[task.Name] = flat
+		}
+
+	}
+
+	return signals
+}
+
+// getSignalConstraint builds a suitable constraint based on the required
+// signals
+func getSignalConstraint(signals []string) map[string]interface{} {
+	sort.Strings(signals)
+	return map[string]interface{}{
+		"operator":  structs.ConstraintSetContains,
+		"attribute": "${attr.os.signals}",
+		"value":     strings.Join(signals, ","),
+	}
+}
+
+func normalizeConstraints(job *api.Job, g, spec map[string]interface{}) {
+	// The constraints is yet another edge case that we have to manage:
+	// Nomad can automatically add some constraint based on some other stanza
+	// of the job specification: https://github.com/hashicorp/nomad/blob/master/nomad/job_endpoint_hooks.go#L120-L179
+	// When it does so we receive one more constraint that what we send, which
+	// we must filter out as Terraform is not expecting it and we can't use
+	// DiffSuppressFunc on lists.
+
+	signals := requiredSignals(job)
+	// Add signal constraints
+	tgSignals, ok := signals[*g["name"].(*string)]
+	if !ok {
+		// Not requesting Vault
+		return
+	}
+
+	// Flatten the signals
+	required := helper.MapStringStringSliceValueSet(tgSignals)
+	sigConstraint := getSignalConstraint(required)
+
+	// We have to check if the user created this constraint themselves as in
+	// this case Nomad will not add one and we must not remove the one added by
+	// the user
+	for _, c := range spec["constraint"].([]interface{}) {
+		if reflect.DeepEqual(sigConstraint, c.(map[string]interface{})) {
+			return
+		}
+	}
+
+	position := -1
+	constraints := g["constraint"].([]interface{})
+	for i, c := range constraints {
+		if reflect.DeepEqual(sigConstraint, c.(map[string]interface{})) {
+			position = i
+			break
+		}
+	}
+
+	if position != -1 {
+		copy(constraints[position:], constraints[position+1:])
+		g["constraint"] = constraints[:len(constraints)-1]
+	}
+
 }
 
 // Those functions should have a 1 to 1 correspondance with the ones in
