@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 )
 
+var globalMeta *interface{}
+
 func resourceJobV2() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -30,6 +32,7 @@ func resourceJobV2() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: getJobFields(),
 				},
+				DiffSuppressFunc: suppressJobDiff,
 			},
 		},
 		Create: resourceJobV2Register,
@@ -40,6 +43,28 @@ func resourceJobV2() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 	}
+}
+
+func suppressJobDiff(k, old, new string, d *schema.ResourceData) bool {
+	if globalMeta == nil {
+		return false
+	}
+
+	meta := *globalMeta
+	client := meta.(ProviderConfig).client
+
+	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
+	job, _ := getJob(jobDefinition, meta)
+	wantedJob := ApiJobToStructJob(job)
+
+	job, _, _ = client.Jobs().Info(d.Id(), nil)
+	if job == nil {
+		return false
+	}
+
+	actualJob := ApiJobToStructJob(job)
+
+	return !actualJob.SpecChanged(wantedJob)
 }
 
 func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
@@ -62,6 +87,8 @@ func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 
 func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
+
+	globalMeta = &meta
 
 	job, _, err := client.Jobs().Info(d.Id(), nil)
 	if err != nil {
@@ -89,9 +116,8 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		"spread":      readSpreads(job.Spreads),
 	}
 
-	jobDefinition := map[string]interface{}{}
 	if len(d.Get("job").([]interface{})) > 0 {
-		jobDefinition = d.Get("job").([]interface{})[0].(map[string]interface{})
+		jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
 		groups, err := readGroups(job.TaskGroups)
 		if err != nil {
 			return err
@@ -267,7 +293,6 @@ func normalizeJob(job *api.Job, j map[string]interface{}, jobDefinition map[stri
 				"healthy_deadline": "5m0s",
 			},
 		)
-		normalizeRestart(g, spec, _type)
 		normalizeRestart(g, spec, _type)
 		normalizeReschedule(g, spec, _type)
 		normalizeConstraints(job, g, spec)
