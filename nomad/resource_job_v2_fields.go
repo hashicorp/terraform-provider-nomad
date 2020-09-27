@@ -74,6 +74,8 @@ func getJobFields() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"migrate":    getMigrateFields(),
+		"reschedule": getRescheduleFields(),
 		"constraint": getConstraintFields(),
 		"affinity":   getAffinityFields(),
 		"spread":     getSpreadFields(),

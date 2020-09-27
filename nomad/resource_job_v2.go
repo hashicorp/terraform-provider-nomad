@@ -587,6 +587,16 @@ func getJob(d map[string]interface{}, meta interface{}) (*api.Job, error) {
 		region = meta.(ProviderConfig).region
 	}
 
+	migrate, err := getMigrate(d["migrate"])
+	if err != nil {
+		return nil, err
+	}
+
+	reschedule, err := getReschedule(d["reschedule"])
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.Job{
 		ID:          ID,
 		Name:        getString(d, "name"),
@@ -599,6 +609,8 @@ func getJob(d map[string]interface{}, meta interface{}) (*api.Job, error) {
 		Region:      region,
 		VaultToken:  getString(d, "vault_token"),
 		ConsulToken: getString(d, "consul_token"),
+		Migrate:     migrate,
+		Reschedule:  reschedule,
 
 		Constraints: getConstraints(d["constraint"]),
 		Affinities:  getAffinities(d["affinity"]),
