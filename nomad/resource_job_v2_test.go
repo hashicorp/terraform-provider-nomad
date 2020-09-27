@@ -1,9 +1,13 @@
 package nomad
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResourceJobV2_basic(t *testing.T) {
@@ -13,6 +17,33 @@ func TestResourceJobV2_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceJob_basicService,
+			},
+			{
+				// Test for https://github.com/hashicorp/terraform-provider-nomad/issues/1
+				PreConfig: func() {
+					client := testProvider.Meta().(ProviderConfig).client
+					job, _, err := client.Jobs().Info("example", nil)
+					require.NoError(t, err)
+
+					job.TaskGroups[0].Count = helper.IntToPtr(2)
+					_, _, err = client.Jobs().Register(job, nil)
+					require.NoError(t, err)
+				},
+				Config: testResourceJob_basicService,
+				Check: func(*terraform.State) error {
+					client := testProvider.Meta().(ProviderConfig).client
+					job, _, err := client.Jobs().Info("example", nil)
+					if err != nil {
+						return err
+					}
+
+					count := *job.TaskGroups[0].Count
+					if count != 1 {
+						return fmt.Errorf("Wrong count for 'example': %d", count)
+					}
+
+					return nil
+				},
 			},
 			{
 				Config:       testResourceJob_basicService,

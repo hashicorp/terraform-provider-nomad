@@ -164,7 +164,6 @@ func getSpreadFields() *schema.Schema {
 func getConstraintFields() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
-		Computed: true,
 		Optional: true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
@@ -716,13 +715,14 @@ func getGroupFields() *schema.Schema {
 					DiffSuppressFunc: diffSupressDuration,
 					Optional:         true,
 				},
+				"count": {
+					Type:     schema.TypeInt,
+					Default:  1,
+					Optional: true,
+				},
 				"meta": {
 					Type:     schema.TypeMap,
 					Elem:     &schema.Schema{Type: schema.TypeString},
-					Optional: true,
-				},
-				"count": {
-					Type:     schema.TypeInt,
 					Optional: true,
 				},
 				"constraint": getConstraintFields(),
@@ -805,6 +805,7 @@ func getGroupFields() *schema.Schema {
 						},
 					},
 				},
+				"update": getUpdateFields(),
 			},
 		},
 	}
@@ -1114,8 +1115,8 @@ func getUpdateFields() *schema.Schema {
 				},
 				"max_parallel": {
 					Type:     schema.TypeInt,
-					Optional: true,
 					Default:  1,
+					Optional: true,
 				},
 				"health_check": {
 					Type:     schema.TypeString,
