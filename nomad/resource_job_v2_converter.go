@@ -6,6 +6,13 @@ import (
 	"github.com/hashicorp/nomad/nomad/structs"
 )
 
+// NOTE(remi): I couldn't find a way to use the version in https://github.com/hashicorp/nomad/blob/master/command/agent/job_endpoint.go
+// directly and got:
+// ../../../../pkg/mod/github.com/hashicorp/consul-template@v0.24.1/config/vault.go:7:2: ambiguous import: found package github.com/hashicorp/vault/api in multiple modules:
+// github.com/hashicorp/vault v0.10.4 (/Users/remi/go/pkg/mod/github.com/hashicorp/vault@v0.10.4/api)
+// github.com/hashicorp/vault/api v1.0.5-0.20190730042357-746c0b111519 (/Users/remi/go/pkg/mod/github.com/hashicorp/vault/api@v1.0.5-0.20190730042357-746c0b111519)
+// I'm not sure why that is so I copied the code here for now.
+
 func ApiJobToStructJob(job *api.Job) *structs.Job {
 	job.Canonicalize()
 
