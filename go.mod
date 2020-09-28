@@ -12,6 +12,7 @@ exclude (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.4.0
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-version v1.2.1-0.20191009193637-2046c9d0f0b0
