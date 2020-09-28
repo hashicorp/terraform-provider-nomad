@@ -2,8 +2,10 @@ package nomad
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
@@ -16,6 +18,37 @@ func TestResourceJobV2_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
+				// Trying to create a job that already exists should fail
+				PreConfig: func() {
+					client := testProvider.Meta().(ProviderConfig).client
+					job := &api.Job{
+						ID:          strToPtr("example"),
+						Datacenters: []string{"dc1"},
+						TaskGroups: []*api.TaskGroup{
+							{
+								Name: strToPtr("test"),
+								Tasks: []*api.Task{
+									{
+										Name:   "redis",
+										Driver: "docker",
+									},
+								},
+							},
+						},
+					}
+					_, _, err := client.Jobs().Register(job, nil)
+					require.NoError(t, err)
+				},
+				Config:      testResourceJob_basicService,
+				ExpectError: regexp.MustCompile("Enforcing job modify index 0: job already exists"),
+			},
+			{
+				// Let's first remove the job from the previous step
+				PreConfig: func() {
+					client := testProvider.Meta().(ProviderConfig).client
+					_, _, err := client.Jobs().Deregister("example", true, nil)
+					require.NoError(t, err)
+				},
 				Config: testResourceJob_basicService,
 			},
 			{

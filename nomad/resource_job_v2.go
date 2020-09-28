@@ -29,8 +29,8 @@ func resourceJobV2() *schema.Resource {
 				},
 			},
 		},
-		Create: resourceJobV2Register,
-		Update: resourceJobV2Register,
+		Create: resourceJobV2Create,
+		Update: resourceJobV2Update,
 		Read:   resourceJobV2Read,
 		Delete: resourceJobV2Deregister,
 		Importer: &schema.ResourceImporter{
@@ -39,17 +39,42 @@ func resourceJobV2() *schema.Resource {
 	}
 }
 
-func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+func resourceJobV2Create(d *schema.ResourceData, meta interface{}) error {
+	register := func(job *api.Job) error {
+		client := meta.(ProviderConfig).client
+		_, _, err := client.Jobs().EnforceRegister(job, 0, nil)
+		if err != nil {
+			return fmt.Errorf("Failed to create the job: %v", err)
+		}
+		return nil
+	}
+
+	return resourceJobV2Register(register, d, meta)
+}
+
+func resourceJobV2Update(d *schema.ResourceData, meta interface{}) error {
+	register := func(job *api.Job) error {
+		client := meta.(ProviderConfig).client
+		_, _, err := client.Jobs().Register(job, nil)
+		if err != nil {
+			return fmt.Errorf("Failed to update the job: %v", err)
+		}
+		return nil
+	}
+
+	return resourceJobV2Register(register, d, meta)
+}
+
+func resourceJobV2Register(register func(job *api.Job) error, d *schema.ResourceData, meta interface{}) error {
 	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
 	job, err := getJob(jobDefinition, meta)
 	if err != nil {
 		return fmt.Errorf("Failed to get job definition: %v", err)
 	}
 
-	_, _, err = client.Jobs().Register(job, nil)
+	err = register(job)
 	if err != nil {
-		return fmt.Errorf("Failed to register the job: %v", err)
+		return err
 	}
 
 	d.SetId(*job.ID)
