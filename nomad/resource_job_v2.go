@@ -3,9 +3,11 @@ package nomad
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
@@ -138,6 +140,8 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		wantedJob.ConsulToken = nil
 		wantedJob.VaultToken = nil
 		plan, _, err := client.Jobs().Plan(wantedJob, true, nil)
+
+		log.Printf("[DEBUG] Got the diff from Nomad: %s", spew.Sdump(plan.Diff))
 
 		// Check for changes
 		if !hasChanges(plan.Diff) {
