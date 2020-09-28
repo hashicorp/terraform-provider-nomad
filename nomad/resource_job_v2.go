@@ -87,9 +87,20 @@ func resourceJobV2Register(register func(job *api.Job) error, d *schema.Resource
 }
 
 func hasChanges(diff *api.JobDiff) bool {
-	if len(diff.Fields)+len(diff.Objects) > 0 {
+	// Ignore the Nomad token if it is the only change
+	if len(diff.Objects) > 0 {
 		return true
 	}
+	if len(diff.Fields) > 1 {
+		return true
+	}
+	if len(diff.Fields) == 1 {
+		field := diff.Fields[0]
+		if field.Name != "NomadTokenID" || field.Type != "Deleted" {
+			return true
+		}
+	}
+
 	for _, tg := range diff.TaskGroups {
 		if len(tg.Fields)+len(tg.Objects) > 0 {
 			return true
