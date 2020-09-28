@@ -3,18 +3,13 @@ package nomad
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/nomad/nomad/structs"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-nomad/nomad/core/helper"
 )
-
-var globalMeta *interface{}
 
 func resourceJobV2() *schema.Resource {
 	return &schema.Resource{
@@ -32,7 +27,6 @@ func resourceJobV2() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: getJobFields(),
 				},
-				DiffSuppressFunc: suppressJobDiff,
 			},
 		},
 		Create: resourceJobV2Register,
@@ -45,28 +39,6 @@ func resourceJobV2() *schema.Resource {
 	}
 }
 
-func suppressJobDiff(k, old, new string, d *schema.ResourceData) bool {
-	if globalMeta == nil {
-		return false
-	}
-
-	meta := *globalMeta
-	client := meta.(ProviderConfig).client
-
-	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
-	job, _ := getJob(jobDefinition, meta)
-	wantedJob := ApiJobToStructJob(job)
-
-	job, _, _ = client.Jobs().Info(d.Id(), nil)
-	if job == nil {
-		return false
-	}
-
-	actualJob := ApiJobToStructJob(job)
-
-	return !actualJob.SpecChanged(wantedJob)
-}
-
 func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 	jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
@@ -77,18 +49,35 @@ func resourceJobV2Register(d *schema.ResourceData, meta interface{}) error {
 
 	_, _, err = client.Jobs().Register(job, nil)
 	if err != nil {
-		return fmt.Errorf("Failed to create the job: %v", err)
+		return fmt.Errorf("Failed to register the job: %v", err)
 	}
 
 	d.SetId(*job.ID)
 
-	return resourceJobV2Read(d, meta)
+	// Exceptionally in this resource we don't read after applying a change
+	// because we can't save the computed attributes anyway.
+	return nil
+}
+
+func hasChanges(diff *api.JobDiff) bool {
+	if len(diff.Fields)+len(diff.Objects) > 0 {
+		return true
+	}
+	for _, tg := range diff.TaskGroups {
+		if len(tg.Fields)+len(tg.Objects) > 0 {
+			return true
+		}
+		for _, t := range tg.Tasks {
+			if len(t.Fields)+len(t.Objects) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
-
-	globalMeta = &meta
 
 	job, _, err := client.Jobs().Info(d.Id(), nil)
 	if err != nil {
@@ -98,8 +87,6 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		return fmt.Errorf("Failed to read the job: %v", err)
 	}
-
-	sw := helper.NewStateWriter(d)
 
 	j := map[string]interface{}{
 		"id":          *job.ID,
@@ -118,6 +105,30 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 
 	if len(d.Get("job").([]interface{})) > 0 {
 		jobDefinition := d.Get("job").([]interface{})[0].(map[string]interface{})
+
+		wantedJob, err := getJob(jobDefinition, meta)
+		if err != nil {
+			return err
+		}
+		wantedJob.ConsulToken = nil
+		wantedJob.VaultToken = nil
+		plan, _, err := client.Jobs().Plan(wantedJob, true, nil)
+
+		// Check for changes
+		if !hasChanges(plan.Diff) {
+			// When the job has not been changed we skip updating the state as it
+			// is currently not possible to suppress diffs on complex attributes:
+			// https://github.com/hashicorp/terraform-plugin-sdk/issues/477
+			// I went down the rabbit hole of trying to find another semantically
+			// equivalent representation that may be used to work around the
+			// Terraform SDK quirks, but it gets very difficult quickly and may not
+			// always be possible. The solution I choose here is to skip setting
+			// the attributes that may cause issues. We will be able to improve this
+			// when the Terraform SDK supports it, and should be an acceptable
+			// compromise in the meantime.
+			return nil
+		}
+
 		groups, err := readGroups(job.TaskGroups)
 		if err != nil {
 			return err
@@ -146,12 +157,10 @@ func resourceJobV2Read(d *schema.ResourceData, meta interface{}) error {
 		}
 		j["periodic"] = periodic
 
-		update := readUpdate(job.Update)
-		j["update"] = update
-
-		normalizeJob(job, j, jobDefinition)
+		j["update"] = readUpdate(job.Update)
 	}
 
+	sw := helper.NewStateWriter(d)
 	sw.Set("job", []interface{}{j})
 
 	return sw.Error()
@@ -228,315 +237,6 @@ func getDuration(d interface{}) (*time.Duration, error) {
 		return nil, err
 	}
 	return &duration, err
-}
-
-// The following function nomalize the job specification returned by Nomad to
-// what Terraform actually expect.
-
-func normalizeJob(job *api.Job, j map[string]interface{}, jobDefinition map[string]interface{}) {
-
-	// Since they are not write-only, neither consul_token and vault_token
-	// are returned by the Nomad API. We add them back to avoid having a
-	// perpetual diff.
-	j["consul_token"] = jobDefinition["consul_token"].(string)
-	j["vault_token"] = jobDefinition["vault_token"].(string)
-
-	// When the user omit a block, Nomad will set it to its default value for
-	// this job type and include it in the response it sends back. When
-	// comparing it with what it sent Terraform will find a new block and will
-	// therefore produce a diff.
-	// Using DiffSuppressFunc does not work for lists so it can't be used to fix
-	// this, we could set the whole block as computed, but would then fail to
-	// notice any later change and end up with basically the same situation as
-	// https://github.com/hashicorp/terraform-provider-nomad/issues/1.
-	// The solution we adopt here is to change the response given by Nomad to
-	// make it match what Terraform is expected when there is no change. There
-	// is multiple cases to consider based on whether the user has set the block
-	// in its Terraform configuration and whether Nomad returned the default
-	// values for this block:
-	//   1. if the user has set the block, we write the values returned by Nomad
-	//     unconditionnaly.
-	//   2. if the user has not the the block and
-	//       a. Nomad returns the default values for this block: we omit this
-	//          block when updating the state as it would could a diff to be
-	//          produced.
-	//       b. Nomad returns something other than the defaults for this block:
-	//          an external change must have happened so we write the block to
-	//          the state so that Terraform can produce the diff.
-
-	_type := jobDefinition["type"].(string)
-
-	normalizeUpdate(j, jobDefinition, _type)
-
-	for i, group := range j["group"].([]interface{}) {
-		g := group.(map[string]interface{})
-		spec := jobDefinition["group"].([]interface{})[i].(map[string]interface{})
-
-		normalizeBlock(
-			"ephemeral_disk",
-			g,
-			spec,
-			map[string]interface{}{
-				"migrate": false,
-				"size":    300,
-				"sticky":  false,
-			},
-		)
-		normalizeBlock(
-			"migrate",
-			g,
-			spec,
-			map[string]interface{}{
-				"max_parallel":     1,
-				"health_check":     "checks",
-				"min_healthy_time": "10s",
-				"healthy_deadline": "5m0s",
-			},
-		)
-		normalizeRestart(g, spec, _type)
-		normalizeReschedule(g, spec, _type)
-		normalizeConstraints(job, g, spec)
-
-		for j, task := range g["task"].([]interface{}) {
-			t := task.(map[string]interface{})
-			spec = spec["task"].([]interface{})[j].(map[string]interface{})
-
-			normalizeBlock(
-				"logs",
-				t,
-				spec,
-				map[string]interface{}{
-					"max_files":     10,
-					"max_file_size": 10,
-				},
-			)
-			normalizeBlock(
-				"resources",
-				t,
-				spec,
-				map[string]interface{}{
-					"cpu":     100,
-					"device":  []interface{}{},
-					"memory":  300,
-					"network": []interface{}{},
-				},
-			)
-		}
-	}
-}
-
-// normalizeBlock implement the logic described in normalizeJob
-func normalizeBlock(name string, parent, spec, defaultValue map[string]interface{}) {
-	// 1. we skipped this part if the user wrote the block or Nomad did not
-	// return anything
-	if spec[name] != nil && len(spec[name].([]interface{})) > 0 {
-		return
-	}
-	if parent[name] == nil || len(parent[name].([]interface{})) == 0 {
-		return
-	}
-
-	block := parent[name].([]interface{})[0].(map[string]interface{})
-	if reflect.DeepEqual(block, defaultValue) {
-		// 2b. Nomad returned the default, we remove the block
-		parent[name] = []interface{}{}
-	}
-	// 2a. We keep the block
-}
-
-func normalizeRestart(parent, spec map[string]interface{}, _type string) {
-	// The default depends on the job type
-	var defaultValue map[string]interface{}
-	if _type == "service" || _type == "system" {
-		defaultValue = map[string]interface{}{
-			"attempts": 2,
-			"delay":    "15s",
-			"interval": "30m0s",
-			"mode":     "fail",
-		}
-	} else if _type == "batch" {
-		defaultValue = map[string]interface{}{
-			"attempts": 3,
-			"delay":    "15s",
-			"interval": "24h0m0s",
-			"mode":     "fail",
-		}
-	} else {
-		// This should not happen
-		defaultValue = map[string]interface{}{}
-	}
-
-	normalizeBlock("restart", parent, spec, defaultValue)
-}
-
-func normalizeReschedule(parent, spec map[string]interface{}, _type string) {
-	var defaultValue map[string]interface{}
-	if _type == "service" {
-		defaultValue = map[string]interface{}{
-			"attempts":       0,
-			"interval":       "0s",
-			"delay":          "30s",
-			"delay_function": "exponential",
-			"max_delay":      "1h0m0s",
-			"unlimited":      true,
-		}
-	} else if _type == "batch" {
-		defaultValue = map[string]interface{}{
-			"attempts":       1,
-			"interval":       "24h0m0s",
-			"delay":          "5s",
-			"delay_function": "constant",
-			"max_delay":      "0s",
-			"unlimited":      false,
-		}
-	} else if _type == "system" {
-		defaultValue = map[string]interface{}{}
-	}
-
-	normalizeBlock("reschedule", parent, spec, defaultValue)
-}
-
-func normalizeUpdate(parent, spec map[string]interface{}, _type string) {
-	var defaultValue map[string]interface{}
-
-	// The default depends ont the job type
-	if _type == "service" {
-		defaultValue = map[string]interface{}{
-			"auto_promote":      false,
-			"auto_revert":       false,
-			"canary":            0,
-			"health_check":      "",
-			"healthy_deadline":  "0s",
-			"max_parallel":      1,
-			"min_healthy_time":  "0s",
-			"progress_deadline": "0s",
-			"stagger":           "30s",
-		}
-	} else if _type == "batch" || _type == "system" {
-		defaultValue = map[string]interface{}{
-			"auto_promote":      false,
-			"auto_revert":       false,
-			"canary":            0,
-			"health_check":      "",
-			"healthy_deadline":  "0s",
-			"max_parallel":      0,
-			"min_healthy_time":  "0s",
-			"progress_deadline": "0s",
-			"stagger":           "0s",
-		}
-	}
-	normalizeBlock("update", parent, spec, defaultValue)
-}
-
-// requiredSignals is a copy of https://github.com/hashicorp/nomad/blob/fb170f37a05d712e3046d604c362804c7934cfc9/nomad/structs/structs.go#L4290-L4340
-// that we need for normalizeConstraints() but the one in Nomad operate on a
-// structs.Job instead of the api.Job we have.
-func requiredSignals(j *api.Job) map[string]map[string][]string {
-	signals := make(map[string]map[string][]string)
-
-	for _, tg := range j.TaskGroups {
-		for _, task := range tg.Tasks {
-			// Use this local one as a set
-			taskSignals := make(map[string]struct{})
-
-			// Check if the Vault change mode uses signals
-			if task.Vault != nil && *task.Vault.ChangeMode == "signal" {
-				taskSignals[*task.Vault.ChangeSignal] = struct{}{}
-			}
-
-			// If a user has specified a KillSignal, add it to required signals
-			if task.KillSignal != "" {
-				taskSignals[task.KillSignal] = struct{}{}
-			}
-
-			// Check if any template change mode uses signals
-			for _, t := range task.Templates {
-				if *t.ChangeMode != "signal" {
-					continue
-				}
-
-				taskSignals[*t.ChangeSignal] = struct{}{}
-			}
-
-			// Flatten and sort the signals
-			l := len(taskSignals)
-			if l == 0 {
-				continue
-			}
-
-			flat := make([]string, 0, l)
-			for sig := range taskSignals {
-				flat = append(flat, sig)
-			}
-
-			sort.Strings(flat)
-			tgSignals, ok := signals[*tg.Name]
-			if !ok {
-				tgSignals = make(map[string][]string)
-				signals[*tg.Name] = tgSignals
-			}
-			tgSignals[task.Name] = flat
-		}
-
-	}
-
-	return signals
-}
-
-// getSignalConstraint builds a suitable constraint based on the required
-// signals
-func getSignalConstraint(signals []string) map[string]interface{} {
-	sort.Strings(signals)
-	return map[string]interface{}{
-		"operator":  structs.ConstraintSetContains,
-		"attribute": "${attr.os.signals}",
-		"value":     strings.Join(signals, ","),
-	}
-}
-
-func normalizeConstraints(job *api.Job, g, spec map[string]interface{}) {
-	// The constraints is yet another edge case that we have to manage:
-	// Nomad can automatically add some constraint based on some other stanza
-	// of the job specification: https://github.com/hashicorp/nomad/blob/master/nomad/job_endpoint_hooks.go#L120-L179
-	// When it does so we receive one more constraint that what we send, which
-	// we must filter out as Terraform is not expecting it and we can't use
-	// DiffSuppressFunc on lists.
-
-	signals := requiredSignals(job)
-	// Add signal constraints
-	tgSignals, ok := signals[*g["name"].(*string)]
-	if !ok {
-		// Not requesting Vault
-		return
-	}
-
-	// Flatten the signals
-	required := helper.MapStringStringSliceValueSet(tgSignals)
-	sigConstraint := getSignalConstraint(required)
-
-	// We have to check if the user created this constraint themselves as in
-	// this case Nomad will not add one and we must not remove the one added by
-	// the user
-	for _, c := range spec["constraint"].([]interface{}) {
-		if reflect.DeepEqual(sigConstraint, c.(map[string]interface{})) {
-			return
-		}
-	}
-
-	position := -1
-	constraints := g["constraint"].([]interface{})
-	for i, c := range constraints {
-		if reflect.DeepEqual(sigConstraint, c.(map[string]interface{})) {
-			position = i
-			break
-		}
-	}
-
-	if position != -1 {
-		copy(constraints[position:], constraints[position+1:])
-		g["constraint"] = constraints[:len(constraints)-1]
-	}
-
 }
 
 // Those functions should have a 1 to 1 correspondance with the ones in
