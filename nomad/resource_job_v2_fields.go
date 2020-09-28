@@ -74,6 +74,7 @@ func getJobFields() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"vault":      getVaultFields(),
 		"migrate":    getMigrateFields(),
 		"reschedule": getRescheduleFields(),
 		"constraint": getConstraintFields(),
@@ -783,6 +784,7 @@ func getGroupFields() *schema.Schema {
 				},
 				"service": getServiceFields(),
 				"task":    getTaskFields(),
+				"vault":   getVaultFields(),
 				"volume": {
 					Type:     schema.TypeList,
 					Optional: true,

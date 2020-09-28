@@ -297,7 +297,8 @@ func getJob(d map[string]interface{}, meta interface{}) (*api.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	taskGroups, err := getTaskGroups(d["group"])
+	vault := getVault(d["vault"])
+	taskGroups, err := getTaskGroups(d["group"], vault)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +418,7 @@ func getSpreads(d interface{}) []*api.Spread {
 	return spreads
 }
 
-func getTaskGroups(d interface{}) ([]*api.TaskGroup, error) {
+func getTaskGroups(d interface{}, jobVault *api.Vault) ([]*api.TaskGroup, error) {
 	taskGroups := make([]*api.TaskGroup, 0)
 
 	for _, tg := range d.([]interface{}) {
@@ -474,7 +475,12 @@ func getTaskGroups(d interface{}) ([]*api.TaskGroup, error) {
 			}
 		}
 
-		tasks, err := getTasks(g["task"])
+		vault := getVault(g["vault"])
+		if vault == nil {
+			vault = jobVault
+		}
+
+		tasks, err := getTasks(g["task"], vault)
 		if err != nil {
 			return nil, err
 		}
@@ -621,7 +627,7 @@ func getUpdate(d interface{}) (*api.UpdateStrategy, error) {
 	return nil, nil
 }
 
-func getTasks(d interface{}) ([]*api.Task, error) {
+func getTasks(d interface{}, groupVault *api.Vault) ([]*api.Task, error) {
 	tasks := make([]*api.Task, 0)
 
 	for _, tk := range d.([]interface{}) {
@@ -715,6 +721,11 @@ func getTasks(d interface{}) ([]*api.Task, error) {
 			return nil, err
 		}
 
+		vault := getVault(t["vault"])
+		if vault == nil {
+			vault = groupVault
+		}
+
 		task := &api.Task{
 			Name:            t["name"].(string),
 			Config:          config,
@@ -734,7 +745,7 @@ func getTasks(d interface{}) ([]*api.Task, error) {
 			Resources:       getResources(t["resources"]),
 			Services:        services,
 			Templates:       templates,
-			Vault:           getVault(t["vault"]),
+			Vault:           vault,
 			VolumeMounts:    volumeMounts,
 		}
 
