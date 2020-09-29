@@ -25,23 +25,95 @@ Registering a job from a jobspec file:
 ```hcl
 resource "nomad_job_v2" "app" {
   job {
-		name        = "example"
-		datacenters = ["dc1"]
+    name        = "example"
+    datacenters = ["dc1"]
 
-		group {
-			name = "cache"
+    group {
+      name = "cache"
 
-			task {
-				name   = "redis"
-				driver = "docker"
-				config = jsonencode({
-					image = "redis:3.2"
-				})
-			}
-		}
-	}
+      task {
+        name   = "redis"
+        driver = "docker"
+        config = jsonencode({
+          image = "redis:3.2"
+        })
+      }
+    }
+  }
 }
 ```
+
+The attribute `job` supports the same attributes as the [Nomad Job specification](https://www.nomadproject.io/docs/job-specification)
+with the exception of the stanza having an ID:
+
+```hcl
+resource "nomad_job_v2" "app" {
+  job {
+    # instead of having
+    #   job "the-job-id" {
+    #     ...
+    #   }
+    # the id can be specified here:
+    id = "the-job-id"
+
+    name        = "example"
+    datacenters = ["dc1"]
+
+    # group "cache" {} becomes:
+    group {
+      name = "cache"
+
+      # task "server" {} becomes:
+      task {
+        name   = "redis"
+
+        driver = "docker"
+        config = jsonencode({
+          image = "redis:3.2"
+        })
+
+        resources {
+          # device "nvidia/gpu" {} becomes:
+          device {
+            name  = "nvidia/gpu"
+            # ...
+          }
+        }
+      }
+
+      # volume "certs" {} becomes:
+      volume {
+        name = "certs"
+        # ...
+      }
+
+      network {
+        # port "http" {} becomes:
+        port {
+          label = "http"
+          # ...
+        }
+      }
+
+      spread {
+        attribute = "$${meta.rack}"
+
+        # target "r1" becomes:
+        target {
+          attribute = "r1"
+          percent   = 60
+        }
+
+        target {
+          attribute = "r2"
+          percent   = 40
+        }
+      }
+    }
+  }
+}
+```
+
 
 ## Argument Reference
 
