@@ -1,5 +1,7 @@
 ## 1.4.10 (Unreleased)
 
+* **Target Nomad 0.12.5**: updated the nomad client to support Nomad API version 0.12.5
+
 IMPROVEMENTS:
 * resource/nomad_volume: added `mount_options` argument ([#147](https://github.com/hashicorp/terraform-provider-nomad/pull/147))
 
