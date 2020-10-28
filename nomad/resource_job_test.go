@@ -351,7 +351,7 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 				Check: func(*terraform.State) error {
 					providerConfig := testProvider.Meta().(ProviderConfig)
 					client := providerConfig.client
-					job, _, err := client.Jobs().Info("foo", nil)
+					job, _, err := client.Jobs().Info("foo-nodestroy", nil)
 					if err != nil {
 						return err
 					}
@@ -947,7 +947,7 @@ var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
     deregister_on_destroy = false
     jobspec = <<EOT
-		job "foo" {
+		job "foo-nodestroy" {
 			datacenters = ["dc1"]
 			type = "service"
 			group "foo" {
