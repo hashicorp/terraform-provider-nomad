@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccDataSourceDeployment(t *testing.T) {
@@ -16,22 +16,24 @@ func TestAccDataSourceDeployment(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccCheckDataSourceNomadDeploymentConfig,
-				Check:  testAccCheckDataSourceNomadDeploymentExist("data.nomad_deployment.foobaz"),
+				Check:  testAccCheckDataSourceNomadDeploymentExist(),
 			},
 			{
 				Config:      testAccCheckDataSourceNomadDeploymentConfigErr,
 				Destroy:     false,
-				ExpectError: regexp.MustCompile(`.*deployment not found`),
+				ExpectError: regexp.MustCompile(`missing deployment ID`),
 			},
 		},
 	})
 }
 
-func testAccCheckDataSourceNomadDeploymentExist(n string) resource.TestCheckFunc {
+func testAccCheckDataSourceNomadDeploymentExist() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
+		resourceName := "data.nomad_deployment.foobaz"
+
+		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
@@ -60,41 +62,42 @@ func testAccCheckDataSourceNomadDeploymentExist(n string) resource.TestCheckFunc
 
 var testAccCheckDataSourceNomadDeploymentConfig = `
 resource "nomad_job" "foobar" {
-	jobspec = <<EOT
-		job "foo" {
-			datacenters = ["dc1"]
-			type = "service"
-			group "foo" {
-				task "foo" {
-					leader = true ## new in Nomad 0.5.6
-					driver = "raw_exec"
-					config {
-						command = "/bin/sleep"
-						args = ["1"]
-					}
-					resources {
-						cpu = 100
-						memory = 10
-					}
-					logs {
-						max_files = 3
-						max_file_size = 10
-					}
-				}
-			}
-		}
-	EOT
+  detach = false
+  jobspec = <<EOT
+job "foo-deployment-datasource" {
+  update {
+    min_healthy_time = "100ms"
+  }
+
+  datacenters = ["dc1"]
+  type        = "service"
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+      resources {
+        cpu    = 1
+        memory = 10
+      }
+      logs {
+        max_files     = 1
+        max_file_size = 1
+      }
+    }
+  }
+}
+EOT
 }
 
 data "nomad_deployment" "foobaz" {
-	deployment_id			=	""
+  deployment_id = nomad_job.foobar.deployment_id
 }
-
 `
 
 var testAccCheckDataSourceNomadDeploymentConfigErr = `
 data "nomad_deployment" "foobaz" {
-	deployment_id			= ""
-}
-
-`
+  deployment_id = ""
+}`
