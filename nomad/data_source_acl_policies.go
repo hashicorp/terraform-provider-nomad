@@ -1,10 +1,8 @@
 package nomad
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"

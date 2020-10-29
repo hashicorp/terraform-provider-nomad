@@ -19,9 +19,8 @@ func TestAccDataSourceNomadAclPolicies_Basic(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				PreConfig:   testAccCreateNomadAclPolicies(t, numPolicies),
-				Config:      testAccNomadAclPoliciesConfig("non-existent"),
-				ExpectError: regexp.MustCompile(`query returned an empty list of ACL policies`),
+				PreConfig: testAccCreateNomadAclPolicies(t, numPolicies),
+				Config:    testAccNomadAclPoliciesConfig("non-existent"),
 			},
 			{
 				Config: testAccNomadAclPoliciesConfig("tf-acc-test"),
