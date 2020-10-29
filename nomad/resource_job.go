@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-
-	"github.com/hashicorp/terraform-provider-nomad/nomad/core/jobspec"
 )
 
 func resourceJob() *schema.Resource {

@@ -11,14 +11,18 @@ exclude (
 	github.com/Sirupsen/logrus v1.4.1
 )
 
+// Force using go-getter version from terraform plugin
+replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.4.0
+
 require (
-	github.com/google/go-cmp v0.3.1
-	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-version v1.2.0
-	github.com/hashicorp/hcl v0.0.0-20170504190234-a4b07c25de5f
-	github.com/hashicorp/nomad/api v0.0.0-20201028165800-38e23b62a770
+	github.com/google/go-cmp v0.4.0
+	github.com/hashicorp/go-multierror v1.1.0
+	github.com/hashicorp/go-version v1.2.1-0.20191009193637-2046c9d0f0b0
+	github.com/hashicorp/hcl v1.0.1-0.20201016140508-a07e7d50bbee
+	github.com/hashicorp/nomad v0.12.5-0.20201029140339-d6255129a300
+	github.com/hashicorp/nomad/api v0.0.0-20201029140339-d6255129a300
 	github.com/hashicorp/terraform-plugin-sdk v1.15.0
 	github.com/hashicorp/vault v0.10.4
-	github.com/mitchellh/mapstructure v1.1.2
-	github.com/stretchr/testify v1.5.1
+	github.com/mitchellh/mapstructure v1.3.1
+	github.com/stretchr/testify v1.6.1
 )
