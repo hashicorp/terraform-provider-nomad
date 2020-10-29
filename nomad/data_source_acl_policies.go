@@ -62,15 +62,7 @@ func dataSourceAclPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
-			d.SetId("")
-			return nil
-		}
 		return fmt.Errorf("error getting ACL policies: %#v", err)
-	}
-
-	if len(policies) == 0 {
-		return errors.New("query returned an empty list of ACL policies")
 	}
 
 	d.SetId(resource.UniqueId())
@@ -82,7 +74,7 @@ func dataSourceAclPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func flattenAclPolicies(policies []*api.ACLPolicyListStub) []interface{} {
-	output := make([]interface{}, 0)
+	output := make([]interface{}, 0, len(policies))
 	for _, policy := range policies {
 		p := map[string]interface{}{
 			"name":        policy.Name,
