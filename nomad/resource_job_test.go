@@ -129,6 +129,18 @@ func TestResourceJob_scalingPolicy(t *testing.T) {
 		CheckDestroy: testResourceJob_checkDestroy("foo-scaling"),
 	})
 
+	// Test Dynamic Application Sizing policies.
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.0.0-beta2+ent") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_scalingPolicyDASConfig,
+				Check:  testResourceJob_scalingPolicyDASCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-scaling-das"),
+	})
 }
 
 func TestResourceJob_lifecycle(t *testing.T) {
@@ -238,6 +250,18 @@ func TestResourceJob_consulConnect(t *testing.T) {
 		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
 	})
 
+	// Test Consul Ingress Gateways.
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.12.4") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_consulConnectIngressGatewayConfig,
+				Check:  testResourceJob_consulConnectIngressGatewayCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
+	})
 }
 
 func TestResourceJob_json(t *testing.T) {
@@ -327,7 +351,7 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 				Check: func(*terraform.State) error {
 					providerConfig := testProvider.Meta().(ProviderConfig)
 					client := providerConfig.client
-					job, _, err := client.Jobs().Info("foo", nil)
+					job, _, err := client.Jobs().Info("foo-nodestroy", nil)
 					if err != nil {
 						return err
 					}
@@ -583,7 +607,7 @@ resource "nomad_job" "test" {
 					name = "foo-service"
 					port = "8080"
 					task = "foo"
-					address_mode = "driver"
+					address_mode = "host"
 
 					tags = ["foor", "test", "tf"]
 					canary_tags = ["canary"]
@@ -923,7 +947,7 @@ var testResourceJob_noDestroy = `
 resource "nomad_job" "test" {
     deregister_on_destroy = false
     jobspec = <<EOT
-		job "foo" {
+		job "foo-nodestroy" {
 			datacenters = ["dc1"]
 			type = "service"
 			group "foo" {
@@ -1326,6 +1350,7 @@ func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
       "Min": 10,
       "Max": 20,
       "Enabled": false,
+      "Type": "horizontal",
       "Policy": {
          "opaque": true
       },
@@ -1343,6 +1368,99 @@ func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
 
 	if diff := cmp.Diff(expScaling, *taskGroup.Scaling); diff != "" {
 		return fmt.Errorf("task group scaling policy mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_scalingPolicyDASCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_das"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	taskGroupName := "foo"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	taskName := "foo"
+	var task *api.Task
+	for _, t := range taskGroup.Tasks {
+		if t.Name == taskName {
+			task = t
+			break
+		}
+	}
+	if task == nil {
+		return fmt.Errorf("task %s not found", taskName)
+	}
+
+	scalingType := "vertical_cpu"
+	var policy *api.ScalingPolicy
+	for _, p := range task.ScalingPolicies {
+		if p.Type == scalingType {
+			policy = p
+			break
+		}
+	}
+	if policy == nil {
+		return fmt.Errorf("policy %s not found", scalingType)
+	}
+
+	expScaling := &api.ScalingPolicy{}
+	err = json.Unmarshal([]byte(`{
+      "Min": 10,
+      "Max": 20,
+      "Enabled": false,
+	  "Type": "vertical_cpu",
+      "Policy": {
+         "opaque": true
+      },
+      "Target": {
+         "Namespace": "default",
+         "Job": "foo-scaling-das",
+         "Group": "foo",
+		 "Task": "foo"
+      }
+	}`), expScaling)
+	if err != nil {
+		return err
+	}
+
+	// ignore the following fields
+	policy.ID = ""
+	policy.ModifyIndex = 0
+	policy.CreateIndex = 0
+
+	if diff := cmp.Diff(expScaling, policy); diff != "" {
+		return fmt.Errorf("task scaling policy mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -1577,6 +1695,91 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 
 	if proxyTask == nil {
 		return fmt.Errorf("conect proxy task %s not found", proxyTaskName)
+	}
+
+	return nil
+}
+
+func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has Service declaration
+	taskGroupName := "ingress-group"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expServices := []*api.Service{}
+	err = json.Unmarshal([]byte(`[
+		{
+			"Name": "ingress-service",
+			"PortLabel": "8080",
+			"AddressMode": "auto",
+			"Connect": {
+				"Gateway": {
+					"Proxy": {
+						"ConnectTimeout": 500000000,
+						"EnvoyGatewayBindAddresses": {
+							"database": { "Address": "0.0.0.0", "Port": 3306 },
+							"web": { "Address": "0.0.0.0", "Port": 8080 }
+						},
+						"EnvoyGatewayNoDefaultBind": true
+					},
+					"Ingress": {
+						"TLS": {},
+						"Listeners": [
+							{
+								"Port": 8080,
+								"Protocol": "tcp",
+								"Services": [{ "Name": "web" }]
+							},
+							{
+								"Port": 3306,
+								"Protocol": "tcp",
+								"Services": [{ "Name": "database" }]
+							}
+						]
+					}
+				}
+			}
+		}
+	]`), &expServices)
+	if err != nil {
+		return fmt.Errorf("failed to parse expected result: %v", err)
+	}
+
+	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
+		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -2234,6 +2437,60 @@ resource "nomad_job" "test" {
 }
 `
 
+var testResourceJob_consulConnectIngressGatewayConfig = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+	job "ingress-example" {
+	  datacenters = ["dc1"]
+
+	  group "ingress-group" {
+		network {
+		  mode = "bridge"
+		  port "inbound" {
+			static = 8080
+		  }
+		}
+
+		service {
+		  name = "ingress-service"
+		  port = "8080"
+
+		  connect {
+			gateway {
+			  proxy {
+				connect_timeout = "500ms"
+			  }
+
+			  ingress {
+				tls {
+				  enabled = false
+				}
+
+				listener {
+				  port     = 8080
+				  protocol = "tcp"
+				  service {
+					name  = "web"
+				  }
+				}
+
+				listener {
+				  port = 3306
+				  protocol = "tcp"
+				  service {
+					name = "database"
+				  }
+				}
+			  }
+			}
+		  }
+		}
+	  }
+	}
+	EOT
+}
+`
+
 var testResourceJob_scalingPolicyConfig = `
 resource "nomad_job" "test" {
 	jobspec = <<EOT
@@ -2253,6 +2510,33 @@ resource "nomad_job" "test" {
 				config {
 					command = "/bin/sleep"
 					args = ["10"]
+				}
+			}
+		}
+	}
+	EOT
+}
+`
+
+var testResourceJob_scalingPolicyDASConfig = `
+resource "nomad_job" "test_das" {
+	jobspec = <<EOT
+	job "foo-scaling-das" {
+		datacenters = ["dc1"]
+		group "foo" {
+			task "foo" {
+				driver = "raw_exec"
+				config {
+					command = "/bin/sleep"
+					args = ["10"]
+				}
+				scaling "cpu" {
+					min = 10
+					max = 20
+					enabled = false
+					policy {
+					   opaque = true
+					}
 				}
 			}
 		}

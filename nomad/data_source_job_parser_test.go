@@ -1,14 +1,17 @@
 package nomad
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccDataSourceNomadJobParser_Basic(t *testing.T) {
@@ -25,12 +28,44 @@ func TestAccDataSourceNomadJobParser_Basic(t *testing.T) {
 						resourceName, "hcl", strings.TrimSpace(testDataSourceJobParserHCL)),
 					resource.TestCheckResourceAttr(
 						resourceName, "canonicalize", "false"),
-					resource.TestCheckResourceAttr(
-						resourceName, "json", testDataSourceJobParserJSON(t)),
+					checkJobFromString(resourceName, testDataSourceJobParserJSON),
 				),
 			},
 		},
 	})
+}
+
+func checkJobFromString(resourceName, expectedJson string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources[resourceName]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+		actualJson, hadJson := instanceState.Attributes["json"]
+		if !hadJson {
+			return errors.New("resource had no \"json\" field")
+		}
+		actualJob := api.Job{}
+		expectedJob := api.Job{}
+		if err := json.Unmarshal([]byte(expectedJson), &expectedJob); err != nil {
+			return errors.New("error parsing expected json")
+		}
+		if err := json.Unmarshal([]byte(actualJson), &actualJob); err != nil {
+			return errors.New("error parsing actual json")
+		}
+		if !reflect.DeepEqual(actualJob, expectedJob) {
+			return errors.New(fmt.Sprintf(
+				`jobs are not equal:
+expected: %#v
+actual: %#v
+`, expectedJob, actualJob))
+		}
+		return nil
+	}
 }
 
 func TestAccDataSourceNomadJobParser_InvalidHCL(t *testing.T) {
@@ -91,23 +126,23 @@ EOT
 const testDataSourceJobParserHCL = `
 job "example" {
   datacenters = ["dc1"]
-  
+
   group "cache" {
     task "redis" {
       driver = "docker"
-  
+
       config {
         image = "redis:3.2"
-  
+
         port_map {
           db = 6379
         }
       }
-  
+
       resources {
         cpu    = 500
         memory = 256
-  
+
         network {
           mbits = 10
           port "db" {}
@@ -117,9 +152,7 @@ job "example" {
   }
 }`
 
-func testDataSourceJobParserJSON(t *testing.T) string {
-	job := `
-{
+const testDataSourceJobParserJSON = `{
   "Stop": null,
   "Region": null,
   "Namespace": null,
@@ -157,6 +190,7 @@ func testDataSourceJobParserJSON(t *testing.T) string {
       "Constraints": null,
       "Affinities": null,
       "Env": null,
+      "ScalingPolicies": null,
       "Services": null,
       "Resources": {
         "CPU": 500,
@@ -237,15 +271,6 @@ func testDataSourceJobParserJSON(t *testing.T) string {
   "ModifyIndex": null,
   "JobModifyIndex": null
 }`
-
-	jobBytes := []byte(job)
-	buffer := new(bytes.Buffer)
-	if err := json.Compact(buffer, jobBytes); err != nil {
-		t.Fatalf("Job Parsing failed: %s", err)
-	}
-
-	return buffer.String()
-}
 
 const testDataSourceJobParserInvalidHCLConfig = `
 data "nomad_job_parser" "test_job" {

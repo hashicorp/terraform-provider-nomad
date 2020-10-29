@@ -19,9 +19,5 @@ If your update requires a newer version of Nomad, you should also update all
 other dependencies that are currently in this directory and the commit hash
 above.
 
-The only modification you should do from the original files is to change
-`import` paths from `github.com/hashicorp/nomad` to
-`github.com/github.com/hashicorp/terraform-provider-nomad/nomad/core`.
-
 You can also copy just a few chucks of the original file to avoid bringing
 extra dependencie.

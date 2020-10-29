@@ -18,6 +18,7 @@ install:
 - bash scripts/gogetcookie.sh
 - bash scripts/getnomad.sh
 - bash scripts/getvault.sh
+- bash scripts/getconsul.sh
 
 
 before_script:
