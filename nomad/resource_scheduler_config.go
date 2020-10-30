@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -11,74 +12,72 @@ import (
 
 func resourceSchedulerConfig() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceSchedulerConfigurationWrite,
-		Update: resourceSchedulerConfigurationUpdate,
+		Create: resourceSchedulerConfigurationCreate,
+		Update: resourceSchedulerConfigurationCreate,
 		Delete: resourceSchedulerConfigurationDelete,
 		Read:   resourceSchedulerConfigurationRead,
 
 		Schema: map[string]*schema.Schema{
-			"algorithm": {
-				Description: "Scheduler algorithm",
+			"scheduler_algorithm": {
+				Description: "Specifies whether scheduler binpacks or spreads allocations on available nodes.",
 				Type:        schema.TypeString,
 				Default:     "binpack",
 				Optional:    true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"binpack",
-					"spread",
-				}, false),
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{
+						"binpack",
+						"spread",
+					}, false),
+				},
 			},
-			"preemption": {
-				Required:    true,
-				Description: "Preemption for various schedulers",
-				Type:        schema.TypeList,
-				Elem:        resourcePreemptionConfig(),
-			},
-		},
-	}
-}
-
-func resourcePreemptionConfig() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"system_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
-			"service_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"batch_enabled": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+			// TODO(jrasell) once the Terraform SDK has been updated within
+			//  this provider, we should add validation.MapKeyMatch to this
+			//  schema entry using a regex such as:
+			//  "("^[service,system,batch]_scheduler_enabled")".
+			"preemption_config": {
+				Description: "Options to enable preemption for various schedulers.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeBool,
+				},
 			},
 		},
 	}
 }
 
-func resourceSchedulerConfigurationWrite(d *schema.ResourceData, meta interface{}) error {
-	return resourceSchedulerConfigurationUpdate(d, meta)
-}
-func resourceSchedulerConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceSchedulerConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 	operator := client.Operator()
 
 	config := api.SchedulerConfiguration{
-		SchedulerAlgorithm: api.SchedulerAlgorithm(d.Get("algorithm").(string)),
+		SchedulerAlgorithm: api.SchedulerAlgorithm(d.Get("scheduler_algorithm").(string)),
+		PreemptionConfig:   api.PreemptionConfig{},
 	}
 
-	pcfg, err := expandPreemptionConfig(d)
-	if err != nil {
-		return err
-	}
-	config.PreemptionConfig = *pcfg
+	// Unpack the preemption block.
+	preempt, ok := d.GetOk("preemption_config")
+	if ok {
+		preemptMap, ok := preempt.(map[string]interface{})
+		if !ok {
+			return errors.New("failed to unpack preemption configuration block")
+		}
 
+		if val, ok := preemptMap["batch_scheduler_enabled"].(bool); ok {
+			config.PreemptionConfig.BatchSchedulerEnabled = val
+		}
+		if val, ok := preemptMap["service_scheduler_enabled"].(bool); ok {
+			config.PreemptionConfig.ServiceSchedulerEnabled = val
+		}
+		if val, ok := preemptMap["system_scheduler_enabled"].(bool); ok {
+			config.PreemptionConfig.SystemSchedulerEnabled = val
+		}
+	}
+
+	// Perform the config write.
 	log.Printf("[DEBUG] Upserting Scheduler configuration")
-	_, _, err = operator.SchedulerSetConfiguration(&config, nil)
-	if err != nil {
+	if _, _, err := operator.SchedulerSetConfiguration(&config, nil); err != nil {
 		return fmt.Errorf("error upserting scheduler configuration: %s", err.Error())
 	}
 	log.Printf("[DEBUG] Upserted scheduler configuration")
@@ -86,14 +85,28 @@ func resourceSchedulerConfigurationUpdate(d *schema.ResourceData, meta interface
 	return resourceSchedulerConfigurationRead(d, meta)
 }
 
-func resourceSchedulerConfigurationDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
+// resourceSchedulerConfigurationDelete does not do anything:
+//
+// There is not a correct way to destroy this "resource" nor check it was
+// destroyed.
+//
+// Consider the following:
+//   1. an operator manually updates the Nomad scheduler config, or doesn't
+//   2. they decide to move management over to Terraform
+//   3. they get rid of Terraform management
+//
+// If the destroy reverts to the Nomad default configuration, we are over
+// writing changes based on assumption. We cannot go back in time to the
+// initial version as we do not have this information available, so we just
+// have to leave it be.
+func resourceSchedulerConfigurationDelete(_ *schema.ResourceData, _ interface{}) error { return nil }
 
 func resourceSchedulerConfigurationRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 	operator := client.Operator()
 
+	// The scheduler config doesn't have a UUID, so the resource uses the agent
+	// region. Grab this so we can set it later.
 	reg, err := client.Agent().Region()
 	if err != nil {
 		return fmt.Errorf("error getting region: %s", err.Error())
@@ -107,42 +120,16 @@ func resourceSchedulerConfigurationRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Read scheduler configuration")
 
 	d.SetId(fmt.Sprintf("nomad-scheduler-configuration-%s", reg))
-	d.Set("algorithm", config.SchedulerConfig.SchedulerAlgorithm)
-	err = d.Set("preemption", flattenPreeption(config.SchedulerConfig.PreemptionConfig))
-	if err != nil {
-		return fmt.Errorf("error setting preemption: %s", err.Error())
+
+	// Set the algorithm, handling any error when performing the set.
+	if err := d.Set("scheduler_algorithm", config.SchedulerConfig.SchedulerAlgorithm); err != nil {
+		return err
 	}
 
-	return nil
-}
-
-func flattenPreeption(preemption api.PreemptionConfig) []interface{} {
-	result := map[string]interface{}{}
-	result["system_enabled"] = preemption.SystemSchedulerEnabled
-	result["service_enabled"] = preemption.ServiceSchedulerEnabled
-	result["batch_enabled"] = preemption.BatchSchedulerEnabled
-	return []interface{}{result}
-}
-
-func expandPreemptionConfig(d *schema.ResourceData) (*api.PreemptionConfig, error) {
-	configs := d.Get("preemption")
-	cfgs := configs.([]interface{})
-
-	if len(cfgs) < 1 {
-		return nil, nil
+	premptMap := map[string]bool{
+		"batch_scheduler_enabled":   config.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
+		"service_scheduler_enabled": config.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
+		"system_scheduler_enabled":  config.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
 	}
-
-	cfg, ok := cfgs[0].(map[string]interface{})
-
-	if !ok {
-		return nil, fmt.Errorf("expected map[string]interface{} for region limit, got %T", cfgs[0])
-	}
-
-	results := &api.PreemptionConfig{
-		BatchSchedulerEnabled:   cfg["batch_enabled"].(bool),
-		ServiceSchedulerEnabled: cfg["service_enabled"].(bool),
-		SystemSchedulerEnabled:  cfg["system_enabled"].(bool),
-	}
-
-	return results, nil
+	return d.Set("preemption_config", premptMap)
 }
