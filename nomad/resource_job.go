@@ -128,90 +128,7 @@ func resourceJob() *schema.Resource {
 				},
 			},
 
-			"task_groups": {
-				Computed: true,
-				Type:     schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Computed: true,
-							Type:     schema.TypeString,
-						},
-						"count": {
-							Computed: true,
-							Type:     schema.TypeInt,
-						},
-						"task": {
-							Computed: true,
-							Type:     schema.TypeList,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Computed: true,
-										Type:     schema.TypeString,
-									},
-									"driver": {
-										Computed: true,
-										Type:     schema.TypeString,
-									},
-									"meta": {
-										Computed: true,
-										Type:     schema.TypeMap,
-									},
-									"volume_mounts": {
-										Computed: true,
-										Type:     schema.TypeList,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"volume": {
-													Computed: true,
-													Type:     schema.TypeString,
-												},
-												"destination": {
-													Computed: true,
-													Type:     schema.TypeString,
-												},
-												"read_only": {
-													Computed: true,
-													Type:     schema.TypeBool,
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						"volumes": {
-							Computed: true,
-							Type:     schema.TypeList,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Computed: true,
-										Type:     schema.TypeString,
-									},
-									"type": {
-										Computed: true,
-										Type:     schema.TypeString,
-									},
-									"read_only": {
-										Computed: true,
-										Type:     schema.TypeBool,
-									},
-									"source": {
-										Computed: true,
-										Type:     schema.TypeString,
-									},
-								},
-							},
-						},
-						"meta": {
-							Computed: true,
-							Type:     schema.TypeMap,
-						},
-					},
-				},
-			},
+			"task_groups": taskGroupSchema(),
 
 			"purge_on_destroy": {
 				Description: "Whether to purge the job when the resource is destroyed.",
@@ -228,6 +145,117 @@ const (
 	MonitoringDeployment = "monitoring_deployment"
 	DeploymentSuccessful = "deployment_successful"
 )
+
+func taskGroupSchema() *schema.Schema {
+	return &schema.Schema{
+		Computed: true,
+		Type:     schema.TypeList,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"name": {
+					Computed: true,
+					Type:     schema.TypeString,
+				},
+				"count": {
+					Computed: true,
+					Type:     schema.TypeInt,
+				},
+				"constraints": {
+					Type:     schema.TypeMap,
+					Computed: true,
+				},
+				"restart_policy": {
+					Type:     schema.TypeMap,
+					Computed: true,
+				},
+				"reschedule_policy": {
+					Type:     schema.TypeMap,
+					Computed: true,
+				},
+				"ephemeral_disk": {
+					Type:     schema.TypeMap,
+					Computed: true,
+				},
+				"update_strategy": {
+					Computed: true,
+					Type:     schema.TypeMap,
+				},
+				"migrate_strategy": {
+					Type:     schema.TypeMap,
+					Computed: true,
+				},
+				"task": {
+					Computed: true,
+					Type:     schema.TypeList,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Computed: true,
+								Type:     schema.TypeString,
+							},
+							"driver": {
+								Computed: true,
+								Type:     schema.TypeString,
+							},
+							"meta": {
+								Computed: true,
+								Type:     schema.TypeMap,
+							},
+							"volume_mounts": {
+								Computed: true,
+								Type:     schema.TypeList,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"volume": {
+											Computed: true,
+											Type:     schema.TypeString,
+										},
+										"destination": {
+											Computed: true,
+											Type:     schema.TypeString,
+										},
+										"read_only": {
+											Computed: true,
+											Type:     schema.TypeBool,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"volumes": {
+					Computed: true,
+					Type:     schema.TypeList,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Computed: true,
+								Type:     schema.TypeString,
+							},
+							"type": {
+								Computed: true,
+								Type:     schema.TypeString,
+							},
+							"read_only": {
+								Computed: true,
+								Type:     schema.TypeBool,
+							},
+							"source": {
+								Computed: true,
+								Type:     schema.TypeString,
+							},
+						},
+					},
+				},
+				"meta": {
+					Computed: true,
+					Type:     schema.TypeMap,
+				},
+			},
+		},
+	}
+}
 
 func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	timeout := d.Timeout(schema.TimeoutCreate)

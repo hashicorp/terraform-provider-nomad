@@ -19,6 +19,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.1.0
 	github.com/hashicorp/vault v0.10.4
 	github.com/stretchr/testify v1.6.1
+	github.com/ulikunitz/xz v0.5.7 // indirect
 )
 
 // Force using go-getter version that is compatible with terraform plugin

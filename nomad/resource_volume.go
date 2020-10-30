@@ -105,18 +105,7 @@ func resourceVolume() *schema.Resource {
 				Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
 				Optional:    true,
 				Type:        schema.TypeMap,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"fs_type": {
-							Description: "The file system type.",
-							Type:        schema.TypeString,
-						},
-						"mount_flags": {
-							Description: "The flags passed to mount.",
-							Type:        schema.TypeList,
-						},
-					},
-				},
+				Elem:        schema.TypeString,
 			},
 
 			"secrets": {
