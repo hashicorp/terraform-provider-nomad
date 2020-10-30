@@ -1,7 +1,12 @@
-## 1.4.10 (Unreleased)
+## 1.5.0 (Unreleased)
 
 IMPROVEMENTS:
 * resource/nomad_volume: added `mount_options` argument ([#147](https://github.com/hashicorp/terraform-provider-nomad/pull/147))
+* Terraform Plugin SDK bumped to v2.1.0 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* nomad job parsing is pulled directly from nomad instead of being copied over ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+
+BUG FIXES:
+* numerous (invalid but unused) fields from the task group and job schema have been removed ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
 ## 1.4.9 (August 13, 2020)
 
