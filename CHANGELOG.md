@@ -1,4 +1,4 @@
-## 1.4.10 (Unreleased)
+## 1.4.10 (October 30, 2020)
 
 * **Target Nomad 1.0.0-beta.2**: updated the nomad client to support Nomad API version 1.0.0-beta2 ([#158](https://github.com/hashicorp/terraform-provider-nomad/issues/158))
 
