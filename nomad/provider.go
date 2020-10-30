@@ -88,6 +88,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_quota_specification": resourceQuotaSpecification(),
 			"nomad_sentinel_policy":     resourceSentinelPolicy(),
 			"nomad_volume":              resourceVolume(),
+			"nomad_scheduler_config":    resourceSchedulerConfig(),
 		},
 	}
 }
