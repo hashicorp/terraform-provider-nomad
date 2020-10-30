@@ -160,30 +160,13 @@ func taskGroupSchema() *schema.Schema {
 					Computed: true,
 					Type:     schema.TypeInt,
 				},
-				"constraints": {
-					Type:     schema.TypeMap,
-					Computed: true,
-				},
-				"restart_policy": {
-					Type:     schema.TypeMap,
-					Computed: true,
-				},
-				"reschedule_policy": {
-					Type:     schema.TypeMap,
-					Computed: true,
-				},
-				"ephemeral_disk": {
-					Type:     schema.TypeMap,
-					Computed: true,
-				},
-				"update_strategy": {
-					Computed: true,
-					Type:     schema.TypeMap,
-				},
-				"migrate_strategy": {
-					Type:     schema.TypeMap,
-					Computed: true,
-				},
+				// "scaling": {
+				// 	Computed: true,
+				// 	Type:     schema.TypeList,
+				// 	MinItems: 0,
+				// 	MaxItems: 1,
+				// 	Elem:     scalingPolicySchema(),
+				// },
 				"task": {
 					Computed: true,
 					Type:     schema.TypeList,
@@ -201,6 +184,11 @@ func taskGroupSchema() *schema.Schema {
 								Computed: true,
 								Type:     schema.TypeMap,
 							},
+							// "scaling": {
+							// 	Computed: true,
+							// 	Type:     schema.TypeList,
+							// 	Elem:     scalingPolicySchema(),
+							// },
 							"volume_mounts": {
 								Computed: true,
 								Type:     schema.TypeList,
