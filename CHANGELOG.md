@@ -1,5 +1,12 @@
 ## 1.4.10 (Unreleased)
 
+* **Target Nomad 1.0.0-beta.2**: updated the nomad client to support Nomad API version 1.0.0-beta2 ([#158](https://github.com/hashicorp/terraform-provider-nomad/issues/158))
+
+FEATURES:
+* **New Resource**: `nomad_scheduler_config` allows management of cluster scheduler configuration ([#157](https://github.com/hashicorp/terraform-provider-nomad/pull/157))
+* **New Data Source**: `nomad_scaling_policies` and `nomad_scaling_policies` retrieves and lists scaling policies ([#162](https://github.com/hashicorp/terraform-provider-nomad/pull/162))
+* **New Data Source**: `nomad_datacenters` lists the datacenters in a Nomad cluster ([#165](https://github.com/hashicorp/terraform-provider-nomad/pull/165))
+
 IMPROVEMENTS:
 * resource/nomad_volume: added `mount_options` argument ([#147](https://github.com/hashicorp/terraform-provider-nomad/pull/147))
 
