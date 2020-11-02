@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
 func dataSourceSchedulerConfig() *schema.Resource {
@@ -39,16 +40,14 @@ func dataSourceSchedulerConfigRead(d *schema.ResourceData, meta interface{}) err
 	// Set a unique ID, as we have nothing else to go on.
 	d.SetId(resource.UniqueId())
 
-	if err := d.Set("scheduler_algorithm", schedCfg.SchedulerConfig.SchedulerAlgorithm); err != nil {
-		return fmt.Errorf("failed to set scheduler_algorithm: %v", err)
-	}
 	premptMap := map[string]bool{
 		"batch_scheduler_enabled":   schedCfg.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
 		"service_scheduler_enabled": schedCfg.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
 		"system_scheduler_enabled":  schedCfg.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
 	}
-	if err := d.Set("preemption_config", premptMap); err != nil {
-		return fmt.Errorf("failed to set preemption_config: %v", err)
-	}
-	return nil
+
+	sw := helper.NewStateWriter(d)
+	sw.Set("scheduler_algorithm", schedCfg.SchedulerConfig.SchedulerAlgorithm)
+	sw.Set("preemption_config", premptMap)
+	return sw.Error()
 }
