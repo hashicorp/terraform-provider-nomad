@@ -8,7 +8,7 @@ description: |-
 
 # nomad_scheduler_config
 
-Retrieve the cluster's scheduler configuration.
+Retrieve the cluster's [scheduler configuration](https://www.nomadproject.io/api-docs/operator#sample-response-3).
 
 ## Example Usage
 
@@ -21,4 +21,4 @@ data "nomad_scheduler_config" "global" {}
 The following attributes are exported:
 
 * `scheduler_algorithm` `(string)` - Specifies whether scheduler binpacks or spreads allocations on available nodes.
-* `preemption_config` `(map[string]bool)` - TOptions to enable preemption for various schedulers.
+* `preemption_config` `(map[string]bool)` - Options to enable preemption for various schedulers.
