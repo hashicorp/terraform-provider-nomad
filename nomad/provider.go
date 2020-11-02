@@ -79,6 +79,7 @@ func Provider() terraform.ResourceProvider {
 			"nomad_plugins":          dataSourcePlugins(),
 			"nomad_scaling_policies": dataSourceScalingPolicies(),
 			"nomad_scaling_policy":   dataSourceScalingPolicy(),
+			"nomad_scheduler_config": dataSourceSchedulerConfig(),
 			"nomad_regions":          dataSourceRegions(),
 			"nomad_volumes":          dataSourceVolumes(),
 		},
