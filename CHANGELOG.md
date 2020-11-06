@@ -1,3 +1,10 @@
+## 1.4.11 (Unreleased)
+
+* **New Data Source**: `nomad_scheduler_config` retrieves the scheduler configuration in Nomad ([#168](https://github.com/hashicorp/terraform-provider-nomad/pull/168))
+
+BUG FIXES:
+* resource/nomad_volume: register volume in the namespace specified in the configuration ([#169](https://github.com/hashicorp/terraform-provider-nomad/pull/169))
+
 ## 1.4.10 (October 30, 2020)
 
 * **Target Nomad 1.0.0-beta.2**: updated the nomad client to support Nomad API version 1.0.0-beta2 ([#158](https://github.com/hashicorp/terraform-provider-nomad/issues/158))
