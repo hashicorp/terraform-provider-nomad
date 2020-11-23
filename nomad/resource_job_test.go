@@ -294,7 +294,7 @@ func TestResourceJob_json(t *testing.T) {
 			},
 		},
 
-		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
+		CheckDestroy: testResourceJob_checkDestroy("foo-json-with-root"),
 	})
 
 	// Test plain jobspec.
@@ -308,7 +308,7 @@ func TestResourceJob_json(t *testing.T) {
 			},
 		},
 
-		CheckDestroy: testResourceJob_checkDestroy("foo-json"),
+		CheckDestroy: testResourceJob_checkDestroy("foo-json-without-root"),
 	})
 }
 
@@ -841,8 +841,8 @@ resource "nomad_job" "test" {
 {
   "Job": {
     "Datacenters": [ "dc1" ],
-    "ID": "foo-json",
-    "Name": "foo-json",
+    "ID": "foo-json-with-root",
+    "Name": "foo-json-with-root",
     "Type": "service",
     "TaskGroups": [
       {
@@ -879,8 +879,8 @@ resource "nomad_job" "test" {
 	jobspec = <<EOT
 {
   "Datacenters": [ "dc1" ],
-  "ID": "foo-json",
-  "Name": "foo-json",
+  "ID": "foo-json-without-root",
+  "Name": "foo-json-without-root",
   "Type": "service",
   "TaskGroups": [
     {
