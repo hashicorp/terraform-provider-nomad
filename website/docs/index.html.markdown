@@ -145,7 +145,7 @@ $ terraform apply  -var vault_token_a=s.lraLq3axH9mkbdVRkWS6H06Q  \
 ```
 
 The downside here is that it requires creating multiple Nomad provider aliases
-and specifying the desired alias for every job resource. Another approach is inject
+and specifying the desired alias for every job resource. Another approach is to inject
 the Vault token into the jobspec using `templatefile`:
 ```hcl
 resource "nomad_job" "job_a" {
