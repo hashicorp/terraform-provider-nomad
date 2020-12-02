@@ -115,7 +115,7 @@ different set of policies. In this case, there are a few different strategies fo
 managing the tokens and ensuring that the correct token is used for a particular
 job.
 
-One approach is to provider aliases, creating a Nomad Provider for each Vault token:
+One approach is to use provider aliases, creating a Nomad Provider for each Vault token:
 ```hcl
 provider "nomad" {
   alias = "a"
