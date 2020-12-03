@@ -99,14 +99,14 @@ Nomad supports passing a Vault token during job registration; this token is used
 only to verify that the submitter has permissions to access the Vault policies
 used in the Nomad job. When running the Nomad CLI, this token can be provided in
 a number of ways:
-* in the job spec using the [`vault_token`](https://www.nomadproject.io/docs/job-specification/job#vault_token) parameter
-* using the [`-vault-token`](https://www.nomadproject.io/docs/commands/job/run#vault-token) command line flag
-* setting the `VAULT_TOKEN` environment variable.
+- in the job spec using the [`vault_token`](https://www.nomadproject.io/docs/job-specification/job#vault_token) parameter
+- using the [`-vault-token`](https://www.nomadproject.io/docs/commands/job/run#vault-token) command line flag
+- setting the `VAULT_TOKEN` environment variable.
 
 When using the Nomad Provider to register Nomad jobs, the options are similar:
-* the token can be placed in the job spec in the [`nomad_job`](./resources/job) resource
-* the token can be [configured](#vault_token) on the Nomad Provider.
-* the token can be set in the `VAULT_TOKEN` environment variable when running `terraform apply`
+- the token can be placed in the job spec in the [`nomad_job`](./resources/job) resource
+- the token can be [configured](#vault_token) on the Nomad Provider.
+- the token can be set in the `VAULT_TOKEN` environment variable when running `terraform apply`
 
 There are two problems that arise. The first is that we likely want to avoid putting
 Vault tokens into Terraform files where they may be inadvertently distributed. The second
