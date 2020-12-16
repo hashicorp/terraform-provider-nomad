@@ -10,8 +10,8 @@ description: |-
 
 Provisions a namespace within a Nomad cluster.
 
-~> **Enterprise Only!** This API endpoint and functionality only exists in
-Nomad Enterprise. This is not present in the open source version of Nomad.
+~> **Nomad OSS >= 1.0.0 and Enterprise** This API endpoint and functionality exists in
+Nomad Enterprise and in version 1.0.0 or greater in the OSS distribution.
 
 Nomad auto-generates a default namespace called `default`. This namespace
 cannot be removed, so destroying a `nomad_namespace` resource where
