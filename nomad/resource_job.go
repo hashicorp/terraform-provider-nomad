@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-
-	"github.com/hashicorp/nomad/jobspec"
 )
 
 func resourceJob() *schema.Resource {
@@ -587,7 +586,7 @@ func parseJobspec(raw string, is_json bool, vaultToken *string) (*api.Job, error
 	if is_json {
 		job, err = parseJSONJobspec(raw)
 	} else {
-		job, err = jobspec.Parse(strings.NewReader(raw))
+		job, err = jobspec2.Parse("", strings.NewReader(raw))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error parsing jobspec: %s", err)
@@ -709,13 +708,13 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	// TODO: does this need to consider is_json ???
 	// Parse the old job
-	oldJob, err := jobspec.Parse(strings.NewReader(old))
+	oldJob, err := jobspec2.Parse("", strings.NewReader(old))
 	if err != nil {
 		return false
 	}
 
 	// Parse the new job
-	newJob, err := jobspec.Parse(strings.NewReader(new))
+	newJob, err := jobspec2.Parse("", strings.NewReader(new))
 	if err != nil {
 		return false
 	}
