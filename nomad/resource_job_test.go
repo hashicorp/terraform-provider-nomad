@@ -2659,7 +2659,7 @@ job "foo-csi-controller" {
       driver = "docker"
 
       config {
-        image = "amazon/aws-ebs-csi-driver:latest"
+        image = "amazon/aws-ebs-csi-driver:v0.7.1"
 
         args = [
           "controller",
