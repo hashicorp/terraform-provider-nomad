@@ -23,7 +23,6 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_ADDR", nil),
 				Description: "URL of the root of the target Nomad agent.",
 			},
-
 			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -31,22 +30,43 @@ func Provider() terraform.ResourceProvider {
 				Description: "Region of the target Nomad agent.",
 			},
 			"ca_file": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CACERT", ""),
-				Description: "A path to a PEM-encoded certificate authority used to verify the remote agent's certificate.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("NOMAD_CACERT", nil),
+				Description:   "A path to a PEM-encoded certificate authority used to verify the remote agent's certificate.",
+				ConflictsWith: []string{"ca_pem"},
+			},
+			"ca_pem": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "PEM-encoded certificate authority used to verify the remote agent's certificate.",
+				ConflictsWith: []string{"ca_file"},
 			},
 			"cert_file": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_CERT", ""),
-				Description: "A path to a PEM-encoded certificate provided to the remote agent; requires use of key_file.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("NOMAD_CLIENT_CERT", nil),
+				Description:   "A path to a PEM-encoded certificate provided to the remote agent; requires use of key_file or key_pem.",
+				ConflictsWith: []string{"cert_pem"},
+			},
+			"cert_pem": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "PEM-encoded certificate provided to the remote agent; requires use of key_file or key_pem.",
+				ConflictsWith: []string{"cert_file"},
 			},
 			"key_file": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", ""),
-				Description: "A path to a PEM-encoded private key, required if cert_file is specified.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("NOMAD_CLIENT_KEY", nil),
+				Description:   "A path to a PEM-encoded private key, required if cert_file or cert_pem is specified.",
+				ConflictsWith: []string{"key_pem"},
+			},
+			"key_pem": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "PEM-encoded private key, required if cert_file or cert_pem is specified.",
+				ConflictsWith: []string{"key_file"},
 			},
 			"vault_token": {
 				Type:        schema.TypeString,
@@ -114,10 +134,15 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf := api.DefaultConfig()
 	conf.Address = d.Get("address").(string)
 	conf.Region = d.Get("region").(string)
+	conf.SecretID = d.Get("secret_id").(string)
+
+	// TLS configuration items.
 	conf.TLSConfig.CACert = d.Get("ca_file").(string)
 	conf.TLSConfig.ClientCert = d.Get("cert_file").(string)
 	conf.TLSConfig.ClientKey = d.Get("key_file").(string)
-	conf.SecretID = d.Get("secret_id").(string)
+	conf.TLSConfig.CACertPEM = []byte(d.Get("ca_pem").(string))
+	conf.TLSConfig.ClientCertPEM = []byte(d.Get("cert_pem").(string))
+	conf.TLSConfig.ClientKeyPEM = []byte(d.Get("key_pem").(string))
 
 	// Get the vault token from the conf, VAULT_TOKEN
 	// or ~/.vault-token (in that order)
