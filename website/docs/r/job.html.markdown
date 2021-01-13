@@ -87,6 +87,18 @@ nomad job run -output my-job.nomad > my-job.json
 Or you can also use the [`/v1/jobs/parse`](https://www.nomadproject.io/api-docs/jobs/#parse-job)
 API endpoint.
 
+## HCL2 jobspec
+
+The input jobspec can also be provided as HCL2 instead of HCL by setting the
+argument `hcl2` to `true`:
+
+```hcl
+resource "nomad_job" "app" {
+  jobspec = file("${path.module}/jobspec.json")
+  hcl2    = true
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -110,3 +122,5 @@ The following arguments are supported:
 
 - `json` `(boolean: false)` - Set this to true if your jobspec is structured with
   JSON instead of the default HCL.
+
+- `hcl2` `(boolean: false)` - Set this to true if your jobspec is structured with HCL2 instead of the default HCL.
