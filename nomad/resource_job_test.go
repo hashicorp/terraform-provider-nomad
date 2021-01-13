@@ -497,6 +497,47 @@ func testResourceJob_parameterizedCheck(s *terraform.State) error {
 	return nil
 }
 
+func TestResourceJob_hcl2(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_hcl2,
+				Check:  testResourceJob_hcl2Check,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-hcl2"),
+	})
+}
+
+func testResourceJob_hcl2Check(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["nomad_job.hcl2"]
+	if resourceState == nil {
+		return errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return errors.New("resource has no primary instance")
+	}
+
+	jobID := instanceState.ID
+
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	return nil
+}
+
 var testResourceJob_parameterizedJob = `
 resource "nomad_job" "parameterized" {
 	jobspec = <<EOT
@@ -2712,5 +2753,38 @@ job "foo-multiregion" {
   }
 }
 	EOT
+}
+`
+
+var testResourceJob_hcl2 = `
+resource "nomad_job" "hcl2" {
+	hcl2    = true
+	jobspec = <<EOT
+variables {
+	args = ["10"]
+}
+job "foo-hcl2" {
+	datacenters = ["dc1"]
+	group "hcl2" {
+		restart {
+			attempts = 5
+			interval = "10m"
+			delay    = "15s"
+			mode     = "delay"
+		}
+
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args = var.args
+			}
+			restart {
+				attempts = 10
+			}
+		}
+	}
+}
+EOT
 }
 `
