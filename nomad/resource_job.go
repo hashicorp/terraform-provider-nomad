@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -70,6 +71,12 @@ func resourceJob() *schema.Resource {
 				Description: "If detach = false, the status for the deployment associated with the last job create/update, if one exists.",
 				Computed:    true,
 				Type:        schema.TypeString,
+			},
+
+			"hcl2": {
+				Description: "If true, the `jobspec` will be parsed as HCL2 instead of HCL.",
+				Optional:    true,
+				Type:        schema.TypeBool,
 			},
 
 			"json": {
@@ -239,7 +246,11 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	// Get the jobspec itself
 	jobspecRaw := d.Get("jobspec").(string)
 	is_json := d.Get("json").(bool)
-	job, err := parseJobspec(jobspecRaw, is_json, providerConfig.vaultToken)
+	parserHCL2 := d.Get("hcl2").(bool)
+	if is_json && parserHCL2 {
+		return fmt.Errorf("invalid combination. is_json is %t and parserHCL2 is %t", is_json, parserHCL2)
+	}
+	job, err := parseJobspec(jobspecRaw, is_json, parserHCL2, providerConfig.vaultToken)
 	if err != nil {
 		return err
 	}
@@ -504,7 +515,11 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	}
 
 	is_json := d.Get("json").(bool)
-	job, err := parseJobspec(newSpecRaw.(string), is_json, providerConfig.vaultToken) // catch syntax errors client-side during plan
+	parserHCL2 := d.Get("hcl2").(bool)
+	if is_json && parserHCL2 {
+		return fmt.Errorf("invalid combination. is_json is %t and parserHCL2 is %t", is_json, parserHCL2)
+	}
+	job, err := parseJobspec(newSpecRaw.(string), is_json, parserHCL2, providerConfig.vaultToken) // catch syntax errors client-side during plan
 	if err != nil {
 		return err
 	}
@@ -579,15 +594,19 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	return nil
 }
 
-func parseJobspec(raw string, is_json bool, vaultToken *string) (*api.Job, error) {
+func parseJobspec(raw string, is_json, parserHCL2 bool, vaultToken *string) (*api.Job, error) {
 	var job *api.Job
 	var err error
 
-	if is_json {
+	switch {
+	case is_json:
 		job, err = parseJSONJobspec(raw)
-	} else {
+	case parserHCL2:
 		job, err = jobspec2.Parse(raw, strings.NewReader(raw))
+	default:
+		job, err = jobspec.Parse(strings.NewReader(raw))
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("error parsing jobspec: %s", err)
 	}
@@ -706,16 +725,38 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 // jobspecDiffSuppress is the DiffSuppressFunc used by the schema to
 // check if two jobspecs are equal.
 func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
-	// TODO: does this need to consider is_json ???
-	// Parse the old job
-	oldJob, err := jobspec2.Parse(old, strings.NewReader(old))
-	if err != nil {
+	var oldJob *api.Job
+	var newJob *api.Job
+	var oldErr error
+	var newErr error
+
+	is_json := d.Get("json").(bool)
+	parserHCL2 := d.Get("hcl2").(bool)
+	if is_json && parserHCL2 {
+		log.Printf("invalid combination. is_json is %t and parserHCL2 is %t\n", is_json, parserHCL2)
 		return false
 	}
-
-	// Parse the new job
-	newJob, err := jobspec2.Parse(new, strings.NewReader(new))
-	if err != nil {
+	switch {
+	case is_json:
+		oldJob, oldErr = parseJSONJobspec(old)
+		newJob, newErr = parseJSONJobspec(new)
+	case parserHCL2:
+		oldJob, oldErr = jobspec2.Parse(old, strings.NewReader(old))
+		newJob, newErr = jobspec2.Parse(new, strings.NewReader(new))
+	default:
+		oldJob, oldErr = jobspec.Parse(strings.NewReader(old))
+		newJob, newErr = jobspec.Parse(strings.NewReader(new))
+	}
+	if oldErr != nil {
+		log.Println("error parsing old jobspec")
+		log.Printf("%v\n", oldJob)
+		log.Printf("%v", oldErr)
+		return false
+	}
+	if newErr != nil {
+		log.Println("error parsing new jobspec")
+		log.Printf("%v\n", newJob)
+		log.Printf("%v", newErr)
 		return false
 	}
 
