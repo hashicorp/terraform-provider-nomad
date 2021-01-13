@@ -89,12 +89,12 @@ API endpoint.
 
 ## HCL2 jobspec
 
-The input jobspec can also be provided as HCL2 instead of HCL by setting the
-argument `hcl2` to `true`:
+The input jobspec can also be provided in the [HCL2 format](https://www.nomadproject.io/docs/job-specification/hcl2)
+by setting the argument `hcl2` to `true`:
 
 ```hcl
 resource "nomad_job" "app" {
-  jobspec = file("${path.module}/jobspec.json")
+  jobspec = file("${path.module}/jobspec.hcl")
   hcl2    = true
 }
 ```
@@ -123,4 +123,5 @@ The following arguments are supported:
 - `json` `(boolean: false)` - Set this to true if your jobspec is structured with
   JSON instead of the default HCL.
 
-- `hcl2` `(boolean: false)` - Set this to true if your jobspec is structured with HCL2 instead of the default HCL.
+- `hcl2` `(boolean: false)` - Set this to true if your jobspec uses the HCL2
+  format instead of the default HCL.
