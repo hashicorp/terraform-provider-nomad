@@ -1,3 +1,8 @@
+## 1.4.12 (Unreleased)
+
+FEATURES:
+* resource/nomad_job: add initial support for jobspec parsing with HCL2 ([#185](https://github.com/hashicorp/terraform-provider-nomad/pull/185))
+
 ## 1.4.11 (December 07, 2020)
 
 * **Target Nomad 1.0.0-rc1**: updated the nomad client to support Nomad API version 1.0.0-rc1 ([#175](https://github.com/hashicorp/terraform-provider-nomad/issues/175))
