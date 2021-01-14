@@ -44,14 +44,23 @@ The following arguments are supported:
   authority used to verify the remote agent's certificate. This can also be
   specified as the `NOMAD_CACERT` environment variable.
 
+- `ca_pem` `(string: "")` - PEM-encoded certificate authority used to verify
+  the remote agent's certificate.
+
 - `cert_file` `(string: "")` - A local file path to a PEM-encoded certificate
-  provided to the remote agent. If this is specified, `key_file` is also
-  required. This can also be specified as the `NOMAD_CLIENT_CERT` environment
-  variable.
+  provided to the remote agent. If this is specified, `key_file` or `key_pem`
+  is also required. This can also be specified as the `NOMAD_CLIENT_CERT`
+  environment variable.
+
+- `cert_pem` `(string: "")` - PEM-encoded certificate provided to the remote
+  agent. If this is specified, `key_file` or `key_pem` is also required.
 
 - `key_file` `(string: "")` - A local file path to a PEM-encoded private key.
-  This is required if `cert_file` is specified. This can also be specified via
-  the `NOMAD_CLIENT_KEY` environment variable.
+  This is required if `cert_file` or `cert_pem` is specified. This can also be
+  specified via the `NOMAD_CLIENT_KEY` environment variable.
+
+- `key_pem` `(string: "")` - PEM-encoded private key. This is required if
+  `cert_file` or `cert_pem` is specified.
 
 - `vault_token` `(string: "")` - A Vault token used when [submitting the job](https://www.nomadproject.io/docs/job-specification/job#vault_token).
   This can also be specified as the `VAULT_TOKEN` environment variable or using a
