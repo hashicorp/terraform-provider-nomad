@@ -2,9 +2,13 @@
 
 * **Target Nomad 1.0.1**: updated the nomad client to support Nomad API version 1.0.1 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
+FEATURES:
+* resource/nomad_job: add initial support for jobspec parsing with HCL2 ([#185](https://github.com/hashicorp/terraform-provider-nomad/pull/185))
+
 IMPROVEMENTS:
-* Terraform Plugin SDK bumped to v2.4.0 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
-* Nomad job parsing is pulled directly from nomad instead of being copied over ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* provider: Terraform Plugin SDK bumped to v2.4.0 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* provider: support TLS certs configured by strings ([#184](https://github.com/hashicorp/terraform-provider-nomad/pull/184))
+* resource/nomad_job: Nomad job parsing is pulled directly from nomad instead of being copied over ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
 BUG FIXES:
 * numerous (invalid but unused) fields from the task group and job schema have been removed ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
