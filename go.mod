@@ -13,6 +13,7 @@ exclude (
 
 require (
 	github.com/google/go-cmp v0.5.2
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/nomad v1.0.1
 	github.com/hashicorp/nomad/api v0.0.0-20210113202117-69b19679e82e

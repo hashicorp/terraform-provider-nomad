@@ -198,11 +198,6 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	ns := d.Get("namespace").(string)
-	if ns == "" {
-		ns = "default"
-	}
-
 	volume := &api.CSIVolume{
 		ID:             d.Get("volume_id").(string),
 		Name:           d.Get("name").(string),
@@ -234,7 +229,13 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 
 	// Register the volume
 	log.Printf("[DEBUG] registering volume %q in namespace %q", volume.ID, volume.Namespace)
-	_, err := client.CSIVolumes().Register(volume, nil)
+	opts := &api.WriteOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = "default"
+	}
+	_, err := client.CSIVolumes().Register(volume, opts)
 	if err != nil {
 		return fmt.Errorf("error registering volume: %s", err)
 	}

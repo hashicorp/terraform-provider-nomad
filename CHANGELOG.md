@@ -1,12 +1,30 @@
-## 1.5.0 (Unreleased)
+## 1.4.12 (Unreleased)
+
+* **Target Nomad 1.0.1**: updated the nomad client to support Nomad API version 1.0.1 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
 IMPROVEMENTS:
-* resource/nomad_volume: added `mount_options` argument ([#147](https://github.com/hashicorp/terraform-provider-nomad/pull/147))
-* Terraform Plugin SDK bumped to v2.1.0 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
-* nomad job parsing is pulled directly from nomad instead of being copied over ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* Terraform Plugin SDK bumped to v2.4.0 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* Nomad job parsing is pulled directly from nomad instead of being copied over ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
 BUG FIXES:
 * numerous (invalid but unused) fields from the task group and job schema have been removed ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+
+## 1.4.11 (December 07, 2020)
+
+* **Target Nomad 1.0.0-rc1**: updated the nomad client to support Nomad API version 1.0.0-rc1 ([#175](https://github.com/hashicorp/terraform-provider-nomad/issues/175))
+* **New Data Source**: `nomad_scheduler_config` retrieves the scheduler configuration in Nomad ([#168](https://github.com/hashicorp/terraform-provider-nomad/pull/168))
+
+BUG FIXES:
+* resource/nomad_volume: register volume in the namespace specified in the configuration ([#169](https://github.com/hashicorp/terraform-provider-nomad/pull/169))
+
+## 1.4.10 (October 30, 2020)
+
+* **Target Nomad 1.0.0-beta2**: updated the nomad client to support Nomad API version 1.0.0-beta2 ([#158](https://github.com/hashicorp/terraform-provider-nomad/issues/158))
+
+FEATURES:
+* **New Resource**: `nomad_scheduler_config` allows management of cluster scheduler configuration ([#157](https://github.com/hashicorp/terraform-provider-nomad/pull/157))
+* **New Data Source**: `nomad_scaling_policies` and `nomad_scaling_policies` retrieves and lists scaling policies ([#162](https://github.com/hashicorp/terraform-provider-nomad/pull/162))
+* **New Data Source**: `nomad_datacenters` lists the datacenters in a Nomad cluster ([#165](https://github.com/hashicorp/terraform-provider-nomad/pull/165))
 
 ## 1.4.9 (August 13, 2020)
 
