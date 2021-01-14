@@ -14,7 +14,7 @@ exclude (
 require (
 	github.com/google/go-cmp v0.5.2
 	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/nomad v0.12.5-0.20201029140339-d6255129a300
+	github.com/hashicorp/nomad v1.0.1
 	github.com/hashicorp/nomad/api v0.0.0-20210113202117-69b19679e82e
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.0
 	github.com/hashicorp/vault v0.10.4
