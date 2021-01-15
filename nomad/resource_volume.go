@@ -339,8 +339,8 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
-	// The Nomad API redacts `mount_options` and `secrets`, so we can't set
-	// them here.
+	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
+	// with the response payload; they will remain as is.
 
 	return nil
 }
