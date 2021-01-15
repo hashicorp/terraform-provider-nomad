@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -104,8 +105,23 @@ func resourceVolume() *schema.Resource {
 			"mount_options": {
 				Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
 				Optional:    true,
-				Type:        schema.TypeMap,
-				Elem:        schema.TypeString,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"fs_type": {
+							Description: "The file system type.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"mount_flags": {
+							Description: "The flags passed to mount.",
+							Type:        schema.TypeList,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Optional:    true,
+						},
+					},
+				},
 			},
 
 			"secrets": {
@@ -183,6 +199,14 @@ func resourceVolume() *schema.Resource {
 				Type:     schema.TypeBool,
 			},
 		},
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceVolumeResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceVolumeStateUpgradeV0,
+				Version: 0,
+			},
+		},
 	}
 }
 
@@ -213,7 +237,12 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	// Unpack the mount_options if we have any and configure the volume struct.
 	mountOpts, ok := d.GetOk("mount_options")
 	if ok {
-		mountOptsMap, ok := mountOpts.(map[string]interface{})
+		mountOptsList, ok := mountOpts.([]interface{})
+		if !ok || len(mountOptsList) != 1 {
+			return errors.New("failed to unpack mount_options configuration block")
+		}
+
+		mountOptsMap, ok := mountOptsList[0].(map[string]interface{})
 		if !ok {
 			return errors.New("failed to unpack mount_options configuration block")
 		}
@@ -311,7 +340,192 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
-	d.Set("mount_options", volume.MountOptions)
+	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
+	// with the response payload; they will remain as is.
 
 	return nil
+}
+
+// resourceVolumeStateUpgradeV0 migrates a nomad_volume resource schema from v0 to v1.
+func resourceVolumeStateUpgradeV0(_ context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	if val, ok := rawState["mount_options"]; ok {
+		rawState["mount_options"] = []interface{}{val}
+	}
+	return rawState, nil
+}
+
+// resourceVolumeResourceV0 returns the v0 schema for a nomad_volume.
+func resourceVolumeResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"type": {
+				ForceNew:    true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The type of the volume. Currently, only 'csi' is supported.",
+				Default:     "csi",
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{"csi"}, false),
+				},
+			},
+
+			"namespace": {
+				ForceNew:    true,
+				Description: "The namespace in which to create the volume.",
+				Optional:    true,
+				Default:     "default",
+				Type:        schema.TypeString,
+			},
+
+			"volume_id": {
+				ForceNew:    true,
+				Description: "The unique ID of the volume, how jobs will refer to the volume.",
+				Required:    true,
+				Type:        schema.TypeString,
+			},
+
+			"name": {
+				Description: "The display name of the volume.",
+				Required:    true,
+				Type:        schema.TypeString,
+			},
+
+			"plugin_id": {
+				ForceNew:    true,
+				Description: "The ID of the CSI plugin that manages this volume.",
+				Required:    true,
+				Type:        schema.TypeString,
+			},
+
+			"external_id": {
+				ForceNew:    true,
+				Description: "The ID of the physical volume from the storage provider.",
+				Required:    true,
+				Type:        schema.TypeString,
+			},
+
+			"access_mode": {
+				Description: "Defines whether a volume should be available concurrently.",
+				Required:    true,
+				Type:        schema.TypeString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{
+						"single-node-reader-only",
+						"single-node-writer",
+						"multi-node-reader-only",
+						"multi-node-single-writer",
+						"multi-node-multi-writer",
+					}, false),
+				},
+			},
+
+			"attachment_mode": {
+				Description: "The storage API that will be used by the volume.",
+				Required:    true,
+				Type:        schema.TypeString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{
+						"block-device",
+						"file-system",
+					}, false),
+				},
+			},
+
+			"mount_options": {
+				Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"fs_type": {
+							Description: "The file system type.",
+							Type:        schema.TypeString,
+						},
+						"mount_flags": {
+							Description: "The flags passed to mount.",
+							Type:        schema.TypeList,
+						},
+					},
+				},
+			},
+
+			"secrets": {
+				Description: "An optional key-value map of strings used as credentials for publishing and unpublishing volumes.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Sensitive:   true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"parameters": {
+				Description: "An optional key-value map of strings passed directly to the CSI plugin to configure the volume.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"context": {
+				Description: "An optional key-value map of strings passed directly to the CSI plugin to validate the volume.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"deregister_on_destroy": {
+				Description: "If true, the volume will be deregistered on destroy.",
+				Optional:    true,
+				Default:     true,
+				Type:        schema.TypeBool,
+			},
+
+			"controller_required": {
+				Computed: true,
+				Type:     schema.TypeBool,
+			},
+
+			"controllers_expected": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"controllers_healthy": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"plugin_provider": {
+				Computed: true,
+				Type:     schema.TypeString,
+			},
+
+			"plugin_provider_version": {
+				Computed: true,
+				Type:     schema.TypeString,
+			},
+
+			"nodes_healthy": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"nodes_expected": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"schedulable": {
+				Computed: true,
+				Type:     schema.TypeBool,
+			},
+		},
+	}
 }
