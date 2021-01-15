@@ -40,6 +40,10 @@ The following arguments are supported:
 - `region` `(string: "")` - The Nomad region to target. This can also be
   specified as the `NOMAD_REGION` environment variable.
 
+- `http_auth` `(string: "")` - HTTP Basic Authentication credentials to be used
+  when communicating with Nomad, in the format of either `user` or `user:pass`.
+  This can also be specified using the `NOMAD_HTTP_AUTH` environment variable.
+
 - `ca_file` `(string: "")` - A local file path to a PEM-encoded certificate
   authority used to verify the remote agent's certificate. This can also be
   specified as the `NOMAD_CACERT` environment variable.
@@ -65,7 +69,7 @@ The following arguments are supported:
 - `vault_token` `(string: "")` - A Vault token used when [submitting the job](https://www.nomadproject.io/docs/job-specification/job#vault_token).
   This can also be specified as the `VAULT_TOKEN` environment variable or using a
   Vault token helper (see [Vault's documentation](https://www.vaultproject.io/docs/commands/token-helper.html)
-  for more details). See [below](#multiple-vault-tokens) for strategies when 
+  for more details). See [below](#multiple-vault-tokens) for strategies when
   multiple Vault tokens are required.
 
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,

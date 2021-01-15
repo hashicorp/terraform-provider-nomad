@@ -2,6 +2,7 @@ package nomad
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -28,6 +29,12 @@ func Provider() terraform.ResourceProvider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_REGION", ""),
 				Description: "Region of the target Nomad agent.",
+			},
+			"http_auth": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NOMAD_HTTP_AUTH", ""),
+				Description: "HTTP basic auth configuration.",
 			},
 			"ca_file": {
 				Type:          schema.TypeString,
@@ -135,6 +142,20 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.Address = d.Get("address").(string)
 	conf.Region = d.Get("region").(string)
 	conf.SecretID = d.Get("secret_id").(string)
+
+	// HTTP basic auth configuration.
+	httpAuth := d.Get("http_auth").(string)
+	if httpAuth != "" {
+		var username, password string
+		if strings.Contains(httpAuth, ":") {
+			split := strings.SplitN(httpAuth, ":", 2)
+			username = split[0]
+			password = split[1]
+		} else {
+			username = httpAuth
+		}
+		conf.HttpAuth = &api.HttpBasicAuth{Username: username, Password: password}
+	}
 
 	// TLS configuration items.
 	conf.TLSConfig.CACert = d.Get("ca_file").(string)
