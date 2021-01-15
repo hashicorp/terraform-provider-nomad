@@ -10,7 +10,11 @@ description: |-
 
 Manages an external volume in Nomad.
 
-This can be used to register external volumes in a Nomad cluster. 
+This can be used to register external volumes in a Nomad cluster.
+
+~> **Warning:** this resource will store any sensitive values placed in
+  `secrets` or `mount_options` in the Terraform's state file. Take care to
+  [protect your state file](/docs/state/sensitive-data.html).
 
 ## Example Usage
 
@@ -31,6 +35,10 @@ resource "nomad_volume" "mysql_volume" {
   external_id     = module.hashistack.ebs_test_volume_id
   access_mode     = "single-node-writer"
   attachment_mode = "file-system"
+
+  mount_options {
+    fs_type = "ext4"
+  }
 }
 
 ```
@@ -52,7 +60,7 @@ The following arguments are supported:
   - `multi-node-single-writer`
   - `multi-node-multi-writer`
 - `attachment_mode`: `(string: <required>)` The storage API that will be used by the volume.
-- `mount_options`: `(map[string]interface: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
+- `mount_options`: `(block: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
   - `fs_type`: `(string: optional)` - The file system type.
   - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
 - `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
@@ -63,7 +71,7 @@ The following arguments are supported:
 In addition to the above arguments, the following attributes are exported and
 can be referenced:
 
-- `controller_required`: `(boolean)` 
+- `controller_required`: `(boolean)`
 - `controllers_expected`: `(integer)`
 - `controllers_healthy`: `(integer)`
 - `plugin_provider`: `(string)`
