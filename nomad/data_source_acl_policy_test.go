@@ -2,15 +2,17 @@ package nomad
 
 import (
 	"fmt"
-	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"testing"
+
+	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccDataSourceNomadAclPolicy_Basic(t *testing.T) {
-	policyName := "testpolicy"
-	resourceName := "data.nomad_acl_policy.test-policy"
+	policyName := acctest.RandomWithPrefix("test-policy")
+	resourceName := "data.nomad_acl_policy.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
@@ -33,7 +35,7 @@ func TestAccDataSourceNomadAclPolicy_Basic(t *testing.T) {
 
 func testAccNomadAclPolicyConfig(name string) string {
 	return `
-resource "nomad_acl_policy" "policy-instance" {
+resource "nomad_acl_policy" "test" {
 	name        = "` + name + `"
 	description = "Test ACL Policy"
     rules_hcl   = <<EOT
@@ -43,8 +45,8 @@ namespace "default" {
 EOT
 }
 
-data "nomad_acl_policy" "test-policy" {
-	name = "${nomad_acl_policy.policy-instance.name}"
+data "nomad_acl_policy" "test" {
+	name = "${nomad_acl_policy.test.id}"
 }
 `
 }

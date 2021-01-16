@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceJob() *schema.Resource {
@@ -97,187 +97,7 @@ func dataSourceJob() *schema.Resource {
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
-			"task_groups": {
-				Description: "Job Task Groups",
-				Computed:    true,
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"count": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-						"constraints": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ltarget": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"rtarget": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"operand": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-								},
-							},
-						},
-						//"tasks": {
-						//	Type:     schema.TypeInt,
-						//	Computed: true,
-						//	Type:        schema.TypeList,
-						//	Elem: &schema.Resource{
-						//		Schema: map[string]*schema.Schema{
-						//		}
-						//},
-						"restart_policy": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"interval": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"attempts": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"delay": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"mode": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-								},
-							},
-						},
-						"reschedule_policy": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"attempts": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"interval": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"delay": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"delay_function": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"max_delay": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"unlimited": {
-										Type:     schema.TypeBool,
-										Computed: true,
-									},
-								},
-							},
-						},
-						"ephemeral_disk": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"sticky": {
-										Type:     schema.TypeBool,
-										Computed: true,
-									},
-									"migrate": {
-										Type:     schema.TypeBool,
-										Computed: true,
-									},
-									"size_mb": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-								},
-							},
-						},
-						"update_strategy": {
-							Computed: true,
-							Type:     schema.TypeMap,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"stagger": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"max_parallel": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"health_check": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"min_healthy_time": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"healthy_deadline": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"auto_revert": {
-										Type:     schema.TypeBool,
-										Computed: true,
-									},
-									"canary": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-								},
-							},
-						},
-						"migrate_strategy": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"max_parallel": {
-										Type:     schema.TypeInt,
-										Computed: true,
-									},
-									"health_check": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"min_healthy_time": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"healthy_deadline": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			"task_groups": taskGroupSchema(),
 			"stable": {
 				Description: "Job Stable",
 				Type:        schema.TypeBool,
@@ -304,43 +124,6 @@ func dataSourceJob() *schema.Resource {
 						},
 						"operand": {
 							Type:     schema.TypeString,
-							Computed: true,
-						},
-					},
-				},
-			},
-			"update_strategy": {
-				Description: "Job Update Policy",
-				Computed:    true,
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"stagger": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"max_parallel": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-						"health_check": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"min_healthy_time": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"healthy_deadline": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"auto_revert": {
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-						"canary": {
-							Type:     schema.TypeInt,
 							Computed: true,
 						},
 					},
@@ -418,12 +201,29 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("stop", job.Stop)
 	d.Set("priority", job.Priority)
 	d.Set("parent_id", job.ParentID)
-	d.Set("task_groups", job.TaskGroups)
+	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 	d.Set("stable", job.Stable)
 	d.Set("all_at_once", job.AllAtOnce)
-	d.Set("contraints", job.Constraints)
-	d.Set("update_strategy", job.Update)
-	d.Set("periodic_config", job.Periodic)
+	d.Set("constraints", job.Constraints)
+	if job.Periodic != nil {
+		periodic := map[string]interface{}{}
+		if job.Periodic.Enabled != nil {
+			periodic["enabled"] = *job.Periodic.Enabled
+		}
+		if job.Periodic.Spec != nil {
+			periodic["spec"] = *job.Periodic.Spec
+		}
+		if job.Periodic.SpecType != nil {
+			periodic["spec_type"] = *job.Periodic.SpecType
+		}
+		if job.Periodic.ProhibitOverlap != nil {
+			periodic["prohibit_overlap"] = *job.Periodic.ProhibitOverlap
+		}
+		if job.Periodic.TimeZone != nil {
+			periodic["timezone"] = *job.Periodic.TimeZone
+		}
+		d.Set("periodic_config", []map[string]interface{}{periodic})
+	}
 
 	return nil
 }
