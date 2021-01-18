@@ -1,8 +1,12 @@
 ## 1.4.12 (Unreleased)
 
-* **Target Nomad 1.0.1**: updated the nomad client to support Nomad API version 1.0.1 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* **Target Nomad 1.0.2**: updated the nomad client to support Nomad API version 1.0.2 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+
+BACKWARDS INCOMPATIBILITIES:
+* resource/nomad_volume: `mount_options` is now a list, so configuration files need to be updated to remove the `=` character (from `mount_options = {...}` to `mount_options {...}`) ([#188](https://github.com/hashicorp/terraform-provider-nomad/pull/188))
 
 FEATURES:
+* provider: add support for HTTP basic auth ([#189](https://github.com/hashicorp/terraform-provider-nomad/pull/189))
 * resource/nomad_job: add initial support for jobspec parsing with HCL2 ([#185](https://github.com/hashicorp/terraform-provider-nomad/pull/185))
 
 IMPROVEMENTS:
@@ -12,6 +16,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 * numerous (invalid but unused) fields from the task group and job schema have been removed ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
+* resource/nomad_volume: fixed an issue where `mount_options` would always cause a change ([#188](https://github.com/hashicorp/terraform-provider-nomad/pull/188))
 
 ## 1.4.11 (December 07, 2020)
 
