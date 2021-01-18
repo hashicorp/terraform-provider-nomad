@@ -619,7 +619,7 @@ func parseJobspec(raw string, is_json, parserHCL2 bool, vaultToken *string) (*ap
 	case is_json:
 		job, err = parseJSONJobspec(raw)
 	case parserHCL2:
-		job, err = jobspec2.Parse(raw, strings.NewReader(raw))
+		job, err = parseHCL2Jobspec(raw)
 	default:
 		job, err = jobspec.Parse(strings.NewReader(raw))
 	}
@@ -663,6 +663,15 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 	}
 
 	return &job, nil
+}
+
+func parseHCL2Jobspec(raw string) (*api.Job, error) {
+	return jobspec2.ParseWithConfig(&jobspec2.ParseConfig{
+		Path:    "",
+		Body:    []byte(raw),
+		AllowFS: true,
+		Strict:  true,
+	})
 }
 
 func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
@@ -758,8 +767,8 @@ func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 		oldJob, oldErr = parseJSONJobspec(old)
 		newJob, newErr = parseJSONJobspec(new)
 	case parserHCL2:
-		oldJob, oldErr = jobspec2.Parse(old, strings.NewReader(old))
-		newJob, newErr = jobspec2.Parse(new, strings.NewReader(new))
+		oldJob, oldErr = parseHCL2Jobspec(old)
+		newJob, newErr = parseHCL2Jobspec(new)
 	default:
 		oldJob, oldErr = jobspec.Parse(strings.NewReader(old))
 		newJob, newErr = jobspec.Parse(strings.NewReader(new))

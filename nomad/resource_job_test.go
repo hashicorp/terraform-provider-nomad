@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -500,7 +501,7 @@ func testResourceJob_parameterizedCheck(s *terraform.State) error {
 func TestResourceJob_hcl2(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0-beta1") },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.0") },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_hcl2,
@@ -533,6 +534,35 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 
 	if got, want := *job.ID, jobID; got != want {
 		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("wanted 1 group, got %d", len(job.TaskGroups))
+	}
+
+	tg := job.TaskGroups[0]
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("wanted 1 task, got %d", len(tg.Tasks))
+	}
+
+	task := tg.Tasks[0]
+	if len(task.Templates) != 1 {
+		return fmt.Errorf("wanted 1 template, got %d", len(task.Templates))
+	}
+
+	tpl := task.Templates[0]
+	if tpl.EmbeddedTmpl == nil {
+		return fmt.Errorf("template content is nil")
+	}
+	got := *tpl.EmbeddedTmpl
+
+	want, err := ioutil.ReadFile("./test-fixtures/hello.txt")
+	if err != nil {
+		return fmt.Errorf("failed to open template data: %v", err)
+	}
+
+	if diff := cmp.Diff(string(want), got); diff != "" {
+		return fmt.Errorf("template content mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -2763,6 +2793,7 @@ resource "nomad_job" "hcl2" {
 variables {
 	args = ["10"]
 }
+
 job "foo-hcl2" {
 	datacenters = ["dc1"]
 	group "hcl2" {
@@ -2777,10 +2808,15 @@ job "foo-hcl2" {
 			driver = "raw_exec"
 			config {
 				command = "/bin/sleep"
-				args = var.args
+				args    = var.args
 			}
 			restart {
 				attempts = 10
+			}
+
+			template {
+			  data        = file("./test-fixtures/hello.txt")
+			  destination = "local/hello.txt"
 			}
 		}
 	}
