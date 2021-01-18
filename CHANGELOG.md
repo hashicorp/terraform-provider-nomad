@@ -6,6 +6,7 @@ BACKWARDS INCOMPATIBILITIES:
 * resource/nomad_volume: `mount_options` is now a list, so configuration files need to be updated to remove the `=` character (from `mount_options = {...}` to `mount_options {...}`) ([#188](https://github.com/hashicorp/terraform-provider-nomad/pull/188))
 
 FEATURES:
+* provider: add support for HTTP basic auth ([#189](https://github.com/hashicorp/terraform-provider-nomad/pull/189))
 * resource/nomad_job: add initial support for jobspec parsing with HCL2 ([#185](https://github.com/hashicorp/terraform-provider-nomad/pull/185))
 
 IMPROVEMENTS:
