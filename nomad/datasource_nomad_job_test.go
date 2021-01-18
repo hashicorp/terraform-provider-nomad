@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccDataSourceNomadJob_Basic(t *testing.T) {
@@ -29,6 +29,33 @@ func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 						"data.nomad_job.test-job", "priority", "50"),
 					resource.TestCheckResourceAttr(
 						"data.nomad_job.test-job", "namespace", "default"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDataSourceNomadJob_Periodic(t *testing.T) {
+	job := "testjobds_periodic"
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testResourceJob_forceDestroyWithPurge(job, "default"),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJobDataSourceConfigPeriodic(job),
+				Check: resource.ComposeTestCheckFunc(
+					testAccDataSourceNomadJobExists("data.nomad_job.test-job-periodic", "default"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job-periodic", "name", job),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job-periodic", "type", "batch"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job-periodic", "priority", "50"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job-periodic", "namespace", "default"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job-periodic", "periodic_config.#", "1"),
 				),
 			},
 		},
@@ -177,6 +204,46 @@ resource "nomad_job" "job-instance" {
 
 data "nomad_job" "test-job" {
   job_id    = "${nomad_job.job-instance.id}"
+}
+`
+}
+
+func testAccJobDataSourceConfigPeriodic(job string) string {
+	return `
+resource "nomad_job" "job-instance-periodic" {
+	jobspec = <<EOT
+		job "` + job + `" {
+			datacenters = ["dc1"]
+			type = "batch"
+			periodic {
+        		cron             = "*/15 * * * * *"
+				prohibit_overlap = true
+			}
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/echo"
+						args = ["test"]
+					}
+
+					resources {
+						cpu = 100
+						memory = 10
+					}
+
+					logs {
+						max_files = 3
+						max_file_size = 10
+					}
+				}
+			}
+		}
+	EOT
+}
+
+data "nomad_job" "test-job-periodic" {
+  job_id    = "${nomad_job.job-instance-periodic.id}"
 }
 `
 }
