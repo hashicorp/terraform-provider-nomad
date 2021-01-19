@@ -504,6 +504,14 @@ func TestResourceJob_hcl2(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.0") },
 		Steps: []r.TestStep{
 			{
+				Config:      testResourceJob_hcl2_and_json,
+				ExpectError: regexp.MustCompile("json is true and hcl2.enabled is true"),
+			},
+			{
+				Config:      testResourceJob_hcl2_no_fs,
+				ExpectError: regexp.MustCompile("filesystem function disabled"),
+			},
+			{
 				Config: testResourceJob_hcl2,
 				Check:  testResourceJob_hcl2Check,
 			},
@@ -2788,7 +2796,96 @@ job "foo-multiregion" {
 
 var testResourceJob_hcl2 = `
 resource "nomad_job" "hcl2" {
-	hcl2    = true
+	hcl2 {
+	  enabled  = true
+	  allow_fs = true
+	}
+
+	jobspec = <<EOT
+variables {
+	args = ["10"]
+}
+
+job "foo-hcl2" {
+	datacenters = ["dc1"]
+	group "hcl2" {
+		restart {
+			attempts = 5
+			interval = "10m"
+			delay    = "15s"
+			mode     = "delay"
+		}
+
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args    = var.args
+			}
+			restart {
+				attempts = 10
+			}
+
+			template {
+			  data        = file("./test-fixtures/hello.txt")
+			  destination = "local/hello.txt"
+			}
+		}
+	}
+}
+EOT
+}
+`
+
+var testResourceJob_hcl2_no_fs = `
+resource "nomad_job" "hcl2" {
+	hcl2 {
+	  enabled  = true
+	}
+
+	jobspec = <<EOT
+variables {
+	args = ["10"]
+}
+
+job "foo-hcl2" {
+	datacenters = ["dc1"]
+	group "hcl2" {
+		restart {
+			attempts = 5
+			interval = "10m"
+			delay    = "15s"
+			mode     = "delay"
+		}
+
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args    = var.args
+			}
+			restart {
+				attempts = 10
+			}
+
+			template {
+			  data        = file("./test-fixtures/hello.txt")
+			  destination = "local/hello.txt"
+			}
+		}
+	}
+}
+EOT
+}
+`
+
+var testResourceJob_hcl2_and_json = `
+resource "nomad_job" "hcl2" {
+	hcl2 {
+	  enabled  = true
+	}
+
+	json    = true
 	jobspec = <<EOT
 variables {
 	args = ["10"]

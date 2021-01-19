@@ -75,9 +75,26 @@ func resourceJob() *schema.Resource {
 			},
 
 			"hcl2": {
-				Description: "If true, the `jobspec` will be parsed as HCL2 instead of HCL.",
+				Description: "Configuration for the HCL2 jobspec parser.",
 				Optional:    true,
-				Type:        schema.TypeBool,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "If true, the `jobspec` will be parsed as HCL2 instead of HCL.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+						},
+						"allow_fs": {
+							Description: "If true, HCL2 file system functions will be enabled when parsing the `jobspec`.",
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+						},
+					},
+				},
 			},
 
 			"json": {
@@ -251,6 +268,29 @@ func taskGroupSchema() *schema.Schema {
 	}
 }
 
+// JobParserConfig stores configuration options for how to parse the jobspec.
+type JobParserConfig struct {
+	JSON JSONJobParserConfig
+	HCL2 HCL2JobParserConfig
+}
+
+// JSONJobParserConfig stores configuration options for the JSON jobspec parser.
+type JSONJobParserConfig struct {
+	Enabled bool
+}
+
+// HCL2JobParserConfig stores configuration options for the HCL2 jobspec parser.
+type HCL2JobParserConfig struct {
+	Enabled bool
+	AllowFS bool
+}
+
+// ResourceFieldGetter are able to retrieve field values.
+// Examples: *schema.ResourceData and *schema.ResourceDiff
+type ResourceFieldGetter interface {
+	Get(string) interface{}
+}
+
 func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	timeout := d.Timeout(schema.TimeoutCreate)
 	if !d.IsNewResource() {
@@ -260,14 +300,17 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	// Get the jobspec itself
+	// Get the jobspec itself.
 	jobspecRaw := d.Get("jobspec").(string)
-	is_json := d.Get("json").(bool)
-	parserHCL2 := d.Get("hcl2").(bool)
-	if is_json && parserHCL2 {
-		return fmt.Errorf("invalid combination. is_json is %t and parserHCL2 is %t", is_json, parserHCL2)
+
+	// Read job parsing config.
+	jobParserConfig, err := parseJobParserConfig(d)
+	if err != nil {
+		return err
 	}
-	job, err := parseJobspec(jobspecRaw, is_json, parserHCL2, providerConfig.vaultToken)
+
+	// Parse jobspec.
+	job, err := parseJobspec(jobspecRaw, jobParserConfig, providerConfig.vaultToken)
 	if err != nil {
 		return err
 	}
@@ -531,12 +574,14 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 		return nil
 	}
 
-	is_json := d.Get("json").(bool)
-	parserHCL2 := d.Get("hcl2").(bool)
-	if is_json && parserHCL2 {
-		return fmt.Errorf("invalid combination. is_json is %t and parserHCL2 is %t", is_json, parserHCL2)
+	// Read job parsing config.
+	jobParserConfig, err := parseJobParserConfig(d)
+	if err != nil {
+		return err
 	}
-	job, err := parseJobspec(newSpecRaw.(string), is_json, parserHCL2, providerConfig.vaultToken) // catch syntax errors client-side during plan
+
+	// Parse jobspec.
+	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig, providerConfig.vaultToken) // catch syntax errors client-side during plan
 	if err != nil {
 		return err
 	}
@@ -611,15 +656,70 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	return nil
 }
 
-func parseJobspec(raw string, is_json, parserHCL2 bool, vaultToken *string) (*api.Job, error) {
+func parseJobParserConfig(d ResourceFieldGetter) (JobParserConfig, error) {
+	config := JobParserConfig{}
+
+	// Read JSON parser configuration.
+	jsonEnabled := d.Get("json").(bool)
+	config.JSON = JSONJobParserConfig{
+		Enabled: jsonEnabled,
+	}
+
+	// Read HCL2 parser configuration.
+	hcl2Config, err := parseHCL2JobParserConfig(d.Get("hcl2"))
+	if err != nil {
+		return config, err
+	}
+	config.HCL2 = hcl2Config
+
+	// JSON and HCL2 parsing are conflicting options.
+	if config.JSON.Enabled && config.HCL2.Enabled {
+		return config, fmt.Errorf("invalid combination. json is %t and hcl2.enabled is %t", config.JSON.Enabled, config.HCL2.Enabled)
+	}
+
+	return config, nil
+}
+
+func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
+	config := HCL2JobParserConfig{}
+
+	// `hcl2` must be a list with only one element.
+	hcl2List, ok := raw.([]interface{})
+	if !ok || len(hcl2List) > 1 {
+		return config, fmt.Errorf("failed to unpack hcl2 configuration block")
+	}
+
+	// If the list is empty, it means we don't have a `hcl2` block.
+	if len(hcl2List) == 0 {
+		return config, nil
+	}
+
+	// The only element in the list must be a map.
+	hcl2Map, ok := hcl2List[0].(map[string]interface{})
+	if !ok {
+		return config, nil
+	}
+
+	// Read map fields into parser config struct.
+	if enabled, ok := hcl2Map["enabled"].(bool); ok {
+		config.Enabled = enabled
+	}
+	if allowFS, ok := hcl2Map["allow_fs"].(bool); ok {
+		config.AllowFS = allowFS
+	}
+
+	return config, nil
+}
+
+func parseJobspec(raw string, config JobParserConfig, vaultToken *string) (*api.Job, error) {
 	var job *api.Job
 	var err error
 
 	switch {
-	case is_json:
+	case config.JSON.Enabled:
 		job, err = parseJSONJobspec(raw)
-	case parserHCL2:
-		job, err = parseHCL2Jobspec(raw)
+	case config.HCL2.Enabled:
+		job, err = parseHCL2Jobspec(raw, config.HCL2)
 	default:
 		job, err = jobspec.Parse(strings.NewReader(raw))
 	}
@@ -665,11 +765,11 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 	return &job, nil
 }
 
-func parseHCL2Jobspec(raw string) (*api.Job, error) {
+func parseHCL2Jobspec(raw string, config HCL2JobParserConfig) (*api.Job, error) {
 	return jobspec2.ParseWithConfig(&jobspec2.ParseConfig{
 		Path:    "",
 		Body:    []byte(raw),
-		AllowFS: true,
+		AllowFS: config.AllowFS,
 		Strict:  true,
 	})
 }
@@ -756,19 +856,20 @@ func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	var oldErr error
 	var newErr error
 
-	is_json := d.Get("json").(bool)
-	parserHCL2 := d.Get("hcl2").(bool)
-	if is_json && parserHCL2 {
-		log.Printf("invalid combination. is_json is %t and parserHCL2 is %t\n", is_json, parserHCL2)
+	// Read job parsing config.
+	jobParserConfig, err := parseJobParserConfig(d)
+	if err != nil {
+		log.Printf("[ERROR] %v", err)
 		return false
 	}
+
 	switch {
-	case is_json:
+	case jobParserConfig.JSON.Enabled:
 		oldJob, oldErr = parseJSONJobspec(old)
 		newJob, newErr = parseJSONJobspec(new)
-	case parserHCL2:
-		oldJob, oldErr = parseHCL2Jobspec(old)
-		newJob, newErr = parseHCL2Jobspec(new)
+	case jobParserConfig.HCL2.Enabled:
+		oldJob, oldErr = parseHCL2Jobspec(old, jobParserConfig.HCL2)
+		newJob, newErr = parseHCL2Jobspec(new, jobParserConfig.HCL2)
 	default:
 		oldJob, oldErr = jobspec.Parse(strings.NewReader(old))
 		newJob, newErr = jobspec.Parse(strings.NewReader(new))
