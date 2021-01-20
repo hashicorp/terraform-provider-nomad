@@ -90,12 +90,74 @@ API endpoint.
 ## HCL2 jobspec
 
 The input jobspec can also be provided in the [HCL2 format](https://www.nomadproject.io/docs/job-specification/hcl2)
-by setting the argument `hcl2` to `true`:
+by enabling `hcl2` parsing:
 
 ```hcl
 resource "nomad_job" "app" {
   jobspec = file("${path.module}/jobspec.hcl")
-  hcl2    = true
+
+  hcl2 {
+    enabled = true
+  }
+}
+```
+
+### Filesystem functions
+
+Please note that [filesystem functions](https://www.nomadproject.io/docs/job-specification/hcl2/functions/file/abspath)
+will create an implicit dependency in your Terraform configuration. For
+example, Terraform will not be able to detect changes to files loaded using the
+[`file`](https://www.nomadproject.io/docs/job-specification/hcl2/functions/file/file)
+function inside a jobspec.
+
+
+To avoid confusion, these functions are disabled by default. To enable them
+set `allow_fs` to `true`:
+
+```hcl
+resource "nomad_job" "app" {
+  jobspec = file("${path.module}/jobspec.hcl")
+
+  hcl2 {
+    enabled  = true
+    allow_fs = true
+  }
+}
+```
+
+If you do need to track changes to external files, you can use the
+[`local_file`](https://registry.terraform.io/providers/hashicorp/local/latest/docs/data-sources/file)
+data source and the
+[`templatefile`](https://www.terraform.io/docs/configuration/functions/templatefile.html)
+function to load the local file into Terraform and then render its content
+into the jobspec:
+
+```hcl
+# main.tf
+
+data "local_file" "index_html" {
+  filename = "${path.module}/index.html"
+}
+
+resource "nomad_job" "nginx" {
+  jobspec = templatefile("${path.module}/nginx.nomad.tpl", {
+    index_html = data.local_file.index_html.content
+  })
+}
+```
+
+```hcl
+# nginx.nomad.tpl
+
+job "nginx" {
+...
+      template {
+        data        = <<EOF
+${index_html}
+EOF
+        destination = "local/www/index.html"
+      }
+...
 }
 ```
 
@@ -120,8 +182,11 @@ The following arguments are supported:
 - `policy_override` `(boolean: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.
 
-- `json` `(boolean: false)` - Set this to true if your jobspec is structured with
+- `json` `(boolean: false)` - Set this to `true` if your jobspec is structured with
   JSON instead of the default HCL.
 
-- `hcl2` `(boolean: false)` - Set this to true if your jobspec uses the HCL2
-  format instead of the default HCL.
+- `hcl2` `(block: optional)` - Options for the HCL2 jobspec parser.
+  - `enabled` `(boolean: false)` - Set this to `true` if your jobspec uses the HCL2
+    format instead of the default HCL.
+  - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
+    [HCL2 filesystem functions](#filesystem-functions)
