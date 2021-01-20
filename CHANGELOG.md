@@ -1,4 +1,4 @@
-## 1.4.13 (Unreleased)
+## 1.4.13 (January 20, 2021)
 
 BUG FIXES:
 * provider: Revert Terraform Plugin SDK to v1.16.0 to support Terraform 0.11.x ([#196](https://github.com/hashicorp/terraform-provider-nomad/pull/196))
