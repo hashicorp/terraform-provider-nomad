@@ -1,14 +1,13 @@
 package nomad
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 // How to run the acceptance tests for this provider:
@@ -30,21 +29,21 @@ import (
 // The tests expect to be run in a fresh, empty Nomad server.
 
 func TestProvider(t *testing.T) {
-	if err := Provider().InternalValidate(); err != nil {
+	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestProvider_impl(t *testing.T) {
-	var _ *schema.Provider = Provider()
+	var _ terraform.ResourceProvider = Provider()
 }
 
 var testProvider *schema.Provider
-var testProviders map[string]*schema.Provider
+var testProviders map[string]terraform.ResourceProvider
 
 func init() {
-	testProvider = Provider()
-	testProviders = map[string]*schema.Provider{
+	testProvider = Provider().(*schema.Provider)
+	testProviders = map[string]terraform.ResourceProvider{
 		"nomad": testProvider,
 	}
 }
@@ -54,7 +53,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
 
-	err := testProvider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
+	err := testProvider.Configure(terraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
