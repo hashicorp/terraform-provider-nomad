@@ -1,4 +1,4 @@
-## 1.4.12 (Unreleased)
+## 1.4.12 (January 20, 2021)
 
 * **Target Nomad 1.0.2**: updated the nomad client to support Nomad API version 1.0.2 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
