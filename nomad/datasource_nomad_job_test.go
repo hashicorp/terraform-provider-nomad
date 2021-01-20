@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccDataSourceNomadJob_Basic(t *testing.T) {
@@ -124,7 +124,7 @@ func testAccDataSourceNomadJobExists(n, namespace string) resource.TestCheckFunc
 func testAccNSJobDataSourceConfig(job, ns string) string {
 	return `
 resource "nomad_namespace" "ns-instance" {
-  name = "` + ns + `" 
+  name = "` + ns + `"
 }
 
 resource "nomad_job" "job-instance" {
