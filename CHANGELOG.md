@@ -1,4 +1,11 @@
+## 1.4.13 (Unreleased)
+
+BUG FIXES:
+* provider: Revert Terraform Plugin SDK to v1.16.0 to support Terraform 0.11.x ([#196](https://github.com/hashicorp/terraform-provider-nomad/pull/196))
+
 ## 1.4.12 (January 20, 2021)
+
+***This release will not work with Terraform v0.11.x. Please use v1.14.13***
 
 * **Target Nomad 1.0.2**: updated the nomad client to support Nomad API version 1.0.2 ([#161](https://github.com/hashicorp/terraform-provider-nomad/issues/161))
 
