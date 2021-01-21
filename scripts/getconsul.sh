@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONSUL_BINARY=https://releases.hashicorp.com/consul/1.8.5+ent/consul_1.8.5+ent_linux_amd64.zip
+CONSUL_BINARY=https://releases.hashicorp.com/consul/1.9.1+ent/consul_1.9.1+ent_linux_amd64.zip
 
 curl -L $CONSUL_BINARY > consul.zip
 sudo unzip -o consul.zip -d /usr/local/bin
