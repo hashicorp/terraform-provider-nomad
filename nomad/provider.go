@@ -2,6 +2,7 @@ package nomad
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
@@ -87,6 +88,26 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_TOKEN", ""),
 				Description: "ACL token secret for API requests.",
 			},
+			"headers": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The headers to send with each Nomad request.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header name",
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header value",
+						},
+					},
+				},
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -164,6 +185,18 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.TLSConfig.CACertPEM = []byte(d.Get("ca_pem").(string))
 	conf.TLSConfig.ClientCertPEM = []byte(d.Get("cert_pem").(string))
 	conf.TLSConfig.ClientKeyPEM = []byte(d.Get("key_pem").(string))
+
+	// Set headers if provided
+	headers := d.Get("headers").([]interface{})
+	parsedHeaders := make(http.Header)
+
+	for _, h := range headers {
+		header := h.(map[string]interface{})
+		if name, ok := header["name"]; ok {
+			parsedHeaders.Add(name.(string), header["value"].(string))
+		}
+	}
+	conf.Headers = parsedHeaders
 
 	// Get the vault token from the conf, VAULT_TOKEN
 	// or ~/.vault-token (in that order)
