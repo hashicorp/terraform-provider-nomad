@@ -2729,7 +2729,7 @@ resource "nomad_job" "test" {
 var testResourceJob_csiController = `
 resource "nomad_job" "test" {
 	jobspec = <<EOT
-// from https://github.com/hashicorp/nomad/tree/master/e2e/csi/input
+// from https://github.com/hashicorp/nomad/tree/main/e2e/csi/input
 job "foo-csi-controller" {
   datacenters = ["dc1"]
   group "foo-controller" {

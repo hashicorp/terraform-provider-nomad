@@ -33,7 +33,7 @@ after_scripts:
 
 branches:
   only:
-  - master
+  - main
 matrix:
   fast_finish: true
   allow_failures:
