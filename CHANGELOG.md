@@ -1,3 +1,7 @@
+## 1.4.14 (Unreleased)
+
+* **Target Nomad 1.0.4**: updated the nomad client to support Nomad API and jobspec version 1.0.4 ([#202](https://github.com/hashicorp/terraform-provider-nomad/pull/202))
+
 ## 1.4.13 (January 20, 2021)
 
 BUG FIXES:
