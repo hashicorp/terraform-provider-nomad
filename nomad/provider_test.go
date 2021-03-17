@@ -59,6 +59,26 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
+func testEntFeatures(t *testing.T, requiredFeatures ...string) {
+	testCheckEnt(t)
+	client := testProvider.Meta().(ProviderConfig).client
+	resp, _, err := client.Operator().LicenseGet(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	licensedFeatures := map[string]bool{}
+	if resp != nil && resp.License != nil {
+		for _, f := range resp.License.Features {
+			licensedFeatures[f] = true
+		}
+	}
+	for _, f := range requiredFeatures {
+		if !licensedFeatures[f] {
+			t.Skip(fmt.Sprintf("license doesn't include required feature %q", f))
+		}
+	}
+}
+
 func testCheckEnt(t *testing.T) {
 	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "ent" })
 }
