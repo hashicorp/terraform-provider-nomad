@@ -211,7 +211,11 @@ func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
 func TestResourceJob_multiregion(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.12.0-beta1") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "0.12.0-beta1")
+			testEntFeatures(t, "Multiregion Deployments")
+		},
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_multiregion,
@@ -1724,7 +1728,7 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	}
 
 	// check if task group has Service declaration
-	taskGroupName := "foo"
+	taskGroupName := "dashboard"
 	var taskGroup *api.TaskGroup
 	for _, tg := range job.TaskGroups {
 		if *tg.Name == taskGroupName {
@@ -1739,16 +1743,16 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	expServices := []*api.Service{}
 	json.Unmarshal([]byte(`[
 		{
-			"Name": "foo",
+			"Name": "count-dashboard",
 			"PortLabel": "9002",
 			"AddressMode": "auto",
 			"Connect": {
 				"SidecarService": {
-					"Tags": ["bar", "foo"],
+					"Tags": ["dashboard", "count"],
 					"Proxy": {
 						"Upstreams": [
 							{
-								"DestinationName": "bar",
+								"DestinationName": "count-api",
 								"LocalBindPort": 8080
 							}
 						]
@@ -1762,9 +1766,10 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	}
 
 	// check if task has Consul Connect sidecar proxy
-	proxyTaskName := "connect-proxy-foo"
+	proxyTaskName := "connect-proxy-count-dashboard"
 	var proxyTask *api.Task
 	for _, t := range taskGroup.Tasks {
+		fmt.Println()
 		if t.Name == proxyTaskName {
 			proxyTask = t
 			break
@@ -2002,7 +2007,11 @@ func TestResourceJob_vault(t *testing.T) {
 func TestResourceJob_vaultMultiNamespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckVaultEnabled(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckVaultEnabled(t)
+			testEntFeatures(t, "Multi-Vault Namespaces")
+		},
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_validVaultNamspaceConfig,
@@ -2453,64 +2462,100 @@ resource "nomad_job" "test" {
 
 var testResourceJob_consulConnectConfig = `
 resource "nomad_job" "test" {
+    hcl2 {
+        enabled = true
+    }
 	jobspec = <<EOT
-	job "foo-consul-connect" {
-		datacenters = ["dc1"]
-              consul_token = "2a422691-6989-42cf-bb3b-0058dbe1f5db"
-		group "foo" {
-			shutdown_delay = "10s"
-			network {
-				mode = "bridge"
-				port "foo" {
-					static = 9002
-					to = 9002
-				}
-			}
-			service {
-				name = "foo"
-				port = "9002"
+job "foo-consul-connect" {
 
-				connect {
-					sidecar_service {
-						proxy {
-							upstreams {
-								destination_name = "bar"
-								local_bind_port = 8080
-							}
-						}
-						tags = ["bar", "foo"]
-					}
-				}
-			}
-			task "foo" {
-				driver = "raw_exec"
-				config {
-					command = "/bin/sleep"
-					args = ["10"]
-				}
-			}
-		}
-		group "bar" {
-			network {
-				mode = "bridge"
-			}
-			service {
-				 name = "bar"
-				 port = "9001"
+  datacenters = ["dc1"]
 
-				 connect {
-					 sidecar_service {}
-				 }
-			 }
-			task "foo" {
-				driver = "raw_exec"
-				config {
-					command = "/bin/sleep"
-					args = ["10"]
-				}
-			}
-		}
-	}
+  group "api" {
+    network {
+      mode = "host"
+      port "port" {
+        static = "9001"
+      }
+    }
+
+    service {
+      name = "count-api"
+      port = "port"
+    }
+
+    task "api" {
+      driver = "docker"
+
+      config {
+        image        = "hashicorpnomad/counter-api:v3"
+        network_mode = "host"
+      }
+    }
+  }
+
+  group "gateway" {
+    network {
+      mode = "bridge"
+    }
+
+    service {
+      name = "api-gateway"
+
+      connect {
+        gateway {
+          proxy {
+          }
+
+          terminating {
+            service {
+              name = "count-api"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  group "dashboard" {
+    network {
+      mode = "bridge"
+
+      port "http" {
+        static = 9002
+        to     = 9002
+      }
+    }
+
+    service {
+      name = "count-dashboard"
+      port = "9002"
+
+      connect {
+        sidecar_service {
+          tags = ["dashboard", "count"]
+          proxy {
+            upstreams {
+              destination_name = "count-api"
+              local_bind_port  = 8080
+            }
+          }
+        }
+      }
+    }
+
+    task "dashboard" {
+      driver = "docker"
+
+      env {
+        COUNTING_SERVICE_URL = "http://$${NOMAD_UPSTREAM_ADDR_count_api}"
+      }
+
+      config {
+        image = "hashicorpnomad/counter-dashboard:v3"
+      }
+    }
+  }
+}
 	EOT
 }
 `
