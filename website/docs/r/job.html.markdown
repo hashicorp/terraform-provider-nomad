@@ -24,7 +24,7 @@ Registering a job from a jobspec file:
 
 ```hcl
 resource "nomad_job" "app" {
-  jobspec = file("${path.module}/jobpec.hcl")
+  jobspec = file("${path.module}/jobspec.hcl")
 }
 ```
 
