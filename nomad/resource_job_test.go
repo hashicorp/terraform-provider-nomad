@@ -544,6 +544,10 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 		return fmt.Errorf("jobID is %q; want %q", got, want)
 	}
 
+	if diff := cmp.Diff(job.Datacenters, []string{"dc1", "dc2"}); diff != "" {
+		return fmt.Errorf("datacenters mismatch (-want +got):\n%s", diff)
+	}
+
 	if len(job.TaskGroups) != 1 {
 		return fmt.Errorf("wanted 1 group, got %d", len(job.TaskGroups))
 	}
@@ -551,6 +555,10 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 	tg := job.TaskGroups[0]
 	if len(tg.Tasks) != 1 {
 		return fmt.Errorf("wanted 1 task, got %d", len(tg.Tasks))
+	}
+
+	if got, want := *tg.RestartPolicy.Attempts, 5; got != want {
+		return fmt.Errorf("reschedule -> attempts is %q; want %q", got, want)
 	}
 
 	task := tg.Tasks[0]
@@ -2796,42 +2804,54 @@ job "foo-multiregion" {
 
 var testResourceJob_hcl2 = `
 resource "nomad_job" "hcl2" {
-	hcl2 {
-	  enabled  = true
-	  allow_fs = true
-	}
+  hcl2 {
+    enabled  = true
+    allow_fs = true
+    vars = {
+      "restart_attempts" = "5",
+      "datacenters"      = "[\"dc1\", \"dc2\"]",
+    }
+  }
 
-	jobspec = <<EOT
+  jobspec = <<EOT
 variables {
-	args = ["10"]
+  args = ["10"]
+}
+
+variable "datacenters" {
+  type = list(string)
+}
+
+variable "restart_attempts" {
+  type = number
 }
 
 job "foo-hcl2" {
-	datacenters = ["dc1"]
-	group "hcl2" {
-		restart {
-			attempts = 5
-			interval = "10m"
-			delay    = "15s"
-			mode     = "delay"
-		}
+  datacenters = var.datacenters
+  group "hcl2" {
+    restart {
+      attempts = var.restart_attempts
+      interval = "10m"
+      delay    = "15s"
+      mode     = "delay"
+    }
 
-		task "sleep" {
-			driver = "raw_exec"
-			config {
-				command = "/bin/sleep"
-				args    = var.args
-			}
-			restart {
-				attempts = 10
-			}
+    task "sleep" {
+      driver = "raw_exec"
+      config {
+        command = "/bin/sleep"
+        args    = var.args
+      }
+      restart {
+        attempts = 10
+      }
 
-			template {
-			  data        = file("./test-fixtures/hello.txt")
-			  destination = "local/hello.txt"
-			}
-		}
-	}
+      template {
+        data        = file("./test-fixtures/hello.txt")
+        destination = "local/hello.txt"
+      }
+    }
+  }
 }
 EOT
 }

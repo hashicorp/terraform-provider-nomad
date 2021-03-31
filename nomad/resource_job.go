@@ -92,6 +92,11 @@ func resourceJob() *schema.Resource {
 							Optional:    true,
 							Default:     false,
 						},
+						"vars": {
+							Description: "Additional variables to use when templating the job with HCL2",
+							Type:        schema.TypeMap,
+							Optional:    true,
+						},
 					},
 				},
 			},
@@ -282,6 +287,7 @@ type JSONJobParserConfig struct {
 type HCL2JobParserConfig struct {
 	Enabled bool
 	AllowFS bool
+	Vars    map[string]string
 }
 
 // ResourceFieldGetter are able to retrieve field values.
@@ -706,6 +712,12 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	if allowFS, ok := hcl2Map["allow_fs"].(bool); ok {
 		config.AllowFS = allowFS
 	}
+	if vars, ok := hcl2Map["vars"].(map[string]interface{}); ok {
+		config.Vars = make(map[string]string)
+		for k, v := range vars {
+			config.Vars[k] = v.(string)
+		}
+	}
 
 	return config, nil
 }
@@ -765,10 +777,16 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 }
 
 func parseHCL2Jobspec(raw string, config HCL2JobParserConfig) (*api.Job, error) {
+	argVars := []string{}
+	for k, v := range config.Vars {
+		argVars = append(argVars, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	return jobspec2.ParseWithConfig(&jobspec2.ParseConfig{
 		Path:    "",
 		Body:    []byte(raw),
 		AllowFS: config.AllowFS,
+		ArgVars: argVars,
 		Strict:  true,
 	})
 }

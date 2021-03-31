@@ -102,6 +102,45 @@ resource "nomad_job" "app" {
 }
 ```
 
+### Variables
+
+HCL2 variables can be passed from Terraform to the jobspec parser through the
+`vars` attribute inside the `hcl2` block. The variable must also be declared
+inside the jobspec as an [input variable](https://www.nomadproject.io/docs/job-specification/hcl2/variables#declaring-an-input-variable).
+
+Due to the way resource attributes are stored in the Terraform state, the
+values must be provided as strings.
+
+```hcl
+resource "nomad_job" "app" {
+  hcl2 {
+    enabled  = true
+    vars = {
+      "restart_attempts" = "5",
+      "datacenters"      = "[\"dc1\", \"dc2\"]",
+    }
+  }
+
+  jobspec = <<EOT
+variable "datacenters" {
+  type = list(string)
+}
+
+variable "restart_attempts" {
+  type = number
+}
+
+job "foo-hcl2" {
+  datacenters = var.datacenters
+
+  restart {
+    attempts = var.restart_attempts
+    ...
+  }
+  ...
+}
+```
+
 ### Filesystem functions
 
 Please note that [filesystem functions](https://www.nomadproject.io/docs/job-specification/hcl2/functions/file/abspath)
