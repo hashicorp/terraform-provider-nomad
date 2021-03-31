@@ -715,7 +715,7 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	if vars, ok := hcl2Map["vars"].(map[string]interface{}); ok {
 		config.Vars = make(map[string]string)
 		for k, v := range vars {
-			config.Vars[k] = fmt.Sprintf("%s", v)
+			config.Vars[k] = v.(string)
 		}
 	}
 
