@@ -4,6 +4,8 @@
 
 FEATURES:
 * provider: add support for custom HTTP headers ([#203](https://github.com/hashicorp/terraform-provider-nomad/issues/203))
+* resource/nomad_job: allow passing HCL2 variables to job ([#211](https://github.com/hashicorp/terraform-provider-nomad/issues/211))
+
 
 ## 1.4.13 (January 20, 2021)
 
