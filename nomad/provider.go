@@ -7,16 +7,16 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/command/config"
 )
 
 type ProviderConfig struct {
 	client     *api.Client
 	vaultToken *string
+	config     *api.Config
 }
 
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"address": {
@@ -215,6 +215,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	res := ProviderConfig{
+		config:     conf,
 		client:     client,
 		vaultToken: &vaultToken,
 	}

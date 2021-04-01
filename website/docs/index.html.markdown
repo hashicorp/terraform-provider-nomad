@@ -66,6 +66,10 @@ The following arguments are supported:
 - `key_pem` `(string: "")` - PEM-encoded private key. This is required if
   `cert_file` or `cert_pem` is specified.
 
+- `headers` - (Optional) A configuration block, described below, that provides headers
+  to be sent along with all requests to Nomad.  This block can be specified
+  multiple times.
+
 - `vault_token` `(string: "")` - A Vault token used when [submitting the job](https://www.nomadproject.io/docs/job-specification/job#vault_token).
   This can also be specified as the `VAULT_TOKEN` environment variable or using a
   Vault token helper (see [Vault's documentation](https://www.vaultproject.io/docs/commands/token-helper.html)
@@ -75,6 +79,29 @@ The following arguments are supported:
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
   environment variable.
+
+The `headers` configuration block accepts the following arguments:
+* `name` - (Required) The name of the header.
+* `value` - (Required) The value of the header.
+
+An example using the `headers` configuration block with repeated blocks and
+headers: 
+```hcl
+provider "nomad" {
+  headers {
+    name = "Test-Header-1"
+    value = "a"
+  }
+  headers {
+    name = "Test-header-1"
+    value = "b"
+  }
+  headers {
+    name = "test-header-2"
+    value = "c"
+  }
+}
+```
 
 ## Multi-Region Deployments
 

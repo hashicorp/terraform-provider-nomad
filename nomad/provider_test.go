@@ -2,10 +2,13 @@ package nomad
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
@@ -29,7 +32,7 @@ import (
 // The tests expect to be run in a fresh, empty Nomad server.
 
 func TestProvider(t *testing.T) {
-	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {
+	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
@@ -42,7 +45,7 @@ var testProvider *schema.Provider
 var testProviders map[string]terraform.ResourceProvider
 
 func init() {
-	testProvider = Provider().(*schema.Provider)
+	testProvider = Provider()
 	testProviders = map[string]terraform.ResourceProvider{
 		"nomad": testProvider,
 	}
@@ -121,4 +124,76 @@ func testCheckVaultEnabled(t *testing.T) {
 	if !vaultEnabled {
 		t.Skip("vault not detected as accessible")
 	}
+}
+
+func TestAccNomadProvider_Headers(t *testing.T) {
+	var provider *schema.Provider
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactoryInternal(&provider),
+		CheckDestroy:      nil,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccNomadProviderConfigWithHeaders,
+				Check:  testAccCheckNomadProviderConfigWithHeaders(provider),
+			},
+		},
+	})
+}
+
+func testAccCheckNomadProviderConfigWithHeaders(provider *schema.Provider) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		if provider == nil || provider.Meta() == nil {
+			return fmt.Errorf("provider was not initialized")
+		}
+		nomadClientConfig := provider.Meta().(ProviderConfig).config
+		expectedHeaders := http.Header(map[string][]string{
+			"Test-Header-1": {"a", "b"},
+			"Test-Header-2": {"c"},
+		})
+		if !reflect.DeepEqual(nomadClientConfig.Headers, expectedHeaders) {
+			return fmt.Errorf("expected headers %v, got: %v", expectedHeaders, nomadClientConfig.Headers)
+		}
+
+		return nil
+	}
+}
+
+var testAccNomadProviderConfigWithHeaders = `
+provider "nomad" {
+  headers {
+    name = "Test-Header-1"
+	value = "a"
+  }
+  headers {
+    name = "Test-header-1"
+	value = "b"
+  }
+  headers {
+    name = "test-header-2"
+	value = "c"
+  }
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+`
+
+// testAccProviderFactoryInternal creates ProviderFactories for provider configuration testing
+//
+// This should only be used for TestAccNomadProvider_ tests which need to
+// reference the provider instance itself. Other testing should use
+// testAccProviderFactories or other related functions.
+func testAccProviderFactoryInternal(provider **schema.Provider) map[string]terraform.ResourceProviderFactory {
+	p := Provider()
+	factories := map[string]terraform.ResourceProviderFactory{
+		"nomad": func() (terraform.ResourceProvider, error) {
+			return p, nil
+		},
+	}
+	if provider != nil {
+		*provider = p
+	}
+	return factories
 }
