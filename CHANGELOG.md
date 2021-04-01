@@ -2,7 +2,7 @@
 
 * **Target Nomad 1.0.4**: updated the nomad client to support Nomad API and jobspec version 1.0.4 ([#202](https://github.com/hashicorp/terraform-provider-nomad/pull/202))([#206](https://github.com/hashicorp/terraform-provider-nomad/issues/206))
 
-FEATURES:
+IMPROVEMENTS:
 * provider: add support for custom HTTP headers ([#203](https://github.com/hashicorp/terraform-provider-nomad/issues/203))
 * resource/nomad_job: allow passing HCL2 variables to job ([#211](https://github.com/hashicorp/terraform-provider-nomad/issues/211))
 
