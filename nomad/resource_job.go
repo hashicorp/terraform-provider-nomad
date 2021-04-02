@@ -315,7 +315,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Parse jobspec.
-	job, err := parseJobspec(jobspecRaw, jobParserConfig, providerConfig.vaultToken)
+	job, err := parseJobspec(jobspecRaw, jobParserConfig, providerConfig.vaultToken, providerConfig.consulToken)
 	if err != nil {
 		return err
 	}
@@ -585,8 +585,9 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		return err
 	}
 
-	// Parse jobspec.
-	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig, providerConfig.vaultToken) // catch syntax errors client-side during plan
+	// Parse jobspec
+	// Catch syntax errors client-side during plan
+	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig, providerConfig.vaultToken, providerConfig.consulToken)
 	if err != nil {
 		return err
 	}
@@ -722,7 +723,7 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	return config, nil
 }
 
-func parseJobspec(raw string, config JobParserConfig, vaultToken *string) (*api.Job, error) {
+func parseJobspec(raw string, config JobParserConfig, vaultToken *string, consulToken *string) (*api.Job, error) {
 	var job *api.Job
 	var err error
 
@@ -744,8 +745,9 @@ func parseJobspec(raw string, config JobParserConfig, vaultToken *string) (*api.
 		return nil, fmt.Errorf("error parsing jobspec: input JSON is not a valid Nomad jobspec")
 	}
 
-	// Inject the Vault token
+	// Inject the Vault and Consul tokens
 	job.VaultToken = vaultToken
+	job.ConsulToken = consulToken
 
 	return job, nil
 }

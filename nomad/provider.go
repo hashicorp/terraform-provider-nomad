@@ -11,9 +11,10 @@ import (
 )
 
 type ProviderConfig struct {
-	client     *api.Client
-	vaultToken *string
-	config     *api.Config
+	client      *api.Client
+	vaultToken  *string
+	consulToken *string
+	config      *api.Config
 }
 
 func Provider() *schema.Provider {
@@ -76,9 +77,17 @@ func Provider() *schema.Provider {
 				Description:   "PEM-encoded private key, required if cert_file or cert_pem is specified.",
 				ConflictsWith: []string{"key_file"},
 			},
+			"consul_token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("CONSUL_HTTP_TOKEN", ""),
+				Description: "Consul token to validate Consul Connect Service Identity policies specified in the job file.",
+			},
 			"vault_token": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Vault token if policies are specified in the job file.",
 			},
@@ -209,15 +218,18 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
+	consulToken := d.Get("consul_token").(string)
+
 	client, err := api.NewClient(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
 	}
 
 	res := ProviderConfig{
-		config:     conf,
-		client:     client,
-		vaultToken: &vaultToken,
+		config:      conf,
+		client:      client,
+		vaultToken:  &vaultToken,
+		consulToken: &consulToken,
 	}
 
 	return res, nil

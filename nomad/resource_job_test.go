@@ -2986,3 +2986,47 @@ job "foo-hcl2" {
 EOT
 }
 `
+
+func Test_ResourceJob_Parse_ConsulVaultToken(t *testing.T) {
+	jobHCL := `
+job "example" {
+  datacenters = ["dc1"]
+  task "example" {
+    driver = "docker"
+    config {
+      image = "alpine"
+    }
+  }
+}
+`
+	tests := []struct {
+		name        string
+		vaultToken  *string
+		consulToken *string
+	}{
+		{
+			name: "no consul, no vault",
+		},
+		{
+			name:       "vault, no consul",
+			vaultToken: helper.StringToPtr("test-vault-token"),
+		},
+		{
+			name:        "consul, no vault",
+			consulToken: helper.StringToPtr("test-consul-token"),
+		},
+		{
+			name:        "consul and vault tokens",
+			vaultToken:  helper.StringToPtr("test-vault-token"),
+			consulToken: helper.StringToPtr("test-consul-token"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseJobspec(jobHCL, JobParserConfig{}, tt.vaultToken, tt.consulToken)
+			require.NoError(t, err)
+			require.True(t, reflect.DeepEqual(tt.consulToken, got.ConsulToken))
+			require.True(t, reflect.DeepEqual(tt.vaultToken, got.VaultToken))
+		})
+	}
+}
