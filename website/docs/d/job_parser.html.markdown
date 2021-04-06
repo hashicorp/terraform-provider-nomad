@@ -14,7 +14,7 @@ Parse a HCL jobspec and produce the equivalent JSON encoded job.
 
 ```hcl
 data "nomad_job_parser" "my_job" {
-  hcl = file("${path.module}/jobpec.hcl")
+  hcl = file("${path.module}/jobspec.hcl")
   canonicalize = false
 }
 ```
