@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-nomad
 
-go 1.14
+go 1.16
 
 exclude (
 	github.com/Sirupsen/logrus v1.1.0
