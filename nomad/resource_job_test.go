@@ -268,6 +268,25 @@ func TestResourceJob_consulConnect(t *testing.T) {
 	})
 }
 
+// TODO: Uncomment once the Terraform Provider SDK is updated to v2.
+// func TestResourceJob_consulNamespace(t *testing.T) {
+// 	r.Test(t, r.TestCase{
+// 		Providers: testProviders,
+// 		ExternalProviders: map[string]r.ExternalProvider{
+// 			"consul": {},
+// 		},
+// 		// TODO: check for Consul Enterprise.
+// 		PreCheck: func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.1.0-beta1+ent") },
+// 		Steps: []r.TestStep{
+// 			{
+// 				Config: testResourceJob_consulNamespaceConfig,
+// 				Check:  testResourceJob_consulNamespaceCheck,
+// 			},
+// 		},
+// 		CheckDestroy: nil,
+// 	})
+// }
+
 func TestResourceJob_json(t *testing.T) {
 	// Test invalid JSON inputs.
 	re := regexp.MustCompile("error parsing jobspec")
@@ -1876,6 +1895,92 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 	return nil
 }
 
+func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_consul_namespace"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	// Find alloc for out test job.
+	allocs, _, err := client.Allocations().List(nil)
+	if err != nil {
+		return err
+	}
+
+	var foundAllocID string
+	for _, alloc := range allocs {
+		if alloc.JobID == jobID {
+			foundAllocID = alloc.ID
+			break
+		}
+	}
+
+	foundAlloc, _, err := client.Allocations().Info(foundAllocID, nil)
+	if err != nil {
+		return err
+	}
+	if foundAlloc == nil {
+		return fmt.Errorf("failed to find alloc for job %q", jobID)
+	}
+
+	// Wait for alloc to run.
+	retries := 100
+	for ; retries > 0; retries-- {
+		foundAlloc, _, err = client.Allocations().Info(foundAllocID, nil)
+		if err != nil {
+			return err
+		}
+
+		if foundAlloc.ClientStatus == api.AllocClientStatusRunning {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q to run", foundAllocID)
+	}
+
+	// Read stdout log and check if key value is present.
+	var stdoutString string
+
+	retries = 100
+	for ; retries > 0; retries-- {
+		stdout, err := client.AllocFS().Cat(foundAlloc, "alloc/logs/sleep.stdout.0", nil)
+		if err != nil {
+			return err
+		}
+
+		stdoutBytes, err := ioutil.ReadAll(stdout)
+		if len(stdoutBytes) > 0 {
+			stdoutString = string(stdoutBytes)
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q stdout logs", foundAllocID)
+	}
+
+	if !strings.Contains(stdoutString, "hello") {
+		return fmt.Errorf("alloc stdout doesn't have Consul key")
+	}
+
+	return nil
+}
+
 func testResourceJob_multiregionCheck(s *terraform.State) error {
 	resourcePath := "nomad_job.multiregion"
 
@@ -2619,6 +2724,58 @@ resource "nomad_job" "test" {
 	  }
 	}
 	EOT
+}
+`
+
+var testResourceJob_consulNamespaceConfig = `
+resource "consul_namespace" "tf_test_consul_namespace" {
+  name = "tf-test-consul-namespace"
+}
+
+resource "consul_keys" "tf_test_consul_namespace" {
+  namespace = consul_namespace.tf_test_consul_namespace.name
+
+  key {
+    path  = "tf_test_consul_namespace"
+    value = "hello"
+  }
+}
+
+resource "nomad_job" "test_consul_namespace" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOF
+job "test-consul-namespace" {
+  datacenters = ["dc1"]
+
+  group "sleep" {
+
+    consul {
+      namespace = "${consul_namespace.tf_test_consul_namespace.name}"
+    }
+
+    task "sleep" {
+      driver = "raw_exec"
+
+      config {
+        command = "local/script.sh"
+      }
+
+      template {
+        data        = <<EOT
+#!/usr/bin/env bash
+
+echo {{ key "tf_test_consul_namespace" }}
+sleep 10
+EOT
+        destination = "local/script.sh"
+      }
+    }
+  }
+}
+EOF
 }
 `
 
