@@ -266,6 +266,19 @@ func TestResourceJob_consulConnect(t *testing.T) {
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
 	})
+
+	// Test Consul Terminating Gateways.
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.4") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_consulConnectTerminatingGatewayConfig,
+				Check:  testResourceJob_consulConnectTerminatingGatewayCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
+	})
 }
 
 // TODO: Uncomment once the Terraform Provider SDK is updated to v2.
@@ -1785,7 +1798,8 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 						]
 					}
 				}
-			}
+			},
+			"OnUpdate": "require_healthy"
 		}
 	]`), &expServices)
 	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
@@ -1796,7 +1810,6 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	proxyTaskName := "connect-proxy-count-dashboard"
 	var proxyTask *api.Task
 	for _, t := range taskGroup.Tasks {
-		fmt.Println()
 		if t.Name == proxyTaskName {
 			proxyTask = t
 			break
@@ -1881,7 +1894,84 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 						]
 					}
 				}
-			}
+			},
+		    "OnUpdate": "require_healthy"
+		}
+	]`), &expServices)
+	if err != nil {
+		return fmt.Errorf("failed to parse expected result: %v", err)
+	}
+
+	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
+		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_consul_terminating_gateway"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has Service declaration
+	taskGroupName := "gateway"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expServices := []*api.Service{}
+	err = json.Unmarshal([]byte(`[
+		{
+			"Name": "terminating-gateway-service",
+			"PortLabel": "connect-terminating-terminating-gateway-service",
+			"AddressMode": "auto",
+			"Connect": {
+				"Gateway": {
+					"Proxy": {
+						"ConnectTimeout": 5000000000,
+						"EnvoyGatewayBindAddresses": {
+							"default": { "Address": "0.0.0.0", "Port": -1}
+						},
+						"EnvoyGatewayNoDefaultBind": true
+					},
+					"Ingress": null,
+					"Terminating": {
+						"Services": [
+							{ "Name": "api" }
+						]
+					}
+				}
+			},
+			"OnUpdate": "require_healthy"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -2724,6 +2814,42 @@ resource "nomad_job" "test" {
 	  }
 	}
 	EOT
+}
+`
+
+var testResourceJob_consulConnectTerminatingGatewayConfig = `
+resource "nomad_job" "test_consul_terminating_gateway" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOT
+job "terminating-gateway" {
+  datacenters = ["dc1"]
+
+  group "gateway" {
+    network {
+      mode = "bridge"
+    }
+
+	service {
+	  name = "terminating-gateway-service"
+
+	  connect {
+		gateway {
+		  proxy {}
+
+		  terminating {
+			service {
+              name = "api"
+			}
+		  }
+		}
+	  }
+	}
+  }
+}
+EOT
 }
 `
 

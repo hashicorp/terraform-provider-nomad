@@ -140,6 +140,9 @@ func TestAccNomadProvider_Headers(t *testing.T) {
 				Check:  testAccCheckNomadProviderConfigWithHeaders(provider),
 			},
 			{
+				// Test concurrent access to Nomad API headers.
+				// On fail the provider would panic, so there's no check necessary.
+				// https://github.com/hashicorp/terraform-provider-nomad/issues/215
 				Config: testAccNomadProviderConfigWithHeadersCrash,
 			},
 		},
