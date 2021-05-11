@@ -1933,14 +1933,45 @@ func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
 		return fmt.Errorf("failed to find alloc for job %q", jobID)
 	}
 
-	// Read stdout log and check if key value is present.
-	stdout, err := client.AllocFS().Cat(foundAlloc, "alloc/logs/sleep.stdout.0", nil)
-	if err != nil {
-		return err
+	// Wait for alloc to run.
+	retries := 100
+	for ; retries > 0; retries-- {
+		foundAlloc, _, err = client.Allocations().Info(foundAllocID, nil)
+		if err != nil {
+			return err
+		}
+
+		if foundAlloc.ClientStatus == api.AllocClientStatusRunning {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q to run", foundAllocID)
 	}
 
-	stdoutBytes, err := ioutil.ReadAll(stdout)
-	stdoutString := string(stdoutBytes)
+	// Read stdout log and check if key value is present.
+	var stdoutString string
+
+	retries = 100
+	for ; retries > 0; retries-- {
+		stdout, err := client.AllocFS().Cat(foundAlloc, "alloc/logs/sleep.stdout.0", nil)
+		if err != nil {
+			return err
+		}
+
+		stdoutBytes, err := ioutil.ReadAll(stdout)
+		if len(stdoutBytes) > 0 {
+			stdoutString = string(stdoutBytes)
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q stdout logs", foundAllocID)
+	}
 
 	if !strings.Contains(stdoutString, "hello") {
 		return fmt.Errorf("alloc stdout doesn't have Consul key")
@@ -2710,6 +2741,10 @@ resource "consul_keys" "tf_test_consul_namespace" {
 }
 
 resource "nomad_job" "test_consul_namespace" {
+  hcl2 {
+    enabled = true
+  }
+
   jobspec = <<EOF
 job "test-consul-namespace" {
   datacenters = ["dc1"]
