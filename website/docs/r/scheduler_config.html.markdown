@@ -34,7 +34,8 @@ resource "nomad_scheduler_config" "config" {
 
 The following arguments are supported:
 
-- `algorithm` `(string: "binpack")` - Specifies whether scheduler binpacks or spreads allocations on available nodes. Possible values are `binpack` and `spread`.
+- `memory_oversubscription_enabled` `(bool: false)` - When `true`, tasks may exceed their reserved memory limit.
+- `scheduler_algorithm` `(string: "binpack")` - Specifies whether scheduler binpacks or spreads allocations on available nodes. Possible values are `binpack` and `spread`.
 - `preemption_config` `(map[string]bool)` - Options to enable preemption for various schedulers.
   - `system_scheduler_enabled` `(bool: true)` - Specifies whether preemption for system jobs is enabled. Note that if this is set to true, then system jobs can preempt any other jobs.
   - `batch_scheduler_enabled` `(bool: false")` - Specifies whether preemption for batch jobs is enabled. Note that if this is set to true, then batch jobs can preempt any other jobs.
