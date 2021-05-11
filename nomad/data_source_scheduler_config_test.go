@@ -13,26 +13,31 @@ func TestAccDataSourceSchedulerConfig_basic(t *testing.T) {
 		CheckDestroy: testFinalConfiguration,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccNomadSchedulerConfigSpread,
+				Config: testAccNomadDataSourceSchedulerConfigS,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(
-						"nomad_scheduler_config.config",
+						"data.nomad_scheduler_config.config",
 						"scheduler_algorithm",
 						"spread",
 					),
 					resource.TestCheckResourceAttr(
-						"nomad_scheduler_config.config",
+						"data.nomad_scheduler_config.config",
 						"preemption_config.batch_scheduler_enabled",
 						"true",
 					),
 					resource.TestCheckResourceAttr(
-						"nomad_scheduler_config.config",
+						"data.nomad_scheduler_config.config",
 						"preemption_config.service_scheduler_enabled",
 						"true",
 					),
 					resource.TestCheckResourceAttr(
-						"nomad_scheduler_config.config",
+						"data.nomad_scheduler_config.config",
 						"preemption_config.system_scheduler_enabled",
+						"true",
+					),
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"memory_oversubscription_enabled",
 						"true",
 					),
 				),
@@ -43,6 +48,7 @@ func TestAccDataSourceSchedulerConfig_basic(t *testing.T) {
 
 const testAccNomadDataSourceSchedulerConfigS = `
 resource "nomad_scheduler_config" "config" {
+	memory_oversubscription_enabled = true
 	scheduler_algorithm = "spread"
 	preemption_config = {
 		system_scheduler_enabled = true
