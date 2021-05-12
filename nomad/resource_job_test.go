@@ -300,6 +300,19 @@ func TestResourceJob_consulConnect(t *testing.T) {
 // 	})
 // }
 
+func TestResourceJob_cpuCores(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.1.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_cpuCoresPolicyConfig,
+				Check:  testResourceJob_cpuCoresCheck,
+			},
+		},
+	})
+}
+
 func TestResourceJob_json(t *testing.T) {
 	// Test invalid JSON inputs.
 	re := regexp.MustCompile("error parsing jobspec")
@@ -2071,6 +2084,49 @@ func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJob_cpuCoresCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_cpu_cores"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected %d task groups, got %d", 1, len(job.TaskGroups))
+	}
+
+	tg := job.TaskGroups[0]
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("expected %d task in group %q, got %d", 1, *tg.Name, len(tg.Tasks))
+	}
+
+	task := tg.Tasks[0]
+	if task.Resources.Cores == nil || *task.Resources.Cores != 1 {
+		return fmt.Errorf("expected %d cores, got %v", 1, task.Resources.Cores)
+	}
+
+	return nil
+}
+
 func testResourceJob_multiregionCheck(s *terraform.State) error {
 	resourcePath := "nomad_job.multiregion"
 
@@ -2902,6 +2958,35 @@ EOT
   }
 }
 EOF
+}
+`
+
+var testResourceJob_cpuCoresPolicyConfig = `
+resource "nomad_job" "test_cpu_cores" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOT
+job "test-cpu-cores" {
+  datacenters = ["dc1"]
+
+  group "test" {
+    task "test" {
+      driver = "raw_exec"
+
+	  config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cores = 1
+	  }
+	}
+  }
+}
+EOT
 }
 `
 
