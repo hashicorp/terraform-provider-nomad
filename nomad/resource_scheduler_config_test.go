@@ -83,6 +83,36 @@ func TestSchedulerConfig_basic(t *testing.T) {
 					),
 				),
 			},
+			{
+				Config: testAccNomadSchedulerConfigDataSource,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"scheduler_algorithm",
+						"binpack",
+					),
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"preemption_config.batch_scheduler_enabled",
+						"false",
+					),
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"preemption_config.service_scheduler_enabled",
+						"true",
+					),
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"preemption_config.system_scheduler_enabled",
+						"false",
+					),
+					resource.TestCheckResourceAttr(
+						"data.nomad_scheduler_config.config",
+						"memory_oversubscription_enabled",
+						"true",
+					),
+				),
+			},
 		},
 	})
 }
@@ -110,6 +140,20 @@ resource "nomad_scheduler_config" "config" {
 `
 
 const testAccNomadSchedulerConfigMemoryOversubscription = `
+resource "nomad_scheduler_config" "config" {
+	memory_oversubscription_enabled = true
+	scheduler_algorithm = "binpack"
+	preemption_config = {
+		system_scheduler_enabled = false
+		batch_scheduler_enabled = false
+		service_scheduler_enabled = true
+	}
+}
+`
+
+const testAccNomadSchedulerConfigDataSource = `
+data "nomad_scheduler_config" "config" {}
+
 resource "nomad_scheduler_config" "config" {
 	memory_oversubscription_enabled = true
 	scheduler_algorithm = "binpack"
