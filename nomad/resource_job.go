@@ -26,6 +26,11 @@ func resourceJob() *schema.Resource {
 
 		CustomizeDiff: resourceJobCustomizeDiff,
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(5 * time.Minute),
+			Update: schema.DefaultTimeout(5 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"jobspec": {
 				Description:      "Job specification. If you want to point to a file use the file() function.",
