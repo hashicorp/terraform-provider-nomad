@@ -229,3 +229,13 @@ The following arguments are supported:
     format instead of the default HCL.
   - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
     [HCL2 filesystem functions](#filesystem-functions)
+
+### Timeouts
+
+`nomad_job` provides the following [`Timeouts`][tf_docs_timeouts] configuration
+options when [`detach`](#detach) is set to `false`:
+
+- `create` `(string: "5m")` - Timeout when registering a new job.
+- `update` `(string: "5m")` - Timeout when updating an existing job.
+
+[tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
