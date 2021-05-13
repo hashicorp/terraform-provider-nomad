@@ -1,16 +1,16 @@
 ---
 layout: "nomad"
-page_title: "Nomad: nomad_volume"
-sidebar_current: "docs-nomad-resource-volume"
+page_title: "Nomad: nomad_external_volume"
+sidebar_current: "docs-nomad-resource-external-volume"
 description: |-
-  Manages the lifecycle of registering and deregistering Nomad volumes.
+  Manages the lifecycle of creating and deleting Nomad volumes.
 ---
 
-# nomad_volume
+# nomad_external_volume
 
-Manages an external volume in Nomad.
+Creates and registers an external volume in Nomad.
 
-This can be used to register external volumes in a Nomad cluster.
+This can be used to create and register external volumes in a Nomad cluster.
 
 ~> **Warning:** this resource will store any sensitive values placed in
   `secrets` or `mount_options` in the Terraform's state file. Take care to
@@ -18,7 +18,7 @@ This can be used to register external volumes in a Nomad cluster.
 
 ## Example Usage
 
-Registering a volume:
+Creating a volume:
 
 ```hcl
 # It can sometimes be helpful to wait for a particular plugin to be available
@@ -27,13 +27,14 @@ data "nomad_plugin" "ebs" {
   wait_for_healthy = true
 }
 
-resource "nomad_volume" "mysql_volume" {
-  depends_on  = [data.nomad_plugin.ebs]
-  type        = "csi"
-  plugin_id   = "aws-ebs0"
-  volume_id   = "mysql_volume"
-  name        = "mysql_volume"
-  external_id = module.hashistack.ebs_test_volume_id
+resource "nomad_external_volume" "mysql_volume" {
+  depends_on   = [data.nomad_plugin.ebs]
+  type         = "csi"
+  plugin_id    = "aws-ebs0"
+  volume_id    = "mysql_volume"
+  name         = "mysql_volume"
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
 
   capability {
     access_mode     = "single-node-writer"
@@ -44,7 +45,6 @@ resource "nomad_volume" "mysql_volume" {
     fs_type = "ext4"
   }
 }
-
 ```
 
 ## Argument Reference
@@ -56,22 +56,16 @@ The following arguments are supported:
 - `volume_id`: `(string: <required>)` - The unique ID of the volume.
 - `name`: `(string: <required>)` - The display name for the volume.
 - `plugin_id`: `(string: <required>)` - The ID of the Nomad plugin for registering this volume.
-- `external_id`: `(string: <required>)` - The ID of the physical volume from the storage provider.
+- `snapshot_id`: `(string: <optional>)` - The external ID of a snapshot to restore. If ommited, the volume will be created from scratch. Conflicts with `clone_id`.
+- `clone_id`: `(string: <optional>)` - The external ID of an existing volume to restore. If ommited, the volume will be created from scratch. Conflicts with `snapshot_id`.
+- `capacity_min`: `(string: <optional>)` - Option to signal a minimum volume size. This may not be supported by all storage providers.
+- `capacity_max`: `(string: <optional>)` - Option to signal a maximum volume size. This may not be supported by all storage providers.
 - `capability`: `(`[`Capability`](#capability-1)`: <required>)` - Options for validating the capability of a volume.
-- `mount_options`: `(block: <optional>)` Options for mounting `block-device` volumes without a pre-formatted file system.
-  - `fs_type`: `(string: <optional>)` - The file system type.
-  - `mount_flags`: `([]string: <optional>)` - The flags passed to `mount`.
-- `secrets`: `(map[string]string: <optional>)` - An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
-- `parameters`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
-- `context`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
-- `deregister_on_destroy`: `(boolean: false)` - If true, the volume will be deregistered on destroy.
-- `access_mode`: `(string: <optional>)` - **Deprecated**. Use [`capability`](#capability) block instead. Defines whether a volume should be available concurrently. Possible values are:
-  - `single-node-reader-only`
-  - `single-node-writer`
-  - `multi-node-reader-only`
-  - `multi-node-single-writer`
-  - `multi-node-multi-writer`
-- `attachment_mode`: `(string: <otional>)` - **Deprecated**. Use [`capability`](#capability) block instead. The storage API that will be used by the volume.
+- `mount_options`: `(block: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
+  - `fs_type`: `(string: optional)` - The file system type.
+  - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
+- `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
+- `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
 
 ### Capability
 
