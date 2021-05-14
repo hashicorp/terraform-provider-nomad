@@ -18,6 +18,12 @@ func resourceSchedulerConfig() *schema.Resource {
 		Read:   resourceSchedulerConfigurationRead,
 
 		Schema: map[string]*schema.Schema{
+			"memory_oversubscription_enabled": {
+				Description: "When true, tasks may exceed their reserved memory limit.",
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+			},
 			"scheduler_algorithm": {
 				Description: "Specifies whether scheduler binpacks or spreads allocations on available nodes.",
 				Type:        schema.TypeString,
@@ -52,8 +58,9 @@ func resourceSchedulerConfigurationCreate(d *schema.ResourceData, meta interface
 	operator := client.Operator()
 
 	config := api.SchedulerConfiguration{
-		SchedulerAlgorithm: api.SchedulerAlgorithm(d.Get("scheduler_algorithm").(string)),
-		PreemptionConfig:   api.PreemptionConfig{},
+		SchedulerAlgorithm:            api.SchedulerAlgorithm(d.Get("scheduler_algorithm").(string)),
+		PreemptionConfig:              api.PreemptionConfig{},
+		MemoryOversubscriptionEnabled: d.Get("memory_oversubscription_enabled").(bool),
 	}
 
 	// Unpack the preemption block.

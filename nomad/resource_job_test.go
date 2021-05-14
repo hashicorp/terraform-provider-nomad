@@ -266,6 +266,51 @@ func TestResourceJob_consulConnect(t *testing.T) {
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
 	})
+
+	// Test Consul Terminating Gateways.
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.4") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_consulConnectTerminatingGatewayConfig,
+				Check:  testResourceJob_consulConnectTerminatingGatewayCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-consul-connect"),
+	})
+}
+
+// TODO: Uncomment once the Terraform Provider SDK is updated to v2.
+// func TestResourceJob_consulNamespace(t *testing.T) {
+// 	r.Test(t, r.TestCase{
+// 		Providers: testProviders,
+// 		ExternalProviders: map[string]r.ExternalProvider{
+// 			"consul": {},
+// 		},
+// 		// TODO: check for Consul Enterprise.
+// 		PreCheck: func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.1.0-beta1+ent") },
+// 		Steps: []r.TestStep{
+// 			{
+// 				Config: testResourceJob_consulNamespaceConfig,
+// 				Check:  testResourceJob_consulNamespaceCheck,
+// 			},
+// 		},
+// 		CheckDestroy: nil,
+// 	})
+// }
+
+func TestResourceJob_cpuCores(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.1.0-beta1") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_cpuCoresPolicyConfig,
+				Check:  testResourceJob_cpuCoresCheck,
+			},
+		},
+	})
 }
 
 func TestResourceJob_json(t *testing.T) {
@@ -1766,7 +1811,8 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 						]
 					}
 				}
-			}
+			},
+			"OnUpdate": "require_healthy"
 		}
 	]`), &expServices)
 	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
@@ -1777,7 +1823,6 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 	proxyTaskName := "connect-proxy-count-dashboard"
 	var proxyTask *api.Task
 	for _, t := range taskGroup.Tasks {
-		fmt.Println()
 		if t.Name == proxyTaskName {
 			proxyTask = t
 			break
@@ -1862,7 +1907,8 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 						]
 					}
 				}
-			}
+			},
+		    "OnUpdate": "require_healthy"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -1871,6 +1917,211 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 
 	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
 		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_consul_terminating_gateway"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// check if task group has Service declaration
+	taskGroupName := "gateway"
+	var taskGroup *api.TaskGroup
+	for _, tg := range job.TaskGroups {
+		if *tg.Name == taskGroupName {
+			taskGroup = tg
+			break
+		}
+	}
+	if taskGroup == nil {
+		return fmt.Errorf("task group %s not found", taskGroupName)
+	}
+
+	expServices := []*api.Service{}
+	err = json.Unmarshal([]byte(`[
+		{
+			"Name": "terminating-gateway-service",
+			"PortLabel": "connect-terminating-terminating-gateway-service",
+			"AddressMode": "auto",
+			"Connect": {
+				"Gateway": {
+					"Proxy": {
+						"ConnectTimeout": 5000000000,
+						"EnvoyGatewayBindAddresses": {
+							"default": { "Address": "0.0.0.0", "Port": -1}
+						},
+						"EnvoyGatewayNoDefaultBind": true
+					},
+					"Ingress": null,
+					"Terminating": {
+						"Services": [
+							{ "Name": "api" }
+						]
+					}
+				}
+			},
+			"OnUpdate": "require_healthy"
+		}
+	]`), &expServices)
+	if err != nil {
+		return fmt.Errorf("failed to parse expected result: %v", err)
+	}
+
+	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
+		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_consul_namespace"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	// Find alloc for out test job.
+	allocs, _, err := client.Allocations().List(nil)
+	if err != nil {
+		return err
+	}
+
+	var foundAllocID string
+	for _, alloc := range allocs {
+		if alloc.JobID == jobID {
+			foundAllocID = alloc.ID
+			break
+		}
+	}
+
+	foundAlloc, _, err := client.Allocations().Info(foundAllocID, nil)
+	if err != nil {
+		return err
+	}
+	if foundAlloc == nil {
+		return fmt.Errorf("failed to find alloc for job %q", jobID)
+	}
+
+	// Wait for alloc to run.
+	retries := 100
+	for ; retries > 0; retries-- {
+		foundAlloc, _, err = client.Allocations().Info(foundAllocID, nil)
+		if err != nil {
+			return err
+		}
+
+		if foundAlloc.ClientStatus == api.AllocClientStatusRunning {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q to run", foundAllocID)
+	}
+
+	// Read stdout log and check if key value is present.
+	var stdoutString string
+
+	retries = 100
+	for ; retries > 0; retries-- {
+		stdout, err := client.AllocFS().Cat(foundAlloc, "alloc/logs/sleep.stdout.0", nil)
+		if err != nil {
+			return err
+		}
+
+		stdoutBytes, err := ioutil.ReadAll(stdout)
+		if len(stdoutBytes) > 0 {
+			stdoutString = string(stdoutBytes)
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if retries == 0 {
+		return fmt.Errorf("timeout waiting for alloc %q stdout logs", foundAllocID)
+	}
+
+	if !strings.Contains(stdoutString, "hello") {
+		return fmt.Errorf("alloc stdout doesn't have Consul key")
+	}
+
+	return nil
+}
+
+func testResourceJob_cpuCoresCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test_cpu_cores"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected %d task groups, got %d", 1, len(job.TaskGroups))
+	}
+
+	tg := job.TaskGroups[0]
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("expected %d task in group %q, got %d", 1, *tg.Name, len(tg.Tasks))
+	}
+
+	task := tg.Tasks[0]
+	if task.Resources.Cores == nil || *task.Resources.Cores != 1 {
+		return fmt.Errorf("expected %d cores, got %v", 1, task.Resources.Cores)
 	}
 
 	return nil
@@ -2619,6 +2870,123 @@ resource "nomad_job" "test" {
 	  }
 	}
 	EOT
+}
+`
+
+var testResourceJob_consulConnectTerminatingGatewayConfig = `
+resource "nomad_job" "test_consul_terminating_gateway" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOT
+job "terminating-gateway" {
+  datacenters = ["dc1"]
+
+  group "gateway" {
+    network {
+      mode = "bridge"
+    }
+
+	service {
+	  name = "terminating-gateway-service"
+
+	  connect {
+		gateway {
+		  proxy {}
+
+		  terminating {
+			service {
+              name = "api"
+			}
+		  }
+		}
+	  }
+	}
+  }
+}
+EOT
+}
+`
+
+var testResourceJob_consulNamespaceConfig = `
+resource "consul_namespace" "tf_test_consul_namespace" {
+  name = "tf-test-consul-namespace"
+}
+
+resource "consul_keys" "tf_test_consul_namespace" {
+  namespace = consul_namespace.tf_test_consul_namespace.name
+
+  key {
+    path  = "tf_test_consul_namespace"
+    value = "hello"
+  }
+}
+
+resource "nomad_job" "test_consul_namespace" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOF
+job "test-consul-namespace" {
+  datacenters = ["dc1"]
+
+  group "sleep" {
+
+    consul {
+      namespace = "${consul_namespace.tf_test_consul_namespace.name}"
+    }
+
+    task "sleep" {
+      driver = "raw_exec"
+
+      config {
+        command = "local/script.sh"
+      }
+
+      template {
+        data        = <<EOT
+#!/usr/bin/env bash
+
+echo {{ key "tf_test_consul_namespace" }}
+sleep 10
+EOT
+        destination = "local/script.sh"
+      }
+    }
+  }
+}
+EOF
+}
+`
+
+var testResourceJob_cpuCoresPolicyConfig = `
+resource "nomad_job" "test_cpu_cores" {
+  hcl2 {
+    enabled = true
+  }
+
+  jobspec = <<EOT
+job "test-cpu-cores" {
+  datacenters = ["dc1"]
+
+  group "test" {
+    task "test" {
+      driver = "raw_exec"
+
+	  config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cores = 1
+	  }
+	}
+  }
+}
+EOT
 }
 `
 

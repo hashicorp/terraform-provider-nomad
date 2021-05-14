@@ -13,6 +13,11 @@ func dataSourceSchedulerConfig() *schema.Resource {
 		Read: dataSourceSchedulerConfigRead,
 
 		Schema: map[string]*schema.Schema{
+			"memory_oversubscription_enabled": {
+				Description: "When true, tasks may exceed their reserved memory limit.",
+				Type:        schema.TypeBool,
+				Computed:    true,
+			},
 			"scheduler_algorithm": {
 				Description: "Specifies whether scheduler binpacks or spreads allocations on available nodes.",
 				Type:        schema.TypeString,
@@ -47,6 +52,7 @@ func dataSourceSchedulerConfigRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	sw := helper.NewStateWriter(d)
+	sw.Set("memory_oversubscription_enabled", schedCfg.SchedulerConfig.MemoryOversubscriptionEnabled)
 	sw.Set("scheduler_algorithm", schedCfg.SchedulerConfig.SchedulerAlgorithm)
 	sw.Set("preemption_config", premptMap)
 	return sw.Error()

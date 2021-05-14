@@ -20,5 +20,6 @@ data "nomad_scheduler_config" "global" {}
 
 The following attributes are exported:
 
+* `memory_oversubscription_enabled` `(bool: false)` - When `true`, tasks may exceed their reserved memory limit.
 * `scheduler_algorithm` `(string)` - Specifies whether scheduler binpacks or spreads allocations on available nodes.
 * `preemption_config` `(map[string]bool)` - Options to enable preemption for various schedulers.

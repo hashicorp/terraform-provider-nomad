@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-version"
@@ -132,11 +133,17 @@ func TestAccNomadProvider_Headers(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactoryInternal(&provider),
-		CheckDestroy:      nil,
+		CheckDestroy:      testAccCheckNomadProviderConfigWithHeadersCrashCheckDestroy(provider),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccNomadProviderConfigWithHeaders,
 				Check:  testAccCheckNomadProviderConfigWithHeaders(provider),
+			},
+			{
+				// Test concurrent access to Nomad API headers.
+				// On fail the provider would panic, so there's no check necessary.
+				// https://github.com/hashicorp/terraform-provider-nomad/issues/215
+				Config: testAccNomadProviderConfigWithHeadersCrash,
 			},
 		},
 	})
@@ -160,6 +167,30 @@ func testAccCheckNomadProviderConfigWithHeaders(provider *schema.Provider) resou
 	}
 }
 
+func testAccCheckNomadProviderConfigWithHeadersCrashCheckDestroy(provider *schema.Provider) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		providerConfig := provider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		namespaces, _, err := client.Namespaces().List(nil)
+		if err != nil {
+			return err
+		}
+
+		count := 0
+		namespacePrefix := "headers-crash-test"
+		for _, ns := range namespaces {
+			if strings.HasPrefix(ns.Name, namespacePrefix) {
+				count++
+			}
+		}
+
+		if count != 0 {
+			return fmt.Errorf("%d namespaces still registered", count)
+		}
+		return nil
+	}
+}
+
 var testAccNomadProviderConfigWithHeaders = `
 provider "nomad" {
   headers {
@@ -178,6 +209,31 @@ provider "nomad" {
 
 // necessary to initialize the provider
 data "nomad_namespaces" "test" {}
+`
+
+var testAccNomadProviderConfigWithHeadersCrash = `
+provider "nomad" {
+  headers {
+    name = "Test-Header-1"
+	value = "a"
+  }
+  headers {
+    name = "Test-header-1"
+	value = "b"
+  }
+  headers {
+    name = "test-header-2"
+	value = "c"
+  }
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+
+resource "nomad_namespace" "test" {
+  count = 100
+  name  = "headers-crash-test-${count.index}"
+}
 `
 
 func TestAccNomadProvider_ConsulToken(t *testing.T) {
