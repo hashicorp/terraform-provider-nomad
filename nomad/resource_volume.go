@@ -1,8 +1,10 @@
 package nomad
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"log"
 	"strings"
 
@@ -72,32 +74,61 @@ func resourceVolume() *schema.Resource {
 				Type:        schema.TypeString,
 			},
 
-			"access_mode": {
-				Description: "Defines whether a volume should be available concurrently.",
-				Required:    true,
-				Type:        schema.TypeString,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice([]string{
-						"single-node-reader-only",
-						"single-node-writer",
-						"multi-node-reader-only",
-						"multi-node-single-writer",
-						"multi-node-multi-writer",
-					}, false),
+			"capability": {
+				Description: "Capabilities intended to be used in a job. At least one capability must be provided.",
+				// COMPAT(1.5.0)
+				// Update once `access_mode` and `attachment_mode` are removed.
+				ForceNew:      false,
+				Optional:      true,
+				ConflictsWith: []string{"access_mode", "attachment_mode"},
+				Type:          schema.TypeSet,
+				MinItems:      1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"access_mode": {
+							Description: "Defines whether a volume should be available concurrently.",
+							Type:        schema.TypeString,
+							Required:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									"single-node-reader-only",
+									"single-node-writer",
+									"multi-node-reader-only",
+									"multi-node-single-writer",
+									"multi-node-multi-writer",
+								}, false),
+							},
+						},
+						"attachment_mode": {
+							Description: "The storage API that will be used by the volume.",
+							Required:    true,
+							Type:        schema.TypeString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									"block-device",
+									"file-system",
+								}, false),
+							},
+						},
+					},
 				},
-			},
+				Set: func(v interface{}) int {
+					var buf bytes.Buffer
+					m := v.(map[string]interface{})
+					buf.WriteString(fmt.Sprintf("%s-", m["access_mode"].(string)))
+					buf.WriteString(fmt.Sprintf("%s-", m["attachment_mode"].(string)))
 
-			"attachment_mode": {
-				Description: "The storage API that will be used by the volume.",
-				Required:    true,
-				Type:        schema.TypeString,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice([]string{
-						"block-device",
-						"file-system",
-					}, false),
+					i := int(crc32.ChecksumIEEE(buf.Bytes()))
+					if i >= 0 {
+						return i
+					}
+					if -i >= 0 {
+						return -i
+					}
+					// i == MinInt
+					return 0
 				},
 			},
 
@@ -197,6 +228,41 @@ func resourceVolume() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeBool,
 			},
+
+			// COMPAT(1.5.0)
+			// Deprecated fields.
+			"access_mode": {
+				Description:   "Defines whether a volume should be available concurrently.",
+				Optional:      true,
+				Deprecated:    "use capability instead",
+				ConflictsWith: []string{"capability"},
+				Type:          schema.TypeString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{
+						"single-node-reader-only",
+						"single-node-writer",
+						"multi-node-reader-only",
+						"multi-node-single-writer",
+						"multi-node-multi-writer",
+					}, false),
+				},
+			},
+
+			"attachment_mode": {
+				Description:   "The storage API that will be used by the volume.",
+				Optional:      true,
+				Deprecated:    "use capability instead",
+				ConflictsWith: []string{"capability"},
+				Type:          schema.TypeString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{
+						"block-device",
+						"file-system",
+					}, false),
+				},
+			},
 		},
 		SchemaVersion: 1,
 		StateUpgraders: []schema.StateUpgrader{
@@ -221,16 +287,47 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
+	// Read capabilities maintaining backwards compatibility with the previous
+	// fields attachment_mode and access_mode.
+	capabilitySet, capabilitiesOk := d.GetOk("capability")
+	attachmentMode, attachmentModeOk := d.GetOk("attachment_mode")
+	accessMode, accessModeOk := d.GetOk("access_mode")
+
+	if !capabilitiesOk && !attachmentModeOk && !accessModeOk {
+		return errors.New(`one of "capability" or "access_mode" and "attachment_mode" must be configured`)
+	}
+
+	var capabilities []*api.CSIVolumeCapability
+
+	if capabilitiesOk {
+		var err error
+		capabilities, err = parseVolumeCapabilities(capabilitySet)
+		if err != nil {
+			return fmt.Errorf("failed to unpack capabilities: %v", err)
+		}
+	} else {
+		capabilities = []*api.CSIVolumeCapability{
+			{
+				AccessMode:     api.CSIVolumeAccessMode(accessMode.(string)),
+				AttachmentMode: api.CSIVolumeAttachmentMode(attachmentMode.(string)),
+			},
+		}
+	}
+
 	volume := &api.CSIVolume{
-		ID:             d.Get("volume_id").(string),
-		Name:           d.Get("name").(string),
-		ExternalID:     d.Get("external_id").(string),
-		AccessMode:     api.CSIVolumeAccessMode(d.Get("access_mode").(string)),
-		AttachmentMode: api.CSIVolumeAttachmentMode(d.Get("attachment_mode").(string)),
-		Secrets:        toMapStringString(d.Get("secrets")),
-		Parameters:     toMapStringString(d.Get("parameters")),
-		Context:        toMapStringString(d.Get("context")),
-		PluginID:       d.Get("plugin_id").(string),
+		ID:                    d.Get("volume_id").(string),
+		Name:                  d.Get("name").(string),
+		ExternalID:            d.Get("external_id").(string),
+		RequestedCapabilities: capabilities,
+		Secrets:               toMapStringString(d.Get("secrets")),
+		Parameters:            toMapStringString(d.Get("parameters")),
+		Context:               toMapStringString(d.Get("context")),
+		PluginID:              d.Get("plugin_id").(string),
+
+		// COMPAT(1.5.0)
+		// Maintain backwards compatibility.
+		AccessMode:     capabilities[0].AccessMode,
+		AttachmentMode: capabilities[0].AttachmentMode,
 	}
 
 	// Unpack the mount_options if we have any and configure the volume struct.
@@ -343,6 +440,35 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	// with the response payload; they will remain as is.
 
 	return nil
+}
+
+func parseVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) {
+	capabilities := []*api.CSIVolumeCapability{}
+
+	capabilitySet, ok := i.(*schema.Set)
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T, expected *schema.Set", i)
+	}
+
+	for _, capabilitySetItem := range capabilitySet.List() {
+		capabilityMap, ok := capabilitySetItem.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid type %T, expected map[string]interface{}", capabilitySetItem)
+		}
+
+		c := &api.CSIVolumeCapability{}
+		for k, v := range capabilityMap {
+			switch k {
+			case "access_mode":
+				c.AccessMode = api.CSIVolumeAccessMode(v.(string))
+			case "attachment_mode":
+				c.AttachmentMode = api.CSIVolumeAttachmentMode(v.(string))
+			}
+		}
+		capabilities = append(capabilities, c)
+	}
+
+	return capabilities, nil
 }
 
 // resourceVolumeStateUpgradeV0 migrates a nomad_volume resource schema from v0 to v1.
