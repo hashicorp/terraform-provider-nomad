@@ -24,6 +24,3 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/stretchr/testify v1.7.0
 )
-
-// Force using go-getter version that is compatible with terraform plugin
-replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.4.0
