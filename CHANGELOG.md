@@ -1,4 +1,4 @@
-## 1.4.15 (Unreleased)
+## 1.4.15 (May 19, 2021)
 
 ***This is the last release to support Terraform v0.11***
 
