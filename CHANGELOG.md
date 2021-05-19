@@ -1,5 +1,17 @@
 ## 1.4.15 (Unreleased)
 
+***This is the last release to support Terraform v0.11***
+
+* **Target Nomad 1.1.0**: updated the Nomad client to support Nomad API and jobspec version 1.1.0 ([#229](https://github.com/hashicorp/terraform-provider-nomad/issues/229))
+* **New Resource**: `nomad_external_volume` creates and registers an external volume with Nomad ([#228](https://github.com/hashicorp/terraform-provider-nomad/pull/228))
+
+IMPROVEMENTS:
+* provider: update Go to 1.16 to add support for `darwin/arm64` ([#218](https://github.com/hashicorp/terraform-provider-nomad/pull/218))
+* resource/nomad_job: allow custom timeout values on create and update ([#227](https://github.com/hashicorp/terraform-provider-nomad/pull/227)
+
+BUG FIXES:
+* provider: update Nomad API to prevent header access panic ([#226](https://github.com/hashicorp/terraform-provider-nomad/pull/226))
+
 ## 1.4.14 (April 06, 2021)
 
 * **Target Nomad 1.0.4**: updated the nomad client to support Nomad API and jobspec version 1.0.4 ([#202](https://github.com/hashicorp/terraform-provider-nomad/pull/202))([#206](https://github.com/hashicorp/terraform-provider-nomad/issues/206))
