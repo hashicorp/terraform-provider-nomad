@@ -31,7 +31,7 @@ jobs:
         bash scripts/getvault.sh
         bash scripts/getconsul.sh
     - name: Start nomad
-        bash scripts/start-nomad.sh
+      run: bash scripts/start-nomad.sh
     - name: Run make vet
       run: make vet
     - name: Get version
