@@ -25,7 +25,7 @@ if [ ! -e /tmp/nomad-test.pid ]; then
     # Give some time for the process to initialize
     sleep 10
 
-    http --ignore-stdin POST http://localhost:4646/v1/acl/bootstrap | jq -r '.SecretID' > /tmp/nomad-test.token
+    curl -X POST http://localhost:4646/v1/acl/bootstrap | jq -r '.SecretID' > /tmp/nomad-test.token
     echo export NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
 elif [ -e /tmp/nomad-test.token ]; then 
   echo export NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
