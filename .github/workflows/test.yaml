@@ -1,0 +1,43 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  test:
+    env:
+      GO111MODULE: on
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@37335c7bb261b353407cff977110895fa0b4f7d8
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    - name: Setup
+      run: | 
+        sudo apt-get update
+        sudo apt-get -y install httpie jq
+    - name: Install vault, nomad, consul
+      run: |
+        bash scripts/getnomad.sh
+        bash scripts/getvault.sh
+        bash scripts/getconsul.sh
+    - name: Start nomad
+        bash scripts/start-nomad.sh
+    - name: Run make vet
+      run: make vet
+    - name: Get version
+      id: nomad_token
+      run: echo ::set-output name=nomad_token::$(cat /tmp/nomad-test.token)
+    - name: Run tests
+      run: ${{ steps.vars.outputs.nomad_token }} make testacc
+    - name: Stop nopmad
+      run: bash scripts/stop-nomad.sh
