@@ -9,9 +9,11 @@ jobs:
   test:
     env:
       GO111MODULE: on
+      VAULT_TEST_TOKEN: terraform-provider-nomad-token
+      VAULT_ADDR: http://localhost:8200
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.16.4]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -21,32 +23,30 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-    - name: Login to Docker Hub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.RO_DOCKERHUB_USER }}
-        password: ${{ secrets.RO_DOCKERHUB_TOKEN }}
+    # - name: Login to Docker Hub
+    #   uses: docker/login-action@v1
+    #   with:
+    #     username: ${{ secrets.RO_DOCKERHUB_USER }}
+    #     password: ${{ secrets.RO_DOCKERHUB_TOKEN }}
     - name: Setup
       run: | 
         sudo apt-get update
         sudo apt-get -y install httpie jq
     - name: Install vault, nomad, consul
       run: |
-        bash scripts/getnomad.sh
-        bash scripts/getvault.sh
-        bash scripts/getconsul.sh
+        ./scripts/getnomad.sh
+        ./scripts/getvault.sh
+        ./scripts/getconsul.sh
     - name: Start nomad
-      run: bash scripts/start-nomad.sh
-    - name: Run make vet
-      run: | 
-        make vet
-        cat /tmp/nomad-test.token
-    - name: Get version
-      id: nomad_token
-      run: echo ::set-output name=nomad_token::$(cat /tmp/nomad-test.token)
+      run: |
+        ./scripts/start-nomad.sh
+        echo "TEST_NOMAD_TOKEN=$(echo $NOMAD_TOKEN | cut -c 1-6)" >> $GITHUB_ENV
+        echo $TEST_NOMAD_TOKEN
+    - name: Run go vet
+      run: make vet
     - name: Run tests
       run: |
-        cat /tmp/nomad-test.token
-        ${{ steps.vars.outputs.nomad_token }} make testacc
-    - name: Stop nopmad
-      run: bash scripts/stop-nomad.sh
+        echo $TEST_NOMAD_TOKEN
+        $TEST_NOMAD_TOKEN make testacc
+    - name: Stop nomad
+      run: ./scripts/stop-nomad.sh
