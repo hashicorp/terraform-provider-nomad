@@ -38,11 +38,15 @@ jobs:
     - name: Start nomad
       run: bash scripts/start-nomad.sh
     - name: Run make vet
-      run: make vet
+      run: | 
+        make vet
+        cat /tmp/nomad-test.token
     - name: Get version
       id: nomad_token
       run: echo ::set-output name=nomad_token::$(cat /tmp/nomad-test.token)
     - name: Run tests
-      run: ${{ steps.vars.outputs.nomad_token }} make testacc
+      run: |
+        cat /tmp/nomad-test.token
+        ${{ steps.vars.outputs.nomad_token }} make testacc
     - name: Stop nopmad
       run: bash scripts/stop-nomad.sh
