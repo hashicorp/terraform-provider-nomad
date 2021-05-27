@@ -43,7 +43,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
         with:
-          name: nomad.log
+          name: logs
           path: |
             /tmp/consul.log
             /tmp/nomad.log
