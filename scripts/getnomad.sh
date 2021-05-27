@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NOMAD_VERSION=1.1.0
+NOMAD_VERSION=1.1.0+ent
 NOMAD_BINARY=https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip
 
 curl -L $NOMAD_BINARY > nomad.zip
