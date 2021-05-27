@@ -44,4 +44,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: nomad.log
-          path: /var/log/nomad.log
+          path: |
+            /tmp/consul.log
+            /tmp/nomad.log
+            /tmp/vault.log
