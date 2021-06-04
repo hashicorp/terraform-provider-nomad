@@ -123,7 +123,7 @@ func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryEr
 		}
 		return resource.NonRetryableError(fmt.Errorf("error checking for plugin: %#v", err))
 	}
-	controllersExpected := len(plugin.Controllers)
+	controllersExpected := plugin.ControllersExpected
 	if waitForHealthy && controllersExpected != plugin.ControllersHealthy {
 		log.Printf("[DEBUG] plugin not yet healthy: %v/%v", controllersExpected, plugin.ControllersHealthy)
 		return resource.RetryableError(fmt.Errorf("plugin not yet healthy: %v/%v",
@@ -135,7 +135,7 @@ func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryEr
 	d.Set("plugin_provider", plugin.Provider)
 	d.Set("plugin_provider_version", plugin.Version)
 	d.Set("controller_required", plugin.ControllerRequired)
-	d.Set("controllers_expected", len(plugin.Controllers))
+	d.Set("controllers_expected", controllersExpected)
 	d.Set("controllers_healthy", plugin.ControllersHealthy)
 	d.Set("nodes_expected", len(plugin.Nodes))
 	d.Set("nodes_healthy", plugin.NodesHealthy)
