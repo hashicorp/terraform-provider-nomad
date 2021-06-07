@@ -2,7 +2,7 @@
 
 BUG FIXES:
 * data source/nomad_plugin: wait for the correct amount of expected controllers ([#234](https://github.com/hashicorp/terraform-provider-nomad/pull/234))
-* data source/nomad_plugin: wait for healthy nodes as well ([#235](https://github.com/hashicorp/terraform-provider-nomad/pull/235))
+* data source/nomad_plugin: wait for the correct amount of healthy nodes ([#235](https://github.com/hashicorp/terraform-provider-nomad/pull/235))
 
 ## 1.4.15 (May 19, 2021)
 
