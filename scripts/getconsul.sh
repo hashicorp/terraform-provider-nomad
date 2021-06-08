@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 CONSUL_VERSION=1.9.5+ent
 CONSUL_BINARY=https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
 

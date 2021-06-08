@@ -1,6 +1,9 @@
 #!/bin/bash
 
-VAULT_BINARY=https://releases.hashicorp.com/vault/1.6.1+ent/vault_1.6.1+ent_linux_amd64.zip
+set -e
+
+VAULT_VERSION=1.7.2+ent
+VAULT_BINARY=https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
 
 curl -L $VAULT_BINARY > vault.zip
 sudo unzip -o vault.zip -d /usr/local/bin
