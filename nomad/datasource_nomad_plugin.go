@@ -14,7 +14,6 @@ func dataSourcePlugin() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourcePluginRead,
 		Schema: map[string]*schema.Schema{
-
 			"plugin_id": {
 				Description: "Plugin ID",
 				Type:        schema.TypeString,
@@ -54,7 +53,6 @@ func dataSourcePlugin() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeInt,
 			},
-
 			"nodes_healthy": {
 				Computed: true,
 				Type:     schema.TypeInt,
@@ -63,7 +61,6 @@ func dataSourcePlugin() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeInt,
 			},
-
 			"nodes": {
 				Description: "Available nodes for this plugin",
 				Computed:    true,
@@ -112,8 +109,9 @@ func dataSourcePluginRead(d *schema.ResourceData, meta interface{}) error {
 func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryError {
 	id := d.Get("plugin_id").(string)
 	waitForHealthy := d.Get("wait_for_healthy").(bool)
-	plugin, _, err := client.CSIPlugins().Info(id, nil)
+
 	log.Printf("[DEBUG] Getting plugin %q...", id)
+	plugin, _, err := client.CSIPlugins().Info(id, nil)
 	if err != nil {
 		// As of Nomad 0.4.1, the API client returns an error for 404
 		// rather than a nil result, so we must check this way.
@@ -123,21 +121,27 @@ func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryEr
 		}
 		return resource.NonRetryableError(fmt.Errorf("error checking for plugin: %#v", err))
 	}
-	controllersExpected := len(plugin.Controllers)
-	if waitForHealthy && controllersExpected != plugin.ControllersHealthy {
-		log.Printf("[DEBUG] plugin not yet healthy: %v/%v", controllersExpected, plugin.ControllersHealthy)
-		return resource.RetryableError(fmt.Errorf("plugin not yet healthy: %v/%v",
-			controllersExpected,
-			plugin.ControllersExpected))
+
+	healthy := plugin.ControllersExpected == plugin.ControllersHealthy &&
+		plugin.NodesExpected == plugin.NodesHealthy
+
+	if waitForHealthy && !healthy {
+		log.Printf("[DEBUG] plugin %s not yet healthy: %d/%d controllers healthy  %d/%d nodes healthy",
+			id,
+			plugin.ControllersHealthy, plugin.ControllersExpected,
+			plugin.NodesHealthy, plugin.NodesExpected)
+
+		return resource.RetryableError(fmt.Errorf("plugin %s not yet healthy", id))
 	}
+
 	d.SetId(plugin.ID)
 	d.Set("plugin_id", plugin.ID)
 	d.Set("plugin_provider", plugin.Provider)
 	d.Set("plugin_provider_version", plugin.Version)
 	d.Set("controller_required", plugin.ControllerRequired)
-	d.Set("controllers_expected", len(plugin.Controllers))
+	d.Set("controllers_expected", plugin.ControllersExpected)
 	d.Set("controllers_healthy", plugin.ControllersHealthy)
-	d.Set("nodes_expected", len(plugin.Nodes))
+	d.Set("nodes_expected", plugin.NodesExpected)
 	d.Set("nodes_healthy", plugin.NodesHealthy)
 	nodes := make([]map[string]interface{}, 0, len(plugin.Nodes))
 	for name, info := range plugin.Nodes {
