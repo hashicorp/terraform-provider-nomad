@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 // How to run the acceptance tests for this provider:
@@ -39,15 +40,15 @@ func TestProvider(t *testing.T) {
 }
 
 func TestProvider_impl(t *testing.T) {
-	var _ terraform.ResourceProvider = Provider()
+	var _ *schema.Provider = Provider()
 }
 
 var testProvider *schema.Provider
-var testProviders map[string]terraform.ResourceProvider
+var testProviders map[string]*schema.Provider
 
 func init() {
 	testProvider = Provider()
-	testProviders = map[string]terraform.ResourceProvider{
+	testProviders = map[string]*schema.Provider{
 		"nomad": testProvider,
 	}
 }
@@ -57,7 +58,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
 
-	err := testProvider.Configure(terraform.NewResourceConfigRaw(nil))
+	err := testProvider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,10 +284,10 @@ func testAccCheckNomadProviderConfigConsulToken(provider *schema.Provider) resou
 // This should only be used for TestAccNomadProvider_ tests which need to
 // reference the provider instance itself. Other testing should use
 // testAccProviderFactories or other related functions.
-func testAccProviderFactoryInternal(provider **schema.Provider) map[string]terraform.ResourceProviderFactory {
+func testAccProviderFactoryInternal(provider **schema.Provider) map[string]func() (*schema.Provider, error) {
 	p := Provider()
-	factories := map[string]terraform.ResourceProviderFactory{
-		"nomad": func() (terraform.ResourceProvider, error) {
+	factories := map[string]func() (*schema.Provider, error){
+		"nomad": func() (*schema.Provider, error) {
 			return p, nil
 		},
 	}

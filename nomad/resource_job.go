@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,8 +14,8 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/nomad/jobspec2"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceJob() *schema.Resource {
@@ -558,7 +559,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	log.Printf("[DEBUG] resourceJobCustomizeDiff")
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
