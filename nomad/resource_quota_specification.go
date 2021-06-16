@@ -80,7 +80,7 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 }
 
 func resourceQuotaSpecificationWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	spec := api.QuotaSpec{
 		Name:        d.Get("name").(string),
@@ -104,7 +104,7 @@ func resourceQuotaSpecificationWrite(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceQuotaSpecificationDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 	name := d.Id()
 
 	// delete the quota spec
@@ -119,7 +119,7 @@ func resourceQuotaSpecificationDelete(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceQuotaSpecificationRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 	name := d.Id()
 
 	// retrieve the policy
@@ -142,7 +142,7 @@ func resourceQuotaSpecificationRead(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceQuotaSpecificationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	name := d.Id()
 	log.Printf("[DEBUG] Checking if quota specification %q exists", name)

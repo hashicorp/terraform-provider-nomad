@@ -55,7 +55,7 @@ func dataSourceVolumes() *schema.Resource {
 }
 
 func volumesDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	ns := d.Get("namespace").(string)
 	if ns == "" {

@@ -309,7 +309,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// Get the jobspec itself.
 	jobspecRaw := d.Get("jobspec").(string)
@@ -480,7 +480,7 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 
 func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// If deregistration is disabled, then do nothing
 	deregister_on_destroy := d.Get("deregister_on_destroy").(bool)
@@ -510,7 +510,7 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 
 func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	id := d.Id()
 	opts := &api.QueryOptions{
@@ -562,7 +562,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	log.Printf("[DEBUG] resourceJobCustomizeDiff")
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	if !d.NewValueKnown("jobspec") {
 		d.SetNewComputed("name")

@@ -235,7 +235,7 @@ func resourceExternalVolume() *schema.Resource {
 
 func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// Parse capacities from human-friendly string to number.
 	capacityMin, err := humanize.ParseBytes(d.Get("capacity_min").(string))
@@ -310,7 +310,7 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 
 func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	id := d.Id()
 	log.Printf("[DEBUG] deleting volume: %q", id)

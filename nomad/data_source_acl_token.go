@@ -61,7 +61,7 @@ func dataSourceACLToken() *schema.Resource {
 
 func dataSourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	accessor := d.Get("accessor_id").(string)
 
 	// retrieve the token

@@ -57,7 +57,7 @@ func dataSourceScalingPolicies() *schema.Resource {
 }
 
 func scalingPoliciesDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	jobID := d.Get("job_id").(string)
 	typeQuery := d.Get("type").(string)

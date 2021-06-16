@@ -399,7 +399,7 @@ func TestResourceJob_disableDestroyDeregister(t *testing.T) {
 				Config:  testResourceJob_noDestroy,
 				Check: func(*terraform.State) error {
 					providerConfig := testProvider.Meta().(ProviderConfig)
-					client := providerConfig.client
+					client := providerConfig.Client
 					job, _, err := client.Jobs().Info("foo-nodestroy", nil)
 					if err != nil {
 						return err
@@ -507,7 +507,7 @@ func TestResourceJob_purgeOnDestroy(t *testing.T) {
 				Config:  testResourceJob_purgeOnDestroy,
 				Check: func(s *terraform.State) error {
 					providerConfig := testProvider.Meta().(ProviderConfig)
-					client := providerConfig.client
+					client := providerConfig.Client
 					job, _, err := client.Jobs().Info("purge-test", nil)
 					if !assert.EqualError(t, err, "Unexpected response code: 404 (job not found)") {
 						return fmt.Errorf("Job found: %#v", job)
@@ -534,7 +534,7 @@ func testResourceJob_parameterizedCheck(s *terraform.State) error {
 	jobID := instanceState.ID
 
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -583,7 +583,7 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 	jobID := instanceState.ID
 
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -1164,7 +1164,7 @@ func testResourceJob_initialCheckNS(t *testing.T, expectedNamespace string) r.Te
 		}
 
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 		job, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
 			Namespace: expectedNamespace,
 		})
@@ -1217,7 +1217,7 @@ func testResourceJob_v086Check(s *terraform.State) error {
 	jobID := instanceState.ID
 
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -1305,7 +1305,7 @@ func testResourceJob_v090Check(s *terraform.State) error {
 	jobID := instanceState.ID
 
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
 		return fmt.Errorf("error reading back job: %s", err)
@@ -1379,7 +1379,7 @@ func testResourceJob_volumesCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1456,7 +1456,7 @@ func testResourceJob_scalingPolicyCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1522,7 +1522,7 @@ func testResourceJob_scalingPolicyDASCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1615,7 +1615,7 @@ func testResourceJob_serviceDeploymentInfoCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	deployment, _, err := client.Jobs().LatestDeployment(jobID, nil)
 	if err != nil {
@@ -1649,7 +1649,7 @@ func testResourceJob_lifecycleCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1713,7 +1713,7 @@ func testResourceJob_csiControllerCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1769,7 +1769,7 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1851,7 +1851,7 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -1937,7 +1937,7 @@ func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) er
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -2013,7 +2013,7 @@ func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// Find alloc for out test job.
 	allocs, _, err := client.Allocations().List(nil)
@@ -2099,7 +2099,7 @@ func testResourceJob_cpuCoresCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -2142,7 +2142,7 @@ func testResourceJob_multiregionCheck(s *terraform.State) error {
 
 	jobID := instanceState.ID
 	providerConfig := testProvider.Meta().(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	job, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
@@ -2164,7 +2164,7 @@ func testResourceJob_multiregionCheck(s *terraform.State) error {
 func testResourceJob_checkExistsNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 		_, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
 			Namespace: ns,
 		})
@@ -2187,7 +2187,7 @@ func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 func testResourceJob_checkDestroyNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 
 		tries := 0
 	TRY:
@@ -2218,7 +2218,7 @@ func testResourceJob_checkDestroyNS(jobID, ns string) r.TestCheckFunc {
 func testResourceJob_forceDestroyWithPurge(jobID, namespace string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 		_, _, err := client.Jobs().Deregister(jobID, true, &api.WriteOptions{
 			Namespace: namespace,
 		})
@@ -2232,7 +2232,7 @@ func testResourceJob_forceDestroyWithPurge(jobID, namespace string) r.TestCheckF
 func testResourceJob_deregister(t *testing.T, jobID string) func() {
 	return func() {
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 		_, _, err := client.Jobs().Deregister(jobID, false, nil)
 		if err != nil {
 			t.Fatalf("error deregistering job: %s", err)

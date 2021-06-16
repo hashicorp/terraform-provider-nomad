@@ -34,7 +34,7 @@ func dataSourceAclPolicy() *schema.Resource {
 
 func dataSourceAclPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	name := d.Get("name").(string)
 

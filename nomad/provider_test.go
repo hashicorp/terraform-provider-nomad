@@ -66,7 +66,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testEntFeatures(t *testing.T, requiredFeatures ...string) {
 	testCheckEnt(t)
-	client := testProvider.Meta().(ProviderConfig).client
+	client := testProvider.Meta().(ProviderConfig).Client
 	resp, _, err := client.Operator().LicenseGet(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func testCheckEnt(t *testing.T) {
 }
 
 func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
-	client := testProvider.Meta().(ProviderConfig).client
+	client := testProvider.Meta().(ProviderConfig).Client
 	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
 		if version, err := version.NewVersion(nodes[0].Version); err != nil {
 			t.Skip("could not parse node version: ", err)
@@ -114,7 +114,7 @@ func testCheckMinVersion(t *testing.T, v string) {
 }
 
 func testCheckVaultEnabled(t *testing.T) {
-	client := testProvider.Meta().(ProviderConfig).client
+	client := testProvider.Meta().(ProviderConfig).Client
 	vaultEnabled := false
 	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
 		if node, _, err := client.Nodes().Info(nodes[0].ID, nil); err == nil {
@@ -171,7 +171,7 @@ func testAccCheckNomadProviderConfigWithHeaders(provider *schema.Provider) resou
 func testAccCheckNomadProviderConfigWithHeadersCrashCheckDestroy(provider *schema.Provider) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
 		providerConfig := provider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 		namespaces, _, err := client.Namespaces().List(nil)
 		if err != nil {
 			return err

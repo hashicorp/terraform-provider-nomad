@@ -35,7 +35,7 @@ func dataSourceJobParser() *schema.Resource {
 
 func dataSourceJobParserRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	hcl := d.Get("hcl").(string)
 	canonicalize := d.Get("canonicalize").(bool)

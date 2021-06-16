@@ -286,7 +286,7 @@ func toMapStringString(m interface{}) map[string]string {
 
 func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// Read capabilities maintaining backwards compatibility with the previous
 	// fields attachment_mode and access_mode.
@@ -374,7 +374,7 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 
 func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	// If deregistration is disabled, then do nothing
 	deregister_on_destroy := d.Get("deregister_on_destroy").(bool)
@@ -403,7 +403,7 @@ func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 
 func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	id := d.Id()
 	opts := &api.QueryOptions{

@@ -6,12 +6,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/server"
 	tfmux "github.com/hashicorp/terraform-plugin-mux"
+	protocol "github.com/hashicorp/terraform-provider-nomad/internal/protocolprovider"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
 
 func main() {
 	ctx := context.Background()
-	muxed, err := tfmux.NewSchemaServerFactory(ctx, nomad.Provider().GRPCProvider)
+
+	provider := nomad.Provider()
+	muxed, err := tfmux.NewSchemaServerFactory(ctx, provider.GRPCProvider, protocol.Server(provider))
 	if err != nil {
 		panic(err)
 	}

@@ -51,7 +51,7 @@ data "nomad_acl_policies" "test" {
 
 func testAccCreateNomadAclPolicies(t *testing.T, n int) func() {
 	return func() {
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		for i := 0; i < n; i++ {
 			rName := acctest.RandomWithPrefix("tf-acc-test")
 			policy := api.ACLPolicy{
@@ -72,7 +72,7 @@ func testAccCreateNomadAclPolicies(t *testing.T, n int) func() {
 }
 
 func sweepACLPolicies() error {
-	client := testProvider.Meta().(ProviderConfig).client
+	client := testProvider.Meta().(ProviderConfig).Client
 	policies, _, err := client.ACLPolicies().List(&api.QueryOptions{})
 	if err != nil {
 		return err

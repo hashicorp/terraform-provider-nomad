@@ -22,7 +22,7 @@ func dataSourceRegions() *schema.Resource {
 }
 
 func regionsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	log.Printf("[DEBUG] Reading regions from Nomad")
 	resp, err := client.Regions().List()

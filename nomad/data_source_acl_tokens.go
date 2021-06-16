@@ -55,7 +55,7 @@ func dataSourceACLTokens() *schema.Resource {
 }
 
 func aclTokensDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	qOpts := &api.QueryOptions{
 		Prefix: d.Get("prefix").(string),

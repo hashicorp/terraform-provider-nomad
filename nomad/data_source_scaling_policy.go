@@ -54,7 +54,7 @@ func dataSourceScalingPolicy() *schema.Resource {
 }
 
 func scalingPolicyDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	id := d.Get("id").(string)
 	p, _, err := client.Scaling().GetPolicy(id, nil)

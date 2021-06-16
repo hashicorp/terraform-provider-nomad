@@ -63,7 +63,7 @@ func testAccDataSourceNomadAclPolicyExists(n string) resource.TestCheckFunc {
 		}
 
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 
 		name := rs.Primary.ID
 

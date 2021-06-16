@@ -164,7 +164,7 @@ func dataSourceJob() *schema.Resource {
 
 func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	id := d.Get("job_id").(string)
 	ns := d.Get("namespace").(string)

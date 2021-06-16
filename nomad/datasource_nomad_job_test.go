@@ -100,7 +100,7 @@ func testAccDataSourceNomadJobExists(n, namespace string) resource.TestCheckFunc
 		}
 
 		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+		client := providerConfig.Client
 
 		id := rs.Primary.ID
 

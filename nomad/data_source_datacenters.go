@@ -39,7 +39,7 @@ func dataSourceDatacenters() *schema.Resource {
 }
 
 func dataSourceDatacentersRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 	nodes, _, err := client.Nodes().List(nil)
 	if err != nil {
 		return fmt.Errorf("failed to query list of nodes: %v", err)

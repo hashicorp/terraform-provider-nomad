@@ -44,7 +44,7 @@ func dataSourceAclPolicies() *schema.Resource {
 
 func dataSourceAclPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 	queryOpts := &api.QueryOptions{}
 	if v, ok := d.GetOk("prefix"); ok && v.(string) != "" {
 		queryOpts.Prefix = v.(string)

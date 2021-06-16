@@ -28,7 +28,7 @@ func dataSourceNamespace() *schema.Resource {
 }
 
 func namespaceDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	name := d.Get("name").(string)
 	ns, _, err := client.Namespaces().Info(name, nil)

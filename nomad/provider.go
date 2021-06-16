@@ -11,7 +11,7 @@ import (
 )
 
 type ProviderConfig struct {
-	client      *api.Client
+	Client      *api.Client
 	vaultToken  *string
 	consulToken *string
 	config      *api.Config
@@ -228,7 +228,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	res := ProviderConfig{
 		config:      conf,
-		client:      client,
+		Client:      client,
 		vaultToken:  &vaultToken,
 		consulToken: &consulToken,
 	}

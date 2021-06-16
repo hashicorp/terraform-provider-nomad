@@ -159,7 +159,7 @@ func testResourceACLPolicy_initialCheck(name string) resource.TestCheckFunc {
 			return fmt.Errorf("expected rules_hcl to be %q, is %q in state", rules_hcl, instanceState.Attributes["rules_hcl"])
 		}
 
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back policy %q: %s", name, err)
@@ -181,7 +181,7 @@ func testResourceACLPolicy_initialCheck(name string) resource.TestCheckFunc {
 
 func testResourceACLPolicy_checkExists(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back policy: %s", err)
@@ -196,7 +196,7 @@ func testResourceACLPolicy_checkExists(name string) resource.TestCheckFunc {
 
 func testResourceACLPolicy_checkDestroy(name string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil && strings.Contains(err.Error(), "404") || policy == nil {
 			return nil
@@ -207,7 +207,7 @@ func testResourceACLPolicy_checkDestroy(name string) resource.TestCheckFunc {
 
 func testResourceACLPolicy_delete(t *testing.T, name string) func() {
 	return func() {
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		_, err := client.ACLPolicies().Delete(name, nil)
 		if err != nil {
 			t.Fatalf("error deleting ACL policy: %s", err)
@@ -266,7 +266,7 @@ func testResourceACLPolicy_updateCheck(name string) resource.TestCheckFunc {
 			return fmt.Errorf("expected rules_hcl to be %q, is %q in state", rules_hcl, instanceState.Attributes["rules_hcl"])
 		}
 
-		client := testProvider.Meta().(ProviderConfig).client
+		client := testProvider.Meta().(ProviderConfig).Client
 		policy, _, err := client.ACLPolicies().Info(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back policy %q: %s", name, err)

@@ -35,7 +35,7 @@ func dataSourceSchedulerConfig() *schema.Resource {
 
 func dataSourceSchedulerConfigRead(d *schema.ResourceData, meta interface{}) error {
 
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	schedCfg, _, err := client.Operator().SchedulerGetConfiguration(nil)
 	if err != nil {

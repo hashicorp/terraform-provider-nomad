@@ -91,7 +91,7 @@ func dataSourcePlugin() *schema.Resource {
 
 func dataSourcePluginRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
+	client := providerConfig.Client
 
 	wait := d.Get("wait_for_registration").(bool)
 	waitForHealthy := d.Get("wait_for_healthy").(bool)

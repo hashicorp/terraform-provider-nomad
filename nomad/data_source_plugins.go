@@ -36,7 +36,7 @@ func dataSourcePlugins() *schema.Resource {
 }
 
 func pluginsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(ProviderConfig).client
+	client := meta.(ProviderConfig).Client
 
 	log.Printf("[DEBUG] Reading list of dynamic plugins from Nomad")
 	resp, _, err := client.CSIPlugins().List(nil)
