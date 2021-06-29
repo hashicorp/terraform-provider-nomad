@@ -27,6 +27,8 @@ jobs:
       - name: Run go vet
         run: make vet
       - name: Install vault, nomad, consul
+        env:
+          NOMAD_LICENSE: ${{ secrets.NOMAD_LICENSE }}
         run: |
           ./scripts/getnomad.sh
           ./scripts/getvault.sh
@@ -49,4 +51,3 @@ jobs:
         run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} make testacc
       - name: Stop nomad
         run: ./scripts/stop-nomad.sh
-
