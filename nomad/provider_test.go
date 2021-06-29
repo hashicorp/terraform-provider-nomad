@@ -127,6 +127,21 @@ func testCheckVaultEnabled(t *testing.T) {
 	}
 }
 
+func testCheckConsulEnabled(t *testing.T) {
+	client := testProvider.Meta().(ProviderConfig).client
+	consulEnabled := false
+	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
+		if node, _, err := client.Nodes().Info(nodes[0].ID, nil); err == nil {
+			if _, ok := node.Attributes["consul.version"]; ok {
+				consulEnabled = true
+			}
+		}
+	}
+	if !consulEnabled {
+		t.Skip("consul not detected as accessible")
+	}
+}
+
 func TestAccNomadProvider_Headers(t *testing.T) {
 	var provider *schema.Provider
 
