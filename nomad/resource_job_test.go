@@ -244,7 +244,11 @@ func TestResourceJob_csiController(t *testing.T) {
 func TestResourceJob_consulConnect(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.10.0-beta1") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckConsulEnabled(t)
+			testCheckMinVersion(t, "0.10.0-beta1")
+		},
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_consulConnectConfig,
