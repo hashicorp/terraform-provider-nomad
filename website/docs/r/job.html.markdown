@@ -102,6 +102,9 @@ resource "nomad_job" "app" {
 }
 ```
 
+~> **Note:** This option should be enabled whenever possible as it includes
+   support for newer jobspec entries.
+
 ### Variables
 
 HCL2 variables can be passed from Terraform to the jobspec parser through the
