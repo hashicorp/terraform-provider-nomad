@@ -77,6 +77,9 @@ func resourceSchedulerConfigurationCreate(d *schema.ResourceData, meta interface
 		if val, ok := preemptMap["service_scheduler_enabled"].(bool); ok {
 			config.PreemptionConfig.ServiceSchedulerEnabled = val
 		}
+		if val, ok := preemptMap["sysbatch_scheduler_enabled"].(bool); ok {
+			config.PreemptionConfig.SysBatchSchedulerEnabled = val
+		}
 		if val, ok := preemptMap["system_scheduler_enabled"].(bool); ok {
 			config.PreemptionConfig.SystemSchedulerEnabled = val
 		}
@@ -134,9 +137,10 @@ func resourceSchedulerConfigurationRead(d *schema.ResourceData, meta interface{}
 	}
 
 	premptMap := map[string]bool{
-		"batch_scheduler_enabled":   config.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
-		"service_scheduler_enabled": config.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
-		"system_scheduler_enabled":  config.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
+		"batch_scheduler_enabled":    config.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
+		"service_scheduler_enabled":  config.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
+		"sysbatch_scheduler_enabled": config.SchedulerConfig.PreemptionConfig.SysBatchSchedulerEnabled,
+		"system_scheduler_enabled":   config.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
 	}
 	return d.Set("preemption_config", premptMap)
 }

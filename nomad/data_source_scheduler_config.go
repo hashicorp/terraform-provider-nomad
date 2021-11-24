@@ -46,9 +46,10 @@ func dataSourceSchedulerConfigRead(d *schema.ResourceData, meta interface{}) err
 	d.SetId(resource.UniqueId())
 
 	premptMap := map[string]bool{
-		"batch_scheduler_enabled":   schedCfg.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
-		"service_scheduler_enabled": schedCfg.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
-		"system_scheduler_enabled":  schedCfg.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
+		"batch_scheduler_enabled":    schedCfg.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
+		"service_scheduler_enabled":  schedCfg.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
+		"sysbatch_scheduler_enabled": schedCfg.SchedulerConfig.PreemptionConfig.SysBatchSchedulerEnabled,
+		"system_scheduler_enabled":   schedCfg.SchedulerConfig.PreemptionConfig.SystemSchedulerEnabled,
 	}
 
 	sw := helper.NewStateWriter(d)
