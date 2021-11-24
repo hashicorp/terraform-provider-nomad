@@ -285,24 +285,19 @@ func TestResourceJob_consulConnect(t *testing.T) {
 	})
 }
 
-// TODO: Uncomment once the Terraform Provider SDK is updated to v2.
-// func TestResourceJob_consulNamespace(t *testing.T) {
-// 	r.Test(t, r.TestCase{
-// 		Providers: testProviders,
-// 		ExternalProviders: map[string]r.ExternalProvider{
-// 			"consul": {},
-// 		},
-// 		// TODO: check for Consul Enterprise.
-// 		PreCheck: func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.1.0-beta1+ent") },
-// 		Steps: []r.TestStep{
-// 			{
-// 				Config: testResourceJob_consulNamespaceConfig,
-// 				Check:  testResourceJob_consulNamespaceCheck,
-// 			},
-// 		},
-// 		CheckDestroy: nil,
-// 	})
-// }
+func TestResourceJob_consulNamespace(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.1.0") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_consulNamespaceConfig,
+				Check:  testResourceJob_consulNamespaceCheck,
+			},
+		},
+		CheckDestroy: nil,
+	})
+}
 
 func TestResourceJob_cpuCores(t *testing.T) {
 	r.Test(t, r.TestCase{
@@ -2019,70 +2014,14 @@ func testResourceJob_consulNamespaceCheck(s *terraform.State) error {
 	providerConfig := testProvider.Meta().(ProviderConfig)
 	client := providerConfig.client
 
-	// Find alloc for out test job.
-	allocs, _, err := client.Allocations().List(nil)
+	jobSpec, _, err := client.Jobs().Info(jobID, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query job: %v", err)
 	}
-
-	var foundAllocID string
-	for _, alloc := range allocs {
-		if alloc.JobID == jobID {
-			foundAllocID = alloc.ID
-			break
-		}
-	}
-
-	foundAlloc, _, err := client.Allocations().Info(foundAllocID, nil)
-	if err != nil {
-		return err
-	}
-	if foundAlloc == nil {
-		return fmt.Errorf("failed to find alloc for job %q", jobID)
-	}
-
-	// Wait for alloc to run.
-	retries := 100
-	for ; retries > 0; retries-- {
-		foundAlloc, _, err = client.Allocations().Info(foundAllocID, nil)
-		if err != nil {
-			return err
-		}
-
-		if foundAlloc.ClientStatus == api.AllocClientStatusRunning {
-			break
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
-	if retries == 0 {
-		return fmt.Errorf("timeout waiting for alloc %q to run", foundAllocID)
-	}
-
-	// Read stdout log and check if key value is present.
-	var stdoutString string
-
-	retries = 100
-	for ; retries > 0; retries-- {
-		stdout, err := client.AllocFS().Cat(foundAlloc, "alloc/logs/sleep.stdout.0", nil)
-		if err != nil {
-			return err
-		}
-
-		stdoutBytes, err := ioutil.ReadAll(stdout)
-		if len(stdoutBytes) > 0 {
-			stdoutString = string(stdoutBytes)
-			break
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
-	if retries == 0 {
-		return fmt.Errorf("timeout waiting for alloc %q stdout logs", foundAllocID)
-	}
-
-	if !strings.Contains(stdoutString, "hello") {
-		return fmt.Errorf("alloc stdout doesn't have Consul key")
+	want := "dev"
+	got := jobSpec.TaskGroups[0].Consul.Namespace
+	if want != got {
+		return fmt.Errorf("Consul namespace is %q, want %q", got, want)
 	}
 
 	return nil
@@ -2914,19 +2853,6 @@ EOT
 `
 
 var testResourceJob_consulNamespaceConfig = `
-resource "consul_namespace" "tf_test_consul_namespace" {
-  name = "tf-test-consul-namespace"
-}
-
-resource "consul_keys" "tf_test_consul_namespace" {
-  namespace = consul_namespace.tf_test_consul_namespace.name
-
-  key {
-    path  = "tf_test_consul_namespace"
-    value = "hello"
-  }
-}
-
 resource "nomad_job" "test_consul_namespace" {
   hcl2 {
     enabled = true
@@ -2939,7 +2865,7 @@ job "test-consul-namespace" {
   group "sleep" {
 
     consul {
-      namespace = "${consul_namespace.tf_test_consul_namespace.name}"
+      namespace = "dev"
     }
 
     task "sleep" {

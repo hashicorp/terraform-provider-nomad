@@ -33,6 +33,11 @@ func TestSchedulerConfig_basic(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr(
 						"nomad_scheduler_config.config",
+						"preemption_config.sysbatch_scheduler_enabled",
+						"true",
+					),
+					resource.TestCheckResourceAttr(
+						"nomad_scheduler_config.config",
 						"preemption_config.system_scheduler_enabled",
 						"true",
 					),
@@ -121,6 +126,7 @@ const testAccNomadSchedulerConfigSpread = `
 resource "nomad_scheduler_config" "config" {
 	scheduler_algorithm = "spread"
 	preemption_config = {
+		sysbatch_scheduler_enabled = true
 		system_scheduler_enabled = true
 		batch_scheduler_enabled = true
 		service_scheduler_enabled = true
@@ -132,6 +138,7 @@ const testAccNomadSchedulerConfigBinpack = `
 resource "nomad_scheduler_config" "config" {
 	scheduler_algorithm = "binpack"
 	preemption_config = {
+		sysbatch_scheduler_enabled = true
 		system_scheduler_enabled = false
 		batch_scheduler_enabled = false
 		service_scheduler_enabled = true
@@ -144,6 +151,7 @@ resource "nomad_scheduler_config" "config" {
 	memory_oversubscription_enabled = true
 	scheduler_algorithm = "binpack"
 	preemption_config = {
+		sysbatch_scheduler_enabled = true
 		system_scheduler_enabled = false
 		batch_scheduler_enabled = false
 		service_scheduler_enabled = true
@@ -158,6 +166,7 @@ resource "nomad_scheduler_config" "config" {
 	memory_oversubscription_enabled = true
 	scheduler_algorithm = "binpack"
 	preemption_config = {
+		sysbatch_scheduler_enabled = true
 		system_scheduler_enabled = false
 		batch_scheduler_enabled = false
 		service_scheduler_enabled = true
