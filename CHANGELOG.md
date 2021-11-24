@@ -1,5 +1,7 @@
 ## 1.4.16 (Unreleased)
 
+* **Target Nomad 1.2.0**: updated the Nomad client to support Nomad API and jobspec version 1.2.0 ([#256](https://github.com/hashicorp/terraform-provider-nomad/pull/256))
+
 BUG FIXES:
 * data source/nomad_plugin: wait for the correct amount of expected controllers ([#234](https://github.com/hashicorp/terraform-provider-nomad/pull/234))
 * data source/nomad_plugin: wait for the correct amount of healthy nodes ([#235](https://github.com/hashicorp/terraform-provider-nomad/pull/235))
