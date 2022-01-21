@@ -1,8 +1,10 @@
 package nomad
 
 import (
+	"log"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
@@ -122,6 +124,50 @@ func TestSchedulerConfig_basic(t *testing.T) {
 	})
 }
 
+func TestSchedulerConfig_memoryOversubscriptionEnabledOutsideTest(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testFinalConfiguration,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccNomadSchedulerConfigMemoryOversubscriptionOff,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"nomad_scheduler_config.config",
+						"memory_oversubscription_enabled",
+						"false",
+					),
+				),
+			},
+			{
+				PreConfig: func() {
+					providerConfig := testProvider.Meta().(ProviderConfig)
+					client := providerConfig.client
+					operator := client.Operator()
+
+					config := api.SchedulerConfiguration{
+						MemoryOversubscriptionEnabled: true,
+						PreemptionConfig: api.PreemptionConfig{
+							SysBatchSchedulerEnabled: true,
+							SystemSchedulerEnabled:   false,
+							BatchSchedulerEnabled:    false,
+							ServiceSchedulerEnabled:  true,
+						},
+					}
+					if _, _, err := operator.SchedulerSetConfiguration(&config, nil); err != nil {
+						log.Printf("[ERROR] upserting scheduler configuration: %s", err.Error())
+					}
+					log.Printf("[DEBUG] Upserted scheduler configuration")
+				},
+				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 const testAccNomadSchedulerConfigSpread = `
 resource "nomad_scheduler_config" "config" {
 	scheduler_algorithm = "spread"
@@ -146,6 +192,18 @@ resource "nomad_scheduler_config" "config" {
 }
 `
 
+const testAccNomadSchedulerConfigMemoryOversubscriptionOff = `
+resource "nomad_scheduler_config" "config" {
+	memory_oversubscription_enabled = false
+	scheduler_algorithm = "binpack"
+	preemption_config = {
+		sysbatch_scheduler_enabled = true
+		system_scheduler_enabled = false
+		batch_scheduler_enabled = false
+		service_scheduler_enabled = true
+	}
+}
+`
 const testAccNomadSchedulerConfigMemoryOversubscription = `
 resource "nomad_scheduler_config" "config" {
 	memory_oversubscription_enabled = true
