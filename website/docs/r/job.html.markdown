@@ -233,6 +233,12 @@ The following arguments are supported:
   - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
     [HCL2 filesystem functions](#filesystem-functions)
 
+- `consul_token` `(string: <optional>)` - Consul token used when registering this job.
+  Will fallback to the value declared in Nomad provider configuration, if any.
+
+- `vault_token` `(string: <optional>)` - Vault token used when registering this job.
+  Will fallback to the value declared in Nomad provider configuration, if any.
+
 ### Timeouts
 
 `nomad_job` provides the following [`Timeouts`][tf_docs_timeouts] configuration
