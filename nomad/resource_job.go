@@ -167,6 +167,20 @@ func resourceJob() *schema.Resource {
 				Optional:    true,
 				Type:        schema.TypeBool,
 			},
+
+			"consul_token": {
+				Description: "The Consul token used to submit this job.",
+				Optional:    true,
+				Sensitive:   true,
+				Type:        schema.TypeString,
+			},
+
+			"vault_token": {
+				Description: "The Vault token used to submit this job.",
+				Optional:    true,
+				Sensitive:   true,
+				Type:        schema.TypeString,
+			},
 		},
 	}
 }
@@ -319,8 +333,20 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	// Use consul token declared on resource, if present.
+	consulToken := d.Get("consul_token").(string)
+	if consulToken == "" {
+		consulToken = *providerConfig.consulToken
+	}
+
+	// Use vault token declared on resource, if present.
+	vaultToken := d.Get("vault_token").(string)
+	if vaultToken == "" {
+		vaultToken = *providerConfig.vaultToken
+	}
+
 	// Parse jobspec.
-	job, err := parseJobspec(jobspecRaw, jobParserConfig, providerConfig.vaultToken, providerConfig.consulToken)
+	job, err := parseJobspec(jobspecRaw, jobParserConfig, &vaultToken, &consulToken)
 	if err != nil {
 		return err
 	}
@@ -590,9 +616,21 @@ func resourceJobCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		return err
 	}
 
+	// Use consul token declared on resource, if present.
+	consulToken := d.Get("consul_token").(string)
+	if consulToken == "" {
+		consulToken = *providerConfig.consulToken
+	}
+
+	// Use vault token declared on resource, if present.
+	vaultToken := d.Get("vault_token").(string)
+	if vaultToken == "" {
+		vaultToken = *providerConfig.vaultToken
+	}
+
 	// Parse jobspec
 	// Catch syntax errors client-side during plan
-	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig, providerConfig.vaultToken, providerConfig.consulToken)
+	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig, &vaultToken, &consulToken)
 	if err != nil {
 		return err
 	}
