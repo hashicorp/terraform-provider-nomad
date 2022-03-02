@@ -1,3 +1,11 @@
+## 1.4.17 (Unreleased)
+
+IMPROVEMENTS:
+* resource/nomad_job: allow passing Consul and Vault token through the job resource ([#261](https://github.com/hashicorp/terraform-provider-nomad/pull/261))
+
+BUG FIXES:
+* resource/scheduler_config: fixed an issue that caused the value of `memory_oversubscription_enabled` to never be set ([#259](https://github.com/hashicorp/terraform-provider-nomad/pull/259))
+
 ## 1.4.16 (November 24, 2021)
 
 * **Target Nomad 1.2.0**: updated the Nomad client to support Nomad API and jobspec version 1.2.0 ([#256](https://github.com/hashicorp/terraform-provider-nomad/pull/256))
