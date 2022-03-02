@@ -136,6 +136,10 @@ func resourceSchedulerConfigurationRead(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
+	if err := d.Set("memory_oversubscription_enabled", config.SchedulerConfig.MemoryOversubscriptionEnabled); err != nil {
+		return err
+	}
+
 	premptMap := map[string]bool{
 		"batch_scheduler_enabled":    config.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
 		"service_scheduler_enabled":  config.SchedulerConfig.PreemptionConfig.ServiceSchedulerEnabled,
