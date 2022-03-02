@@ -18,6 +18,10 @@ Nomad cluster often runs core system services that are ideally setup during
 infrastructure creation. This resource is ideal for the latter type of job, but
 can be used to manage any job within Nomad.
 
+~> **Warning:** this resource will store any sensitive values placed in
+  `consul_token` or `vault_token` in the Terraform's state file. Take care to
+  [protect your state file](/docs/state/sensitive-data.html).
+
 ## Example Usage
 
 Registering a job from a jobspec file:
