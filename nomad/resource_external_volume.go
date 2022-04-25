@@ -284,8 +284,11 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		if val, ok := mountOptsMap["fs_type"].(string); ok {
 			volume.MountOptions.FSType = val
 		}
-		if val, ok := mountOptsMap["mount_flags"].([]string); ok {
-			volume.MountOptions.MountFlags = val
+		if mountFlagsList, ok := mountOptsMap["mount_flags"].([]interface{}); ok {
+			volume.MountOptions.MountFlags = []string{}
+			for _, rawflag := range mountFlagsList {
+				volume.MountOptions.MountFlags = append(volume.MountOptions.MountFlags, rawflag.(string))
+			}
 		}
 	}
 
