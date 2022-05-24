@@ -347,8 +347,12 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		if val, ok := mountOptsMap["fs_type"].(string); ok {
 			volume.MountOptions.FSType = val
 		}
-		if val, ok := mountOptsMap["mount_flags"].([]string); ok {
-			volume.MountOptions.MountFlags = val
+		rawMountFlags := mountOptsMap["mount_flags"].([]interface{})
+		volume.MountOptions.MountFlags = make([]string, len(rawMountFlags))
+		for index, value := range rawMountFlags {
+			if val, ok := value.(string); ok {
+				volume.MountOptions.MountFlags[index] = val
+			}
 		}
 	}
 
