@@ -142,6 +142,31 @@ func testCheckConsulEnabled(t *testing.T) {
 	}
 }
 
+func testCheckCSIPluginAvailable(t *testing.T, pluginID string) {
+	client := testProvider.Meta().(ProviderConfig).client
+	plugins, _, err := client.CSIPlugins().List(nil)
+	if err != nil {
+		t.Skipf("failed to detect CSI plugin %s: %v", pluginID, err)
+	}
+	if len(plugins) == 0 {
+		t.Skipf("no CSI plugins available")
+	}
+
+	for _, plugin := range plugins {
+		if plugin.ID == pluginID {
+			if plugin.ControllersHealthy == 0 {
+				t.Skipf("CSI plugin %s has 0 healthy controllers", pluginID)
+			}
+			if plugin.NodesHealthy == 0 {
+				t.Skipf("CSI plugin %s has 0 healthy nodes", pluginID)
+			}
+
+			// Plugin found and healthy.
+			return
+		}
+	}
+}
+
 func TestAccNomadProvider_Headers(t *testing.T) {
 	var provider *schema.Provider
 

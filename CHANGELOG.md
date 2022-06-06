@@ -4,6 +4,7 @@ IMPROVEMENTS:
 * resource/nomad_job: allow passing Consul and Vault token through the job resource ([#261](https://github.com/hashicorp/terraform-provider-nomad/pull/261))
 
 BUG FIXES:
+* resource/external_volume: fixed a bug where volume mount flags were not set ([#266](https://github.com/hashicorp/terraform-provider-nomad/pull/266))
 * resource/scheduler_config: fixed an issue that caused the value of `memory_oversubscription_enabled` to never be set ([#259](https://github.com/hashicorp/terraform-provider-nomad/pull/259))
 
 ## 1.4.16 (November 24, 2021)
