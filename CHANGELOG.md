@@ -5,6 +5,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 * resource/scheduler_config: fixed an issue that caused the value of `memory_oversubscription_enabled` to never be set ([#259](https://github.com/hashicorp/terraform-provider-nomad/pull/259))
+* resource/volume: fixed a bug where volume mount flags were not set ([#269](https://github.com/hashicorp/terraform-provider-nomad/pull/269))
 
 ## 1.4.16 (November 24, 2021)
 
