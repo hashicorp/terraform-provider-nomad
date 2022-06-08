@@ -1,27 +1,18 @@
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+
 jobs:
   test:
-    env:
-      GO111MODULE: on
-    strategy:
-      fail-fast: true
-      matrix:
-        go-version: [1.16.4]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
+      - id: go-version
+        run: echo "::set-output name=version::$(cat ./.go-version)"
       - name: Install Go
-        uses: actions/setup-go@37335c7bb261b353407cff977110895fa0b4f7d8
+        uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ steps.go-version.outputs.version }}
       - name: Checkout code
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        uses: actions/checkout@v3
       - name: Setup
         run: sudo apt-get -y install httpie
       - name: Run go vet
@@ -49,5 +40,15 @@ jobs:
           if-no-files-found: warn
       - name: Run acceptance tests
         run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} make testacc
+      - name: Upload logs on failure
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: logs
+          path: |
+            /tmp/consul.log
+            /tmp/nomad.log
+            /tmp/vault.log
+          if-no-files-found: warn
       - name: Stop nomad
         run: ./scripts/stop-nomad.sh
