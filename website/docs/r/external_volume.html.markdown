@@ -44,6 +44,23 @@ resource "nomad_external_volume" "mysql_volume" {
   mount_options {
     fs_type = "ext4"
   }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          rack = "R1"
+          zone = "us-east-1a"
+        }
+      }
+
+      topology {
+        segments = {
+          rack = "R2"
+        }
+      }
+    }
+  }
 }
 ```
 
@@ -61,6 +78,7 @@ The following arguments are supported:
 - `capacity_min`: `(string: <optional>)` - Option to signal a minimum volume size. This may not be supported by all storage providers.
 - `capacity_max`: `(string: <optional>)` - Option to signal a maximum volume size. This may not be supported by all storage providers.
 - `capability`: `(`[`Capability`](#capability-1)`: <required>)` - Options for validating the capability of a volume.
+- `topology_request`: `(`[`TopologyRequest`](#topology-request)`: <optional>)` - Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.
 - `mount_options`: `(block: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
   - `fs_type`: `(string: optional)` - The file system type.
   - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
@@ -79,6 +97,16 @@ The following arguments are supported:
   - `block-device`
   - `file-system`
 
+### Topology Request
+
+- `required`: `(`[`Topology`](#topology)`: <optional>)` - Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.
+- `preferred`: `(`[`Topology`](#topology)`: <optional>)` - Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.
+
+### Topology
+
+- `topology`: `(List of segments: <required>)` - Defines the location for the volume.
+  - `segments`: `(map[string]string)` - Define the attributes for the topology request.
+
 In addition to the above arguments, the following attributes are exported and
 can be referenced:
 
@@ -92,3 +120,4 @@ can be referenced:
 - `nodes_healthy`: `(integer)`
 - `nodes_expected`: `(integer)`
 - `schedulable`: `(boolean)`
+- `topologies`: `(List of topologies)`

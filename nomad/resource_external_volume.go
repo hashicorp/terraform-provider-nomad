@@ -190,6 +190,71 @@ func resourceExternalVolume() *schema.Resource {
 				},
 			},
 
+			"topology_request": {
+				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"required": {
+							Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
+							Optional:    true,
+							Type:        schema.TypeList,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"topology": {
+										Description: "Defines the location for the volume.",
+										Required:    true,
+										Type:        schema.TypeList,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"segments": {
+													Description: "Define the attributes for the topology request.",
+													Required:    true,
+													Type:        schema.TypeMap,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						"preferred": {
+							Description: "Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.",
+							Optional:    true,
+							Type:        schema.TypeList,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"topology": {
+										Description: "Defines the location for the volume.",
+										Required:    true,
+										Type:        schema.TypeList,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"segments": {
+													Description: "Define the attributes for the topology request.",
+													Required:    true,
+													Type:        schema.TypeMap,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+
 			"controller_required": {
 				Computed: true,
 				Type:     schema.TypeBool,
@@ -229,6 +294,21 @@ func resourceExternalVolume() *schema.Resource {
 				Computed: true,
 				Type:     schema.TypeBool,
 			},
+			"topologies": {
+				Computed: true,
+				Type:     schema.TypeList,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"segments": {
+							Computed: true,
+							Type:     schema.TypeMap,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -254,6 +334,11 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("failed to unpack capabilities: %v", err)
 	}
 
+	topologyRequest, err := parseVolumeTopologyRequest(d.Get("topology_request"))
+	if err != nil {
+		return fmt.Errorf("failed to unpack topology request: %v", err)
+	}
+
 	volume := &api.CSIVolume{
 		ID:                    d.Get("volume_id").(string),
 		PluginID:              d.Get("plugin_id").(string),
@@ -263,6 +348,7 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		RequestedCapacityMin:  int64(capacityMin),
 		RequestedCapacityMax:  int64(capacityMax),
 		RequestedCapabilities: capabilities,
+		RequestedTopologies:   topologyRequest,
 		Secrets:               toMapStringString(d.Get("secrets")),
 		Parameters:            toMapStringString(d.Get("parameters")),
 	}
