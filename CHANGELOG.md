@@ -1,5 +1,8 @@
 ## 1.4.17 (Unreleased)
 
+BACKWARDS INCOMPATIBILITIES:
+* provider: Don't read the `NOMAD_NAMESPACE` environment variable. This is a potentially breaking change, as it modifies the previous behaviour, but this was never intended to be supported. If you relied on this environment variable make sure you set the namespace in each resource before upgrading. ([#271](https://github.com/hashicorp/terraform-provider-nomad/pull/271))
+
 IMPROVEMENTS:
 * resource/nomad_job: allow passing Consul and Vault token through the job resource ([#261](https://github.com/hashicorp/terraform-provider-nomad/pull/261))
 
