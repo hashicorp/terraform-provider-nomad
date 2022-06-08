@@ -174,6 +174,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.Region = d.Get("region").(string)
 	conf.SecretID = d.Get("secret_id").(string)
 
+	// The namespace is set per-resource but `DefaultConfig` loads it from the
+	// NOMAD_NAMESPACE env var automatically, so we need unset it.
+	conf.Namespace = ""
+
 	// HTTP basic auth configuration.
 	httpAuth := d.Get("http_auth").(string)
 	if httpAuth != "" {
