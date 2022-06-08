@@ -5,7 +5,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - id: go-version
+      - name: Read Go version
+        id: go-version
         run: echo "::set-output name=version::$(cat ./.go-version)"
       - name: Install Go
         uses: actions/setup-go@v3
@@ -26,27 +27,25 @@ jobs:
         env:
           NOMAD_LICENSE: ${{ secrets.NOMAD_LICENSE }}
         run: ./scripts/start-nomad.sh
-      - name: Upload logs on failure
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: logs
-          path: |
-            /tmp/consul.log
-            /tmp/nomad.log
-            /tmp/vault.log
-          if-no-files-found: warn
       - name: Run acceptance tests
         run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} make testacc
-      - name: Upload logs on failure
+      - name: Make Nomad data dir and log file readable
+        if: always()
+        run: |
+          sudo chmod -R 777 /tmp/nomad
+          sudo chmod 666 /tmp/nomad.log
+      - name: Upload logs
         uses: actions/upload-artifact@v2
-        if: failure()
+        if: always()
         with:
           name: logs
           path: |
             /tmp/consul.log
             /tmp/nomad.log
             /tmp/vault.log
+            /tmp/nomad/data/**/alloc/logs/plugin*
+            !/tmp/nomad/data/**/alloc/logs/*.fifo
           if-no-files-found: warn
+          retention-days: 3
       - name: Stop nomad
         run: ./scripts/stop-nomad.sh
