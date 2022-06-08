@@ -1,7 +1,12 @@
 ## 1.4.17 (Unreleased)
 
+* **Target Nomad 1.3.0**: updated the Nomad client to support Nomad API and jobspec version 1.3.0 ([#270](https://github.com/hashicorp/terraform-provider-nomad/issues/270))
+
 IMPROVEMENTS:
+* provider: update Go to 1.17 ([#270](https://github.com/hashicorp/terraform-provider-nomad/pull/270))
+* resource/nomad_external_volume: add support for topologies ([#270](https://github.com/hashicorp/terraform-provider-nomad/issues/270))
 * resource/nomad_job: allow passing Consul and Vault token through the job resource ([#261](https://github.com/hashicorp/terraform-provider-nomad/pull/261))
+* resource/nomad_volume: add support for topologies ([#270](https://github.com/hashicorp/terraform-provider-nomad/issues/270))
 
 BUG FIXES:
 * resource/external_volume: fixed a bug where volume mount flags were not set ([#266](https://github.com/hashicorp/terraform-provider-nomad/pull/266))
