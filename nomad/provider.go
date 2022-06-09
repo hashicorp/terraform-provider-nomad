@@ -1,10 +1,14 @@
 package nomad
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/command/config"
@@ -196,6 +200,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.TLSConfig.ClientCertPEM = []byte(d.Get("cert_pem").(string))
 	conf.TLSConfig.ClientKeyPEM = []byte(d.Get("key_pem").(string))
 
+	if _, ok := os.LookupEnv("TF_ACC"); ok {
+		// Revert the Nomad API client to non-pooled to avoid EOF errors when
+		// running the test suite since it instantiates the provider multiple
+		// times, creating several clients in parallel.
+		// https://github.com/hashicorp/nomad/pull/12492
+		conf.HttpClient = nonPooledHttpClient()
+	}
+
 	// Set headers if provided
 	headers := d.Get("headers").([]interface{})
 	parsedHeaders := make(http.Header)
@@ -234,4 +246,19 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	return res, nil
+}
+
+func nonPooledHttpClient() *http.Client {
+	httpClient := cleanhttp.DefaultClient()
+	transport := httpClient.Transport.(*http.Transport)
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	// Default to http/1: alloc exec/websocket aren't supported in http/2
+	// well yet: https://github.com/gorilla/websocket/issues/417
+	transport.ForceAttemptHTTP2 = false
+
+	return httpClient
 }
