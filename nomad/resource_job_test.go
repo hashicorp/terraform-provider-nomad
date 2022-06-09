@@ -1811,7 +1811,8 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 					}
 				}
 			},
-			"OnUpdate": "require_healthy"
+			"OnUpdate": "require_healthy",
+			"Provider": "consul"
 		}
 	]`), &expServices)
 	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
@@ -1907,7 +1908,8 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 					}
 				}
 			},
-		    "OnUpdate": "require_healthy"
+		    "OnUpdate": "require_healthy",
+			"Provider": "consul"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -1983,7 +1985,8 @@ func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) er
 					}
 				}
 			},
-			"OnUpdate": "require_healthy"
+			"OnUpdate": "require_healthy",
+			"Provider": "consul"
 		}
 	]`), &expServices)
 	if err != nil {

@@ -173,6 +173,46 @@ func resourceVolume() *schema.Resource {
 				},
 			},
 
+			"topology_request": {
+				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"required": {
+							Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
+							Optional:    true,
+							Type:        schema.TypeList,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"topology": {
+										Description: "Defines the location for the volume.",
+										Required:    true,
+										Type:        schema.TypeList,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"segments": {
+													Description: "Define attributes for the topology request.",
+													Required:    true,
+													Type:        schema.TypeMap,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						// Volume registration does not support preferred topologies.
+						// https://www.nomadproject.io/docs/commands/volume/register#topology_request-parameters
+					},
+				},
+			},
+
 			"context": {
 				Description: "An optional key-value map of strings passed directly to the CSI plugin to validate the volume.",
 				Optional:    true,
@@ -227,6 +267,21 @@ func resourceVolume() *schema.Resource {
 			"schedulable": {
 				Computed: true,
 				Type:     schema.TypeBool,
+			},
+			"topologies": {
+				Computed: true,
+				Type:     schema.TypeList,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"segments": {
+							Computed: true,
+							Type:     schema.TypeMap,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
 			},
 
 			// COMPAT(1.5.0)
@@ -314,11 +369,17 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	topologyRequest, err := parseVolumeTopologyRequest(d.Get("topology_request"))
+	if err != nil {
+		return fmt.Errorf("failed to unpack topology request: %v", err)
+	}
+
 	volume := &api.CSIVolume{
 		ID:                    d.Get("volume_id").(string),
 		Name:                  d.Get("name").(string),
 		ExternalID:            d.Get("external_id").(string),
 		RequestedCapabilities: capabilities,
+		RequestedTopologies:   topologyRequest,
 		Secrets:               toMapStringString(d.Get("secrets")),
 		Parameters:            toMapStringString(d.Get("parameters")),
 		Context:               toMapStringString(d.Get("context")),
@@ -364,7 +425,7 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	_, err := client.CSIVolumes().Register(volume, opts)
+	_, err = client.CSIVolumes().Register(volume, opts)
 	if err != nil {
 		return fmt.Errorf("error registering volume: %s", err)
 	}
@@ -440,6 +501,7 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
+	d.Set("topologies", flattenVolumeTopologies(volume.Topologies))
 	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
 	// with the response payload; they will remain as is.
 
@@ -473,6 +535,110 @@ func parseVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) 
 	}
 
 	return capabilities, nil
+}
+
+// parseVolumeTopologyRequest parses a Terraform state representation of volume
+// topology request into its Nomad API representation.
+func parseVolumeTopologyRequest(i interface{}) (*api.CSITopologyRequest, error) {
+	req := &api.CSITopologyRequest{}
+	var err error
+
+	topologyRequestList, ok := i.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for topology_request, expected []interface{}", i)
+	}
+
+	if len(topologyRequestList) == 0 {
+		return nil, nil
+	}
+
+	topologyMap, ok := topologyRequestList[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for topology_request item, expected map[string]interface{}", topologyRequestList[0])
+	}
+
+	if required, ok := topologyMap["required"]; ok {
+		req.Required, err = parseVolumeTopologies("required", required)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse required CSI topology: %v", err)
+		}
+	}
+
+	if preferred, ok := topologyMap["preferred"]; ok {
+		req.Preferred, err = parseVolumeTopologies("preferred", preferred)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse preferred CSI topology: %v", err)
+		}
+	}
+
+	return req, nil
+}
+
+// parseVolumeTopologis parses a Terraform state representation of volume
+// topology into its Nomad API representation.
+func parseVolumeTopologies(prefix string, i interface{}) ([]*api.CSITopology, error) {
+	var topologies []*api.CSITopology
+
+	topologiesList, ok := i.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for %s.topology, expected []interface{}", i, prefix)
+	}
+
+	if len(topologiesList) == 0 {
+		return topologies, nil
+	}
+
+	topologiesListMap, ok := topologiesList[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for %s.topology, expected map[string]interface{}", topologiesList[0], prefix)
+	}
+
+	topologiesListMapList, ok := topologiesListMap["topology"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for %s.topology, expected []interface{}", topologiesListMap["topology"], prefix)
+	}
+
+	for j, topologyItem := range topologiesListMapList {
+		topologyItemMap, ok := topologyItem.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid type %T for %s.topology.%d, expected map[string]interface{}",
+				topologyItem, prefix, j)
+		}
+		segmentsMap, ok := topologyItemMap["segments"].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid type %T for %s.topology.%d.segments, expected map[string]interface{}",
+				topologyItemMap["segments"], prefix, j)
+		}
+
+		segmentsMapString := make(map[string]string, len(segmentsMap))
+		for k, v := range segmentsMap {
+			segmentsMapString[k] = v.(string)
+		}
+		topologies = append(topologies, &api.CSITopology{
+			Segments: segmentsMapString,
+		})
+	}
+
+	return topologies, nil
+}
+
+// flattenVolumeTopologies turns a list of Nomad API CSITopology structs into
+// the flat representation used by Terraform.
+func flattenVolumeTopologies(topologies []*api.CSITopology) []interface{} {
+	topologiesList := []interface{}{}
+
+	for _, topo := range topologies {
+		if topo == nil {
+			continue
+		}
+		topoItem := make(map[string]interface{})
+		topoItem["segments"] = topo.Segments
+		topologiesList = append(topologiesList, topoItem)
+	}
+
+	return topologiesList
 }
 
 // resourceVolumeStateUpgradeV0 migrates a nomad_volume resource schema from v0 to v1.

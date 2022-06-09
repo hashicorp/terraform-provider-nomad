@@ -45,6 +45,31 @@ resource "nomad_external_volume" "test" {
     fs_type     = "ext4"
 	mount_flags = ["ro", "noatime"]
   }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          rack = "R1"
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+
+      topology {
+        segments = {
+          rack = "R2"
+        }
+      }
+    }
+
+    preferred {
+      topology {
+        segments = {
+          zone = "us-east-1a"
+        }
+      }
+    }
+  }
 }
 				`,
 				Check: func(s *terraform.State) error {
@@ -74,7 +99,11 @@ resource "nomad_external_volume" "test" {
 						"mount_options.0.mount_flags.0": "ro",
 						"mount_options.0.mount_flags.1": "noatime",
 						"mount_options.0.fs_type":       "ext4",
-						"capability.#":                  "1", // capability is a set, so it's hard to infer their indexes.
+						"topology_request.0.required.0.topology.0.segments.rack":                       "R1",
+						"topology_request.0.required.0.topology.0.segments.topology.hostpath.csi/node": "node-0",
+						"topology_request.0.required.0.topology.1.segments.rack":                       "R2",
+						"topology_request.0.preferred.0.topology.0.segments.zone":                      "us-east-1a",
+						"capability.#": "1", // capability is a set, so it's hard to infer their indexes.
 					}
 					for k, v := range expected {
 						got := instanceState.Attributes[k]
@@ -126,13 +155,51 @@ resource "nomad_external_volume" "test" {
 					}
 
 					expectedCapabilities := []*api.CSIVolumeCapability{
-						&api.CSIVolumeCapability{
+						{
 							AccessMode:     api.CSIVolumeAccessModeSingleNodeWriter,
 							AttachmentMode: api.CSIVolumeAttachmentModeFilesystem,
 						},
 					}
 					if diff := cmp.Diff(expectedCapabilities, volume.RequestedCapabilities); diff != "" {
 						t.Errorf("RequestedCapabilities mismatch (-want +got):\n%s", diff)
+					}
+
+					expectedTopologyRequest := &api.CSITopologyRequest{
+						Required: []*api.CSITopology{
+							{
+								Segments: map[string]string{
+									"topology.hostpath.csi/node": "node-0",
+									"rack":                       "R1",
+								},
+							},
+							{
+								Segments: map[string]string{
+									"rack": "R2",
+								},
+							},
+						},
+						Preferred: []*api.CSITopology{
+							{
+								Segments: map[string]string{
+									"zone": "us-east-1a",
+								},
+							},
+						},
+					}
+					if diff := cmp.Diff(expectedTopologyRequest, volume.RequestedTopologies); diff != "" {
+						t.Errorf("RequestedTopologies mismatch (-want +got):\n%s", diff)
+					}
+
+					expectedTopologies := []*api.CSITopology{
+						nil, // not sure why the hostpath plugin returns this nil topology.
+						{
+							Segments: map[string]string{
+								"topology.hostpath.csi/node": "node-0",
+							},
+						},
+					}
+					if diff := cmp.Diff(expectedTopologies, volume.Topologies); diff != "" {
+						t.Errorf("Topologies mismatch (-want +got):\n%s", diff)
 					}
 
 					return nil
