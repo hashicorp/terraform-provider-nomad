@@ -167,6 +167,42 @@ func testCheckCSIPluginAvailable(t *testing.T, pluginID string) {
 	}
 }
 
+func TestAccNomadProvider_namespace(t *testing.T) {
+	var provider *schema.Provider
+	os.Setenv("NOMAD_NAMESPACE", "doesnt-exist")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactoryInternal(&provider),
+		CheckDestroy:      testResourceJob_checkDestroy("provider-namespace-test"),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "nomad_job" "provider_namespace_test" {
+	jobspec = <<EOT
+		job "provider-namespace-test" {
+			datacenters = ["dc1"]
+			group "foo" {
+				task "foo" {
+					driver = "raw_exec"
+					config {
+						command = "/bin/sleep"
+						args = ["10"]
+					}
+				}
+			}
+		}
+	EOT
+}
+				`,
+				// We only need to test that this doesn't fail.
+			},
+		},
+	})
+
+	os.Unsetenv("NOMAD_NAMESPACE")
+}
+
 func TestAccNomadProvider_Headers(t *testing.T) {
 	var provider *schema.Provider
 
