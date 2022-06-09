@@ -32,6 +32,7 @@ jobs:
       - name: Run acceptance tests
         run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} make testacc
       - name: Stop nomad
+        if: always()
         run: ./scripts/stop-nomad.sh
       - name: Make Nomad data dir and log file readable
         if: always()
