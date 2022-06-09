@@ -1,4 +1,4 @@
-## 1.4.17 (Unreleased)
+## 1.4.17 (June 9, 2022)
 
 * **Target Nomad 1.3.0**: updated the Nomad client to support Nomad API and jobspec version 1.3.0 ([#270](https://github.com/hashicorp/terraform-provider-nomad/issues/270))
 
