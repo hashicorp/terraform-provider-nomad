@@ -106,10 +106,15 @@ resource "nomad_job" "app" {
 }
 ```
 
-~> **Note:** This option should be enabled whenever possible as it includes
+-> **Note:** This option should be enabled whenever possible as it includes
    support for newer jobspec entries.
 
 ### Variables
+
+~> **Warning:** mixing Nomad HCL2 variables and Terraform values may result in
+  plan faiilures. It's best to avoid using variables in job files and instead
+  use [string templates][tf_docs_string_template] or render a file with the
+  [`templatefile`][tf_docs_templatefile] Terraform function.
 
 HCL2 variables can be passed from Terraform to the jobspec parser through the
 `vars` attribute inside the `hcl2` block. The variable must also be declared
@@ -148,6 +153,52 @@ job "foo-hcl2" {
 }
 ```
 
+Variables must have known-values at plan time. This means that you will not be
+able to reference values from resoruces that don't exist in the Terraform state
+yet. Instead, use [string templates][tf_docs_string_template] or the
+[`templatefile`][tf_docs_templatefile] Terraform function to provide a fully
+rendered jobspec.
+
+```hcl
+resource "random_pet" "random_dc" {}
+
+# This resource will fail to plan because random_pet.random_dc.id is unknown.
+resource "nomad_job" "job_with_hcl2" {
+  jobspec = <<EOT
+variable "datacenter" {
+  type = string
+}
+
+job "example" {
+  datacenters = [var.datacenter]
+  ...
+}
+EOT
+
+  hcl2 {
+    enabled  = true
+    vars = {
+      datacenter = random_pet.random_dc.id
+    }
+  }
+}
+
+# This will work since Terraform will provide a fully rendered jobspec once it
+# knows the value of random_pet.random_dc.id.
+resource "nomad_job" "job_with_hcl2" {
+  jobspec = <<EOT
+job "example" {
+  datacenters = ["${random_pet.random_dc.id}"]
+  ...
+}
+EOT
+
+  hcl2 {
+    enabled  = true
+  }
+}
+```
+
 ### Filesystem functions
 
 Please note that [filesystem functions](https://www.nomadproject.io/docs/job-specification/hcl2/functions/file/abspath)
@@ -173,10 +224,8 @@ resource "nomad_job" "app" {
 
 If you do need to track changes to external files, you can use the
 [`local_file`](https://registry.terraform.io/providers/hashicorp/local/latest/docs/data-sources/file)
-data source and the
-[`templatefile`](https://www.terraform.io/docs/configuration/functions/templatefile.html)
-function to load the local file into Terraform and then render its content
-into the jobspec:
+data source and the [`templatefile`][tf_docs_templatefile] function to load the
+local file into Terraform and then render its content into the jobspec:
 
 ```hcl
 # main.tf
@@ -252,3 +301,5 @@ options when [`detach`](#detach) is set to `false`:
 - `update` `(string: "5m")` - Timeout when updating an existing job.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
+[tf_docs_templatefile]: https://www.terraform.io/docs/configuration/functions/templatefile.html
+[tf_docs_string_template]: https://www.terraform.io/language/expressions/strings#string-templates
