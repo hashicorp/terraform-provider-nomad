@@ -23,9 +23,10 @@ Set cluster scheduler configuration:
 resource "nomad_scheduler_config" "config" {
   scheduler_algorithm = "spread"
   preemption_config = {
-    system_scheduler_enabled  = true
-    batch_scheduler_enabled   = true
-    service_scheduler_enabled = true
+    system_scheduler_enabled   = true
+    batch_scheduler_enabled    = true
+    service_scheduler_enabled  = true
+    sysbatch_scheduler_enabled = true
   }
 }
 ```
@@ -40,3 +41,4 @@ The following arguments are supported:
   - `system_scheduler_enabled` `(bool: true)` - Specifies whether preemption for system jobs is enabled. Note that if this is set to true, then system jobs can preempt any other jobs.
   - `batch_scheduler_enabled` `(bool: false")` - Specifies whether preemption for batch jobs is enabled. Note that if this is set to true, then batch jobs can preempt any other jobs.
   - `service_scheduler_enabled` `(bool: false)` - Specifies whether preemption for service jobs is enabled. Note that if this is set to true, then service jobs can preempt any other jobs.
+  - `sysbatch_scheduler_enabled` `(bool: false)` - Specifies whether preemption for sysbatch (system batch) jobs is enabled. Note that if this is set to true, then system batch jobs can preempt any other jobs.
