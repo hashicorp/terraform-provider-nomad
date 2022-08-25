@@ -40,6 +40,13 @@ The following arguments are supported:
 - `region` `(string: "")` - The Nomad region to target. This can also be
   specified as the `NOMAD_REGION` environment variable.
 
+- `load_namespace_env_var` `(bool: false)` - If true, the `NOMAD_NAMESPACE`
+  environment variable will be loaded into the provider configuration.
+
+    ~> **Warning:** This value should not be set (or set to `false`) when
+      running Terraform in environments where it runs within a Nomad
+      allocation, such as in Terraform Cloud.
+
 - `http_auth` `(string: "")` - HTTP Basic Authentication credentials to be used
   when communicating with Nomad, in the format of either `user` or `user:pass`.
   This can also be specified using the `NOMAD_HTTP_AUTH` environment variable.
@@ -80,7 +87,6 @@ The following arguments are supported:
   This can also be specified as the `CONSUL_HTTP_TOKEN` environment variable.
   See [below](#configuring-multiple-tokens) for strategies when multiple Consul tokens are required.
 
-
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
   environment variable.
@@ -90,7 +96,7 @@ The `headers` configuration block accepts the following arguments:
 * `value` - (Required) The value of the header.
 
 An example using the `headers` configuration block with repeated blocks and
-headers: 
+headers:
 ```hcl
 provider "nomad" {
   headers {
@@ -207,8 +213,8 @@ the tokens into the jobspec using `templatefile`:
 resource "nomad_job" "job_a" {
   jobspec = templatefile(
     "${path.module}/job_a.hcl.tmpl",
-    { 
-      vault_token = "s.lraLq3axH9mkbdVRkWS6H06Q" 
+    {
+      vault_token = "s.lraLq3axH9mkbdVRkWS6H06Q"
       consul_token = "fc0ff975-e845-4140-804c-c348e9414ff8"
     }
   )
@@ -217,8 +223,8 @@ resource "nomad_job" "job_a" {
 resource "nomad_job" "job_b" {
   jobspec = templatefile(
     "${path.module}/job_b.hcl.tmpl",
-    { 
-      vault_token = "s.koqvVqdAkG8yt7irxDdmIQiC" 
+    {
+      vault_token = "s.koqvVqdAkG8yt7irxDdmIQiC"
       consul_token = "aed18d86-dd9d-4029-8a7a-906f6bba640a"
     }
   )

@@ -36,6 +36,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_REGION", ""),
 				Description: "Region of the target Nomad agent.",
 			},
+			"load_namespace_env_var": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If true, the NOMAD_NAMESPACE environment variable will be loaded into the provider configuration.",
+			},
 			"http_auth": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -179,8 +185,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.SecretID = d.Get("secret_id").(string)
 
 	// The namespace is set per-resource but `DefaultConfig` loads it from the
-	// NOMAD_NAMESPACE env var automatically, so we need unset it.
-	conf.Namespace = ""
+	// NOMAD_NAMESPACE env var automatically. This will cause problems when
+	// Terraform is running within a Nomad job (such as in Terraform Cloud) so
+	// we need to unset it unless the provider is configured to load it.
+	if !d.Get("load_namespace_env_var").(bool) {
+		conf.Namespace = ""
+	}
 
 	// HTTP basic auth configuration.
 	httpAuth := d.Get("http_auth").(string)
