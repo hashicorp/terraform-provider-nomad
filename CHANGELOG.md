@@ -1,5 +1,7 @@
 ## 1.4.18 (Unreleased)
 
+* **Target Nomad 1.3.4**: updated the nomad client to support Nomad API and jobspec version 1.3.4 ([#282](https://github.com/hashicorp/terraform-provider-nomad/pull/282))
+
 IMPROVEMENTS:
 * provider: add `load_namespace_env_var` to allow loading the `NOMAD_NAMESPACE` environment variable ([#280](https://github.com/hashicorp/terraform-provider-nomad/pull/280))
 
