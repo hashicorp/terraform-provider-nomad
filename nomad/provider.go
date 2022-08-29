@@ -33,14 +33,7 @@ func Provider() *schema.Provider {
 			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("NOMAD_REGION", ""),
 				Description: "Region of the target Nomad agent.",
-			},
-			"load_namespace_env_var": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If true, the NOMAD_NAMESPACE environment variable will be loaded into the provider configuration.",
 			},
 			"http_auth": {
 				Type:        schema.TypeString,
@@ -127,6 +120,12 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
+			"ignore_env_vars": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "A set of environment variables that are ignored by the provider when configuring the Nomad API client.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -179,16 +178,31 @@ func getToken() (string, error) {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+	ignoreEnvVars := d.Get("ignore_env_vars").(*schema.Set)
+	if ignoreEnvVars.Len() == 0 {
+		// The Terraform SDK doesn't support DefaultFunc for complex types yet,
+		// so implement the default value logic here for now.
+		// https://github.com/hashicorp/terraform-plugin-sdk/issues/142
+		if os.Getenv("TFC_RUN_ID") != "" {
+			ignoreEnvVars = schema.NewSet(schema.HashString, []interface{}{"NOMAD_NAMESPACE", "NOMAD_REGION"})
+		}
+	}
+
 	conf := api.DefaultConfig()
 	conf.Address = d.Get("address").(string)
-	conf.Region = d.Get("region").(string)
 	conf.SecretID = d.Get("secret_id").(string)
+
+	if region, ok := d.GetOk("region"); ok {
+		conf.Region = region.(string)
+	} else if ignoreEnvVars.Contains("NOMAD_REGION") {
+		conf.Region = ""
+	}
 
 	// The namespace is set per-resource but `DefaultConfig` loads it from the
 	// NOMAD_NAMESPACE env var automatically. This will cause problems when
 	// Terraform is running within a Nomad job (such as in Terraform Cloud) so
 	// we need to unset it unless the provider is configured to load it.
-	if !d.Get("load_namespace_env_var").(bool) {
+	if ignoreEnvVars.Contains("NOMAD_NAMESPACE") {
 		conf.Namespace = ""
 	}
 

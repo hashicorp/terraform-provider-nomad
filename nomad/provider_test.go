@@ -168,39 +168,204 @@ func testCheckCSIPluginAvailable(t *testing.T, pluginID string) {
 }
 
 func TestAccNomadProvider_namespace(t *testing.T) {
+	defer func() {
+		os.Unsetenv("NOMAD_NAMESPACE")
+		os.Unsetenv("TFC_RUN_ID")
+	}()
 	var provider *schema.Provider
-	os.Setenv("NOMAD_NAMESPACE", "doesnt-exist")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactoryInternal(&provider),
-		CheckDestroy:      testResourceJob_checkDestroy("provider-namespace-test"),
 		Steps: []resource.TestStep{
+			// Provider reads NOMAD_NAMESPACE by default.
 			{
 				Config: `
-resource "nomad_job" "provider_namespace_test" {
-	jobspec = <<EOT
-		job "provider-namespace-test" {
-			datacenters = ["dc1"]
-			group "foo" {
-				task "foo" {
-					driver = "raw_exec"
-					config {
-						command = "/bin/sleep"
-						args = ["10"]
-					}
-				}
-			}
-		}
-	EOT
-}
+provider "nomad" {}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
 				`,
-				// We only need to test that this doesn't fail.
+				PreConfig: func() {
+					os.Setenv("NOMAD_NAMESPACE", "default")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := os.Getenv("NOMAD_NAMESPACE")
+					got := config.Namespace
+					if got != expect {
+						return fmt.Errorf("expected namespace to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider ignores NOMAD_NAMESPACE if requested.
+			{
+				Config: `
+provider "nomad" {
+  ignore_env_vars = ["NOMAD_NAMESPACE"]
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_NAMESPACE", "dev")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := ""
+					got := config.Namespace
+					if got != expect {
+						return fmt.Errorf("expected namespace to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider ignores NOMAD_NAMESPACE if running in TFC.
+			{
+				Config: `
+provider "nomad" {}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_NAMESPACE", "tfc")
+					os.Setenv("TFC_RUN_ID", "1")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := ""
+					got := config.Namespace
+					if got != expect {
+						return fmt.Errorf("expected namespace to be %q, got %q", expect, got)
+					}
+					return nil
+				},
 			},
 		},
 	})
 
-	os.Unsetenv("NOMAD_NAMESPACE")
+}
+
+func TestAccNomadProvider_region(t *testing.T) {
+	defer func() {
+		os.Unsetenv("NOMAD_REGION")
+		os.Unsetenv("TFC_RUN_ID")
+	}()
+	var provider *schema.Provider
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactoryInternal(&provider),
+		Steps: []resource.TestStep{
+			// Provider reads NOMAD_REGION by default.
+			{
+				Config: `
+provider "nomad" {}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_REGION", "global")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := os.Getenv("NOMAD_REGION")
+					got := config.Region
+					if got != expect {
+						return fmt.Errorf("expected region to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider overrides NOMAD_REGION if specified in the config.
+			{
+				Config: `
+provider "nomad" {
+  region = "global"
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_REGION", "us")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := "global"
+					got := config.Region
+					if got != expect {
+						return fmt.Errorf("expected region to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider ignores NOMAD_REGION if requested.
+			{
+				Config: `
+provider "nomad" {
+  ignore_env_vars = ["NOMAD_REGION"]
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_REGION", "us")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := ""
+					got := config.Region
+					if got != expect {
+						return fmt.Errorf("expected region to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider ignores NOMAD_REGION if running in TFC.
+			{
+				Config: `
+provider "nomad" {}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_REGION", "tfc")
+					os.Setenv("TFC_RUN_ID", "1")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := ""
+					got := config.Region
+					if got != expect {
+						return fmt.Errorf("expected region to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+		},
+	})
+
 }
 
 func TestAccNomadProvider_Headers(t *testing.T) {
