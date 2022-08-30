@@ -7,6 +7,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Read Go version
         id: go-version
         run: echo "::set-output name=version::$(cat ./.go-version)"
@@ -14,8 +16,6 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ steps.go-version.outputs.version }}
-      - name: Checkout code
-        uses: actions/checkout@v3
       - name: Run go vet
         run: make vet
       - name: Install vault, nomad, consul
