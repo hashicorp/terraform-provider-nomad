@@ -121,10 +121,10 @@ func Provider() *schema.Provider {
 				},
 			},
 			"ignore_env_vars": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "A set of environment variables that are ignored by the provider when configuring the Nomad API client.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Elem:        &schema.Schema{Type: schema.TypeBool},
 			},
 		},
 
@@ -178,13 +178,16 @@ func getToken() (string, error) {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	ignoreEnvVars := d.Get("ignore_env_vars").(*schema.Set)
-	if ignoreEnvVars.Len() == 0 {
+	ignoreEnvVars := d.Get("ignore_env_vars").(map[string]interface{})
+	if len(ignoreEnvVars) == 0 {
 		// The Terraform SDK doesn't support DefaultFunc for complex types yet,
 		// so implement the default value logic here for now.
 		// https://github.com/hashicorp/terraform-plugin-sdk/issues/142
 		if os.Getenv("TFC_RUN_ID") != "" {
-			ignoreEnvVars = schema.NewSet(schema.HashString, []interface{}{"NOMAD_NAMESPACE", "NOMAD_REGION"})
+			ignoreEnvVars = map[string]interface{}{
+				"NOMAD_NAMESPACE": true,
+				"NOMAD_REGION":    true,
+			}
 		}
 	}
 
@@ -194,7 +197,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	if region, ok := d.GetOk("region"); ok {
 		conf.Region = region.(string)
-	} else if ignoreEnvVars.Contains("NOMAD_REGION") {
+	} else if ignore, ok := ignoreEnvVars["NOMAD_REGION"]; ok && ignore.(bool) {
 		conf.Region = ""
 	}
 
@@ -202,7 +205,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	// NOMAD_NAMESPACE env var automatically. This will cause problems when
 	// Terraform is running within a Nomad job (such as in Terraform Cloud) so
 	// we need to unset it unless the provider is configured to load it.
-	if ignoreEnvVars.Contains("NOMAD_NAMESPACE") {
+	if ignore, ok := ignoreEnvVars["NOMAD_NAMESPACE"]; ok && ignore.(bool) {
 		conf.Namespace = ""
 	}
 

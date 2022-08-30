@@ -84,11 +84,17 @@ The following arguments are supported:
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
   environment variable.
 
-- `ignore_env_vars` `([]string: [])` - A set of environment variables that are
-  ignored by the provider when configuring the Nomad API client. Supported
-  values are: `NOMAD_NAMESPACE` and `NOMAD_REGION`. When using the provider
-  with Terraform Cloud, the default value is set to `["NOMAD_NAMESPACE",
-  "NOMAD_REGION"]`.
+- `ignore_env_vars` `(map[string]bool: {})` - A map of environment variables
+  that are ignored by the provider when configuring the Nomad API client.
+  Supported keys are: `NOMAD_NAMESPACE` and `NOMAD_REGION`. When using the
+  provider within Terraform Cloud, the default value is set to
+    ```
+    {
+      NOMAD_NAMESPACE: true,
+      NOMAD_REGION:    true,
+    }
+    ```.
+  Set these values to `false` if you need to load these environment variables.
 
 The `headers` configuration block accepts the following arguments:
 * `name` - (Required) The name of the header.

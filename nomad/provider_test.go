@@ -205,7 +205,9 @@ data "nomad_namespaces" "test" {}
 			{
 				Config: `
 provider "nomad" {
-  ignore_env_vars = ["NOMAD_NAMESPACE"]
+  ignore_env_vars = {
+    NOMAD_NAMESPACE: true,
+  }
 }
 
 // necessary to initialize the provider
@@ -243,6 +245,34 @@ data "nomad_namespaces" "test" {}
 					config := providerConfig.config
 
 					expect := ""
+					got := config.Namespace
+					if got != expect {
+						return fmt.Errorf("expected namespace to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider loads NOMAD_NAMESPACE even when running in TFC if user requests.
+			{
+				Config: `
+provider "nomad" {
+  ignore_env_vars = {
+    NOMAD_NAMESPACE: false,
+  }
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_NAMESPACE", "default")
+					os.Setenv("TFC_RUN_ID", "1")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := os.Getenv("NOMAD_NAMESPACE")
 					got := config.Namespace
 					if got != expect {
 						return fmt.Errorf("expected namespace to be %q, got %q", expect, got)
@@ -318,7 +348,9 @@ data "nomad_namespaces" "test" {}
 			{
 				Config: `
 provider "nomad" {
-  ignore_env_vars = ["NOMAD_REGION"]
+  ignore_env_vars = {
+    NOMAD_REGION: true,
+  }
 }
 
 // necessary to initialize the provider
@@ -356,6 +388,34 @@ data "nomad_namespaces" "test" {}
 					config := providerConfig.config
 
 					expect := ""
+					got := config.Region
+					if got != expect {
+						return fmt.Errorf("expected region to be %q, got %q", expect, got)
+					}
+					return nil
+				},
+			},
+			// Provider loads NOMAD_REGION even when running in TFC if user requests.
+			{
+				Config: `
+provider "nomad" {
+  ignore_env_vars = {
+    NOMAD_REGION: false,
+  }
+}
+
+// necessary to initialize the provider
+data "nomad_namespaces" "test" {}
+				`,
+				PreConfig: func() {
+					os.Setenv("NOMAD_REGION", "global")
+					os.Setenv("TFC_RUN_ID", "1")
+				},
+				Check: func(_ *terraform.State) error {
+					providerConfig := provider.Meta().(ProviderConfig)
+					config := providerConfig.config
+
+					expect := os.Getenv("NOMAD_REGION")
 					got := config.Region
 					if got != expect {
 						return fmt.Errorf("expected region to be %q, got %q", expect, got)
