@@ -101,9 +101,9 @@ func resourceSchedulerConfigurationCreate(d *schema.ResourceData, meta interface
 // destroyed.
 //
 // Consider the following:
-//   1. an operator manually updates the Nomad scheduler config, or doesn't
-//   2. they decide to move management over to Terraform
-//   3. they get rid of Terraform management
+//  1. an operator manually updates the Nomad scheduler config, or doesn't
+//  2. they decide to move management over to Terraform
+//  3. they get rid of Terraform management
 //
 // If the destroy reverts to the Nomad default configuration, we are over
 // writing changes based on assumption. We cannot go back in time to the

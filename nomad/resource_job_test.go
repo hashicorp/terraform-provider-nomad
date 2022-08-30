@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/nomad/helper"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper/pointer"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
@@ -2261,7 +2261,7 @@ func TestVolumeSorting(t *testing.T) {
 	}
 	tgs := []*api.TaskGroup{
 		{
-			Name: helper.StringToPtr("group-with-volumes"),
+			Name: pointer.Of("group-with-volumes"),
 			Volumes: map[string]*api.VolumeRequest{
 				vols[0].Name: vols[0],
 				vols[1].Name: vols[1],
@@ -3310,16 +3310,16 @@ job "example" {
 		},
 		{
 			name:       "vault, no consul",
-			vaultToken: helper.StringToPtr("test-vault-token"),
+			vaultToken: pointer.Of("test-vault-token"),
 		},
 		{
 			name:        "consul, no vault",
-			consulToken: helper.StringToPtr("test-consul-token"),
+			consulToken: pointer.Of("test-consul-token"),
 		},
 		{
 			name:        "consul and vault tokens",
-			vaultToken:  helper.StringToPtr("test-vault-token"),
-			consulToken: helper.StringToPtr("test-consul-token"),
+			vaultToken:  pointer.Of("test-vault-token"),
+			consulToken: pointer.Of("test-consul-token"),
 		},
 	}
 	for _, tt := range tests {
