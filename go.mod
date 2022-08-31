@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-nomad
 
-go 1.17
+go 1.19
 
 exclude (
 	github.com/Sirupsen/logrus v1.1.0
@@ -21,8 +21,8 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.4.0
-	github.com/hashicorp/nomad v1.3.3
-	github.com/hashicorp/nomad/api v0.0.0-20220805111057-428b2cd8014c
+	github.com/hashicorp/nomad v1.3.4
+	github.com/hashicorp/nomad/api v0.0.0-20220825195357-a267b2b000ae
 	github.com/hashicorp/terraform-plugin-sdk v1.17.2
 	github.com/hashicorp/vault v0.10.4
 	github.com/stretchr/testify v1.8.0
@@ -99,6 +99,7 @@ require (
 	github.com/zclconf/go-cty-yaml v1.0.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
+	golang.org/x/exp v0.0.0-20220609121020-a51bd0440498 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
