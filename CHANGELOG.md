@@ -1,7 +1,8 @@
 ## 1.4.18 (Unreleased)
 
 IMPROVEMENTS:
-* provider: add `load_namespace_env_var` to allow loading the `NOMAD_NAMESPACE` environment variable ([#280](https://github.com/hashicorp/terraform-provider-nomad/pull/280))
+* provider: add `ignore_env_vars` configuration to allow specifying environment variables that should not be loaded by the provider. ([#281](https://github.com/hashicorp/terraform-provider-nomad/pull/281))
+* provider: ignore `NOMAD_NAMESPACE` and `NOMAD_REGION` when running in Terraform Cloud by default. ([#281](https://github.com/hashicorp/terraform-provider-nomad/pull/281))
 
 ## 1.4.17 (June 9, 2022)
 
