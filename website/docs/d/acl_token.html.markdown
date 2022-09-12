@@ -36,5 +36,11 @@ The following attributes are exported:
 * `secret_id`: `(string)` The token value itself.
 * `type`: `(string)` The type of the token.
 * `policies`: `(list of strings)` List of policy names associated with this token.
-* `global`: `(bool)` Whether the token is replicated to all regions, or if it will only be used in the region it was created.
+* `roles` `(set: [])` - The list of roles attached to the token. Each entry has
+  `name` and `id` attributes.
+* `global`: `(bool)` Whether the token is replicated to all regions, or if it 
+  will only be used in the region it was created.
 * `create_time`: `(string)` Date and time the token was created.
+* `expiration_ttl`: `(string)` The expiration TTL for the token.
+* `expiration_time` `(string)` - The timestamp after which the token is
+  considered expired and eligible for destruction.
