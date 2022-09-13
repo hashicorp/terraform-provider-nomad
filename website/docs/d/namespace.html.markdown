@@ -26,5 +26,9 @@ data "nomad_namespace" "namespaces" {
 
 The following attributes are exported:
 
-- `description` `(string)` - The description of the namespace.
-- `quota` `(string)` - The quota associated with the namespace.
+* `description` `(string)` - The description of the namespace.
+* `quota` `(string)` - The quota associated with the namespace.
+* `meta` `(map[string]string)` -  Arbitrary KV metadata associated with the namespace.
+* `capabilities` `(block)` - Capabilities of the namespace
+  * `enabled_task_drivers` `([]string)` - Task drivers enabled for the namespace.
+  * `disabled_task_drivers` `([]string)` - Task drivers disabled for the namespace.

@@ -41,6 +41,41 @@ func resourceNamespace() *schema.Resource {
 				Optional:    true,
 				Type:        schema.TypeString,
 			},
+
+			"meta": {
+				Description: "Metadata associated with the namespace.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"capabilities": {
+				Description: "Capabilities of the namespace.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem:        resourceNamespaceCapabilities(),
+			},
+		},
+	}
+}
+
+func resourceNamespaceCapabilities() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"enabled_task_drivers": {
+				Description: "Enabled task drivers for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			"disabled_task_drivers": {
+				Description: "Disabled task drivers for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
@@ -48,15 +83,26 @@ func resourceNamespace() *schema.Resource {
 func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
+	m := make(map[string]string)
+	for name, value := range d.Get("meta").(map[string]interface{}) {
+		m[name] = value.(string)
+	}
+
+	capabilities, err := expandNamespaceCapabilities(d)
+	if err != nil {
+		return err
+	}
+
 	namespace := api.Namespace{
-		Name:        d.Get("name").(string),
-		Description: d.Get("description").(string),
-		Quota:       d.Get("quota").(string),
+		Name:         d.Get("name").(string),
+		Description:  d.Get("description").(string),
+		Quota:        d.Get("quota").(string),
+		Meta:         m,
+		Capabilities: capabilities,
 	}
 
 	log.Printf("[DEBUG] Upserting namespace %q", namespace.Name)
-	_, err := client.Namespaces().Register(&namespace, nil)
-	if err != nil {
+	if _, err := client.Namespaces().Register(&namespace, nil); err != nil {
 		return fmt.Errorf("error inserting namespace %q: %s", namespace.Name, err.Error())
 	}
 	log.Printf("[DEBUG] Created namespace %q", namespace.Name)
@@ -121,6 +167,8 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", namespace.Name)
 	d.Set("description", namespace.Description)
 	d.Set("quota", namespace.Quota)
+	d.Set("meta", namespace.Meta)
+	d.Set("capabilities", flattenNamespaceCapabilities(namespace.Capabilities))
 
 	return nil
 }
@@ -149,4 +197,65 @@ func resourceNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, er
 	}
 
 	return true, nil
+}
+
+func flattenNamespaceCapabilities(capabilities *api.NamespaceCapabilities) *schema.Set {
+	if capabilities == nil {
+		return nil
+	}
+	rawCapabilities := map[string]interface{}{}
+	if capabilities.EnabledTaskDrivers != nil {
+		enabledI := make([]interface{}, len(capabilities.EnabledTaskDrivers))
+		for i, v := range capabilities.EnabledTaskDrivers {
+			enabledI[i] = v
+		}
+		rawCapabilities["enabled_task_drivers"] = enabledI
+	}
+	if capabilities.DisabledTaskDrivers != nil {
+		disabledI := make([]interface{}, len(capabilities.DisabledTaskDrivers))
+		for i, v := range capabilities.DisabledTaskDrivers {
+			disabledI[i] = v
+		}
+		rawCapabilities["disabled_task_drivers"] = disabledI
+	}
+
+	result := []interface{}{rawCapabilities}
+	return schema.NewSet(schema.HashResource(resourceNamespaceCapabilities()), result)
+}
+
+func expandNamespaceCapabilities(d *schema.ResourceData) (*api.NamespaceCapabilities, error) {
+	capabilitiesI := d.Get("capabilities").(*schema.Set).List()
+	if len(capabilitiesI) < 1 {
+		return nil, nil
+	}
+	capabilities, ok := capabilitiesI[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for region capabilities, got %T", capabilitiesI[0])
+	}
+	var res api.NamespaceCapabilities
+	if enaI, ok := capabilities["enabled_task_drivers"]; ok {
+		enaS, ok := enaI.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected enabled_task_drivers to be []string, got %T", enaS)
+		}
+		res.EnabledTaskDrivers = make([]string, len(enaS))
+		for index, value := range enaS {
+			if val, ok := value.(string); ok {
+				res.EnabledTaskDrivers[index] = val
+			}
+		}
+	}
+	if disI, ok := capabilities["disabled_task_drivers"]; ok {
+		disS, ok := disI.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected disabled_task_drivers to be []string, got %T", disS)
+		}
+		res.DisabledTaskDrivers = make([]string, len(disS))
+		for index, value := range disS {
+			if val, ok := value.(string); ok {
+				res.DisabledTaskDrivers[index] = val
+			}
+		}
+	}
+	return &res, nil
 }

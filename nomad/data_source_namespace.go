@@ -23,6 +23,18 @@ func dataSourceNamespace() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"meta": {
+				Type:     schema.TypeMap,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"capabilities": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Elem:     resourceNamespaceCapabilities(),
+			},
 		},
 	}
 }
@@ -41,6 +53,12 @@ func namespaceDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if err = d.Set("quota", ns.Quota); err != nil {
 		return fmt.Errorf("Failed to set 'quota': %v", err)
+	}
+	if err = d.Set("meta", ns.Meta); err != nil {
+		return fmt.Errorf("Failed to set 'meta': %v", err)
+	}
+	if err = d.Set("capabilities", flattenNamespaceCapabilities(ns.Capabilities)); err != nil {
+		return fmt.Errorf("Failed to set 'capabilities': %v", err)
 	}
 
 	d.SetId(client.Address() + "/namespace/" + name)
