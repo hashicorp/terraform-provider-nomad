@@ -70,7 +70,7 @@ func TestResourceACLToken_Expiration(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0-beta.1") },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -87,7 +87,7 @@ func TestResourceACLToken_RoleLink(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0-beta.1") },
 		Steps: []resource.TestStep{
 			{
 				Config: config,
@@ -387,9 +387,9 @@ EOT
 
 resource "nomad_acl_role" "test" {
   name        = "terraform-token-test"
-  description = "A Terraform acctest ACL role" 
+  description = "A Terraform acctest ACL role"
 
-  policies { 
+  policies {
     name = nomad_acl_policy.test.name
   }
 }
