@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestDataSourceNamespace(t *testing.T) {
@@ -33,12 +32,6 @@ func TestDataSourceNamespace(t *testing.T) {
 			{
 				Config: testDataSourceNamespace_basicConfig(name),
 				Check: resource.ComposeTestCheckFunc(
-					func() resource.TestCheckFunc {
-						return func(s *terraform.State) error {
-							t.Log(s)
-							return nil
-						}
-					}(),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", "A Terraform acctest namespace"),
 					resource.TestCheckResourceAttr(resourceName, "quota", ""),
