@@ -18,7 +18,7 @@ func TestResourceACLRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0-beta.1") },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceACLRoleConfig(testResourceName, testResourceName),
@@ -50,8 +50,8 @@ resource "nomad_acl_role" "test" {
   name        = %q
   description = "A Terraform acctest ACL role"
   depends_on  = [nomad_acl_policy.test]
-  
-  policies { 
+
+  policies {
     name = nomad_acl_policy.test.name
   }
 } `, policyName, roleName)
