@@ -24,6 +24,10 @@ resource "nomad_namespace" "dev" {
   name        = "dev"
   description = "Shared development environment."
   quota       = "dev"
+  meta        = {
+    owner = "John Doe"
+    foo   = "bar"
+  }
 }
 ```
 
@@ -58,3 +62,15 @@ The following arguments are supported:
 - `name` `(string: <required>)` - A unique name for the namespace.
 - `description` `(string: "")` - A description of the namespace.
 - `quota` `(string: "")` - A resource quota to attach to the namespace.
+- `meta` `(map[string]string: <optional>)` -  Specifies arbitrary KV metadata to associate with the namespace.
+- `capabilities` `(block: <optional>)` - A block of capabilities for the namespace. Can't 
+  be repeated. See below for the structure of this block.
+
+
+### `capabilities` blocks
+
+The `capabilities` block describes the capabilities of the namespace. It supports
+the following arguments:
+
+- `enabled_task_drivers` `([]string: <optional>)` - Task drivers enabled for the namespace.
+- `disabled_task_drivers` `([]string: <optional>)` - Task drivers disabled for the namespace.

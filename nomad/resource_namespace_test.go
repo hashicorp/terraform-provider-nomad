@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
@@ -130,6 +131,15 @@ func testResourceNamespace_initialConfig(name string) string {
 resource "nomad_namespace" "test" {
   name = "%s"
   description = "A Terraform acctest namespace"
+
+  meta = {
+    key = "value",
+  }
+
+  capabilities {
+    enabled_task_drivers  = ["docker", "exec"]
+    disabled_task_drivers = ["raw_exec"]
+  }
 }
 `, name)
 }
@@ -172,6 +182,21 @@ func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 		}
 		if namespace.Description != description {
 			return fmt.Errorf("expected description to be %q, is %q in API", description, namespace.Description)
+		}
+
+		expectedMeta := map[string]string{
+			"key": "value",
+		}
+		if diff := cmp.Diff(namespace.Meta, expectedMeta); diff != "" {
+			return fmt.Errorf("namespace meta mismatch (-want +got):\n%s", diff)
+		}
+
+		expectedCapabilities := &api.NamespaceCapabilities{
+			EnabledTaskDrivers:  []string{"docker", "exec"},
+			DisabledTaskDrivers: []string{"raw_exec"},
+		}
+		if diff := cmp.Diff(namespace.Capabilities, expectedCapabilities); diff != "" {
+			return fmt.Errorf("namespace capabilities mismatch (-want +got):\n%s", diff)
 		}
 
 		return nil
