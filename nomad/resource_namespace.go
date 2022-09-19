@@ -56,6 +56,7 @@ func resourceNamespace() *schema.Resource {
 				Optional:    true,
 				Type:        schema.TypeSet,
 				Elem:        resourceNamespaceCapabilities(),
+				MaxItems:    1,
 			},
 		},
 	}
