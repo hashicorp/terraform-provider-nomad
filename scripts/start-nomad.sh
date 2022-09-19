@@ -43,7 +43,12 @@ EOF
     # Give some time for the process to initialize
     sleep 10
 
-    nomad operator api -X POST /v1/acl/bootstrap | jq -r '.SecretID' > /tmp/nomad-test.token
+    retries=30
+    while [ $retries -ge 0 ]; do
+      nomad acl bootstrap -json | jq -r '.SecretID' > /tmp/nomad-test.token && break
+      sleep 5
+      retries=$(( $retries - 1 ))
+    done
     export NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
     if [ -z "$NOMAD_TOKEN" ]; then
       echo "Failed to bootstrap Nomad ACL"
