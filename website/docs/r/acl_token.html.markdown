@@ -74,8 +74,14 @@ The following arguments are supported:
   `management`-type tokens. Policies do not need to exist before being
   used here.
 
+- `role` `(set: [])` - The list of roles attached to the token. Each entry has
+  `name` and `id` attributes. It may be used multiple times.
+
 - `global` `(bool: false)` - Whether the token should be replicated to all
   regions, or if it will only be used in the region it was created in.
+
+- `expiration_ttl` `(string: "")` - Provides a TTL for the token in the form of
+  a time duration such as `"5m"` or `"1h"`.
 
 In addition to the above arguments, the following attributes are exported and
 can be referenced:
@@ -87,3 +93,6 @@ can be referenced:
   access to the cluster.
 
 - `create_time` `(string)` - The timestamp the token was created.
+
+- `expiration_time` `(string)` - The timestamp after which the token is
+  considered expired and eligible for destruction.

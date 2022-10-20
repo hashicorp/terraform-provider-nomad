@@ -5,6 +5,7 @@
 * **New Data Source**: `nomad_acl_role` and `nomad_acl_roles` retrieves and lists ACL roles ([#284](https://github.com/hashicorp/terraform-provider-nomad/pull/284))
 
 IMPROVEMENTS:
+* resources/nomad_acl_token: add support for `role` and `expiration_ttl` ([#286](https://github.com/hashicorp/terraform-provider-nomad/pull/286))
 * resources/nomad_namespace: add support for `meta` and `capabilities` ([#287](https://github.com/hashicorp/terraform-provider-nomad/pull/287))
 * data source/nomad_namespace: add support for `meta` and `capabilities` ([#287](https://github.com/hashicorp/terraform-provider-nomad/pull/287))
 

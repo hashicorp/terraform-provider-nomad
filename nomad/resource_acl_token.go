@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -27,33 +28,47 @@ func resourceACLToken() *schema.Resource {
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
-
 			"secret_id": {
 				Description: "The value that grants access to Nomad.",
 				Computed:    true,
 				Sensitive:   true,
 				Type:        schema.TypeString,
 			},
-
 			"name": {
 				Description: "Human-readable name for this token.",
 				Optional:    true,
 				Type:        schema.TypeString,
 			},
-
 			"type": {
 				Description: "The type of token to create, 'client' or 'management'.",
 				Required:    true,
 				Type:        schema.TypeString,
 			},
-
 			"policies": {
 				Description: "The ACL policies to associate with the token, if it's a 'client' type.",
 				Optional:    true,
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-
+			"role": {
+				Description: "The roles that should be applied to the token. It may be used multiple times.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The ID of the ACL role to link.",
+						},
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The name of the ACL role linked.",
+						},
+					},
+				},
+			},
 			"global": {
 				Description: "Whether the token should be replicated to all regions or not.",
 				Optional:    true,
@@ -61,11 +76,21 @@ func resourceACLToken() *schema.Resource {
 				ForceNew:    true,
 				Default:     false,
 			},
-
 			"create_time": {
 				Description: "The timestamp the token was created.",
 				Type:        schema.TypeString,
 				Computed:    true,
+			},
+			"expiration_ttl": {
+				Description: `Provides a TTL for the token in the form of a time duration such as "5m" or "1h".`,
+				Optional:    true,
+				ForceNew:    true,
+				Type:        schema.TypeString,
+			},
+			"expiration_time": {
+				Description: "The point after which a token is considered expired and eligible for destruction.",
+				Computed:    true,
+				Type:        schema.TypeString,
 			},
 		},
 	}
@@ -75,34 +100,19 @@ func resourceACLTokenCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	policies := make([]string, 0, len(d.Get("policies").(*schema.Set).List()))
-	for _, pol := range d.Get("policies").(*schema.Set).List() {
-		policies = append(policies, pol.(string))
-	}
-
-	token := api.ACLToken{
-		Name:     d.Get("name").(string),
-		Type:     d.Get("type").(string),
-		Policies: policies,
-		Global:   d.Get("global").(bool),
+	token, err := resourceACLTokenGenerate(d)
+	if err != nil {
+		return err
 	}
 
 	// create our token
 	log.Println("[DEBUG] Creating ACL token")
-	resp, _, err := client.ACLTokens().Create(&token, nil)
+	resp, _, err := client.ACLTokens().Create(token, nil)
 	if err != nil {
 		return fmt.Errorf("error creating ACL token: %s", err.Error())
 	}
 	log.Printf("[DEBUG] Created ACL token %q", resp.AccessorID)
 	d.SetId(resp.AccessorID)
-
-	d.Set("accessor_id", resp.AccessorID)
-	d.Set("secret_id", resp.SecretID)
-	d.Set("name", resp.Name)
-	d.Set("type", resp.Type)
-	d.Set("policies", resp.Policies)
-	d.Set("global", resp.Global)
-	d.Set("create_time", resp.CreateTime.UTC().String())
 
 	return resourceACLTokenRead(d, meta)
 }
@@ -111,21 +121,14 @@ func resourceACLTokenUpdate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	policies := make([]string, 0, len(d.Get("policies").(*schema.Set).List()))
-	for _, pol := range d.Get("policies").(*schema.Set).List() {
-		policies = append(policies, pol.(string))
-	}
-
-	token := api.ACLToken{
-		AccessorID: d.Id(),
-		Name:       d.Get("name").(string),
-		Type:       d.Get("type").(string),
-		Policies:   policies,
+	token, err := resourceACLTokenGenerate(d)
+	if err != nil {
+		return err
 	}
 
 	// update the token
 	log.Printf("[DEBUG] Updating ACL token %q", d.Id())
-	_, _, err := client.ACLTokens().Update(&token, nil)
+	_, _, err = client.ACLTokens().Update(token, nil)
 	if err != nil {
 		return fmt.Errorf("error updating ACL token %q: %s", d.Id(), err.Error())
 	}
@@ -164,13 +167,26 @@ func resourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Read ACL token %q", accessor)
 
+	var expirationTime string
+	if token.ExpirationTime != nil {
+		expirationTime = token.ExpirationTime.Format(time.RFC3339)
+	}
+
+	roles := make([]map[string]interface{}, len(token.Roles))
+	for i, roleLink := range token.Roles {
+		roles[i] = map[string]interface{}{"id": roleLink.ID, "name": roleLink.Name}
+	}
+
+	d.Set("accessor_id", token.AccessorID)
+	d.Set("secret_id", token.SecretID)
 	d.Set("name", token.Name)
 	d.Set("type", token.Type)
 	d.Set("policies", token.Policies)
-	d.Set("accessor_id", token.AccessorID)
-	d.Set("secret_id", token.SecretID)
+	d.Set("role", roles)
 	d.Set("global", token.Global)
 	d.Set("create_time", token.CreateTime.UTC().String())
+	d.Set("expiration_tll", token.ExpirationTTL.String())
+	d.Set("expiration_time", expirationTime)
 
 	return nil
 }
@@ -193,4 +209,41 @@ func resourceACLTokenExists(d *schema.ResourceData, meta interface{}) (bool, err
 	}
 
 	return true, nil
+}
+
+// resourceACLTokenGenerate takes the resource data and converts this into a
+// valid ACL Token object. Any error returned is fatal to this run of Terraform
+// and indicates a user error when configuring certain schema values.
+func resourceACLTokenGenerate(d *schema.ResourceData) (*api.ACLToken, error) {
+
+	policies := make([]string, 0, len(d.Get("policies").(*schema.Set).List()))
+	for _, pol := range d.Get("policies").(*schema.Set).List() {
+		policies = append(policies, pol.(string))
+	}
+
+	roles := make([]*api.ACLTokenRoleLink, 0, len(d.Get("role").(*schema.Set).List()))
+	for _, raw := range d.Get("role").(*schema.Set).List() {
+		role := raw.(map[string]interface{})
+		roles = append(roles, &api.ACLTokenRoleLink{ID: role["id"].(string)})
+	}
+
+	token := api.ACLToken{
+		AccessorID: d.Id(),
+		Name:       d.Get("name").(string),
+		Type:       d.Get("type").(string),
+		Policies:   policies,
+		Roles:      roles,
+		Global:     d.Get("global").(bool),
+	}
+
+	// Identify and parse the expiration TTL if this has been set by the user.
+	if ttlString := d.Get("expiration_ttl").(string); ttlString != "" {
+		ttl, err := time.ParseDuration(ttlString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse expiration_ttl: %v", err)
+		}
+		token.ExpirationTTL = ttl
+	}
+
+	return &token, nil
 }

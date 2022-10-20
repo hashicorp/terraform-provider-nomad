@@ -36,5 +36,9 @@ The objects in the `acl_tokens` list have the following attributes:
 * `name`: `(TypeString)` The name of the token.
 * `type`: `(TypeString)` The type of the token.
 * `policies`: `(list of strings)` The list of policies attached to the token.
+* `roles` `(set: [])` - The list of roles attached to the token. Each entry has
+  `name` and `id` attributes.
 * `global`: `(bool)` Whether the token is replicated to all regions.
 * `create_time`: `(string)` Date and time the token was created at.
+* `expiration_time` `(string)` - The timestamp after which the token is
+  considered expired and eligible for destruction.
