@@ -228,11 +228,12 @@ func resourceACLTokenGenerate(d *schema.ResourceData) (*api.ACLToken, error) {
 	}
 
 	token := api.ACLToken{
-		Name:     d.Get("name").(string),
-		Type:     d.Get("type").(string),
-		Policies: policies,
-		Roles:    roles,
-		Global:   d.Get("global").(bool),
+		AccessorID: d.Id(),
+		Name:       d.Get("name").(string),
+		Type:       d.Get("type").(string),
+		Policies:   policies,
+		Roles:      roles,
+		Global:     d.Get("global").(bool),
 	}
 
 	// Identify and parse the expiration TTL if this has been set by the user.
