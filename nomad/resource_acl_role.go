@@ -32,8 +32,8 @@ func resourceACLRole() *schema.Resource {
 				Optional:    true,
 				Type:        schema.TypeString,
 			},
-			"policies": {
-				Description: "The policies that should be applied to the role.",
+			"policy": {
+				Description: "The policies that should be applied to the role. It may be used multiple times.",
 				Required:    true,
 				Type:        schema.TypeSet,
 				Elem: &schema.Resource{
@@ -130,7 +130,7 @@ func resourceACLRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("name", role.Name)
 	d.Set("description", role.Description)
-	d.Set("policies", policies)
+	d.Set("policy", policies)
 
 	return nil
 }
@@ -159,7 +159,7 @@ func generateNomadACLRole(d *schema.ResourceData) *api.ACLRole {
 
 	policies := make([]*api.ACLRolePolicyLink, 0)
 
-	for _, raw := range d.Get("policies").(*schema.Set).List() {
+	for _, raw := range d.Get("policy").(*schema.Set).List() {
 		s := raw.(map[string]interface{})
 		policies = append(policies, &api.ACLRolePolicyLink{Name: s["name"].(string)})
 	}

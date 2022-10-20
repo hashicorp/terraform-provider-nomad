@@ -22,7 +22,7 @@ data "nomad_acl_roles" "example" {
 
 The following arguments are supported:
 
-* `prefix`: `(string)` An optional string to filter ACL Roles based on ID 
+* `prefix`: `(string)` An optional string to filter ACL Roles based on ID
   prefix. If not provided, all policies are returned.
 
 ## Attribute Reference

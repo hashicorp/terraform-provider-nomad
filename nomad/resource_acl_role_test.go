@@ -46,15 +46,41 @@ namespace "default" {
 EOT
 }
 
+resource "nomad_acl_policy" "test2" {
+  name        = %q
+  description = "A Terraform acctest ACL policy"
+  rules_hcl   = <<EOT
+namespace "default" {
+  policy       = "read"
+  capabilities = ["submit-job"]
+}
+EOT
+}
+
+resource "nomad_acl_policy" "test3" {
+  name        = %q
+  description = "A Terraform acctest ACL policy"
+  rules_hcl   = <<EOT
+namespace "default" {
+  policy       = "read"
+  capabilities = ["submit-job"]
+}
+EOT
+}
+
 resource "nomad_acl_role" "test" {
   name        = %q
   description = "A Terraform acctest ACL role"
   depends_on  = [nomad_acl_policy.test]
 
-  policies {
+  policy {
     name = nomad_acl_policy.test.name
   }
-} `, policyName, roleName)
+
+  policy {
+    name = nomad_acl_policy.test2.name
+  }
+} `, policyName, policyName+"2", policyName+"3", roleName)
 }
 
 func testResourceACLRoleCheck(roleName string) resource.TestCheckFunc {
@@ -83,9 +109,9 @@ func testResourceACLRoleCheck(roleName string) resource.TestCheckFunc {
 		}
 
 		// because policies is a set, it's a pain to try and check the values here
-		if instanceState.Attributes["policies.#"] != "1" {
-			return fmt.Errorf(`expected policies.# to be "1", is %q in state`,
-				instanceState.Attributes["policies.#"])
+		if instanceState.Attributes["policy.#"] != "2" {
+			return fmt.Errorf(`expected policies.# to be "2", is %q in state`,
+				instanceState.Attributes["policy.#"])
 		}
 
 		client := testProvider.Meta().(ProviderConfig).client
@@ -97,7 +123,7 @@ func testResourceACLRoleCheck(roleName string) resource.TestCheckFunc {
 		if role.Name != roleName {
 			return fmt.Errorf("expected name to be %q, is %q in API", roleName, role.Name)
 		}
-		if len(role.Policies) != 1 {
+		if len(role.Policies) != 2 {
 			return fmt.Errorf("expected %d policies, got %v from the API", 1, role.Policies)
 		}
 

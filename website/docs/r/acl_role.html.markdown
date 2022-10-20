@@ -28,8 +28,8 @@ EOT
 resource "nomad_acl_role" "my_nomad_acl_role" {
   name        = "my-nomad-acl-role"
   description = "An ACL Role for cluster developers"
-  
-  policies {
+
+  policy {
     name = nomad_acl_policy.my_nomad_acl_policy.name
   }
 }
@@ -43,5 +43,5 @@ The following arguments are supported:
 
 - `description` `(string: "")` - A description of the ACL Role.
 
-- `policies` `(set: <required>)` - A set of policy names to associate with this
-  ACL Role.
+- `policy` `(set: <required>)` - A set of policy names to associate with this
+  ACL Role. It may be used multiple times.

@@ -55,7 +55,7 @@ resource "nomad_acl_role" "test" {
   description = "A Terraform acctest ACL Role"
   depends_on  = [nomad_acl_policy.test]
 
-  policies {
+  policy {
     name = nomad_acl_policy.test.name
   }
 }
