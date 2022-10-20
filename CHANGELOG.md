@@ -1,5 +1,7 @@
 ## 1.4.19 (Unreleased)
 
+* **Target Nomad 1.4.1**: updated the nomad client to support Nomad API, jobspec, and fetures of version 1.4.1 ([#291](https://github.com/hashicorp/terraform-provider-nomad/pull/291))
+
 IMPROVEMENTS:
 * resources/nomad_namespace: add support for `meta` and `capabilities` ([#287](https://github.com/hashicorp/terraform-provider-nomad/pull/287))
 * data source/nomad_namespace: add support for `meta` and `capabilities` ([#287](https://github.com/hashicorp/terraform-provider-nomad/pull/287))
