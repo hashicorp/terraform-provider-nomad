@@ -133,6 +133,8 @@ func Provider() *schema.Provider {
 		DataSourcesMap: map[string]*schema.Resource{
 			"nomad_acl_policies":     dataSourceAclPolicies(),
 			"nomad_acl_policy":       dataSourceAclPolicy(),
+			"nomad_acl_role":         dataSourceACLRole(),
+			"nomad_acl_roles":        dataSourceACLRoles(),
 			"nomad_acl_token":        dataSourceACLToken(),
 			"nomad_acl_tokens":       dataSourceACLTokens(),
 			"nomad_datacenters":      dataSourceDatacenters(),
@@ -152,6 +154,7 @@ func Provider() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"nomad_acl_policy":          resourceACLPolicy(),
+			"nomad_acl_role":            resourceACLRole(),
 			"nomad_acl_token":           resourceACLToken(),
 			"nomad_external_volume":     resourceExternalVolume(),
 			"nomad_job":                 resourceJob(),
