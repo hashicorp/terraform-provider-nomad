@@ -1,11 +1,7 @@
-Terraform Provider
-==================
+Nomad Terraform Provider
+========================
 
-- Website: https://www.terraform.io
-- [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
-- Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
-
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/main/content/source/assets/images/logo-hashicorp.svg" width="600px">
+- Website: https://registry.terraform.io/providers/hashicorp/nomad
 
 Maintainers
 -----------
@@ -15,8 +11,8 @@ This provider plugin is maintained by the Nomad team at [HashiCorp](https://www.
 Requirements
 ------------
 
--	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
--	[Go](https://golang.org/doc/install) 1.16 (to build the provider plugin)
+-	[Terraform](https://www.terraform.io/downloads.html) 1.0.x
+-	[Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
 
 Building The Provider
 ---------------------
