@@ -740,7 +740,6 @@ resource "nomad_job" "test" {
 				service {
 					name = "foo-service"
 					port = "8080"
-					task = "foo"
 					address_mode = "host"
 
 					tags = ["foor", "test", "tf"]
@@ -1736,16 +1735,17 @@ func testResourceJob_csiControllerCheck(s *terraform.State) error {
 		return fmt.Errorf("task group %s not found", taskGroupName)
 	}
 
-	expCSIPluginConfig := api.TaskCSIPluginConfig{}
-	json.Unmarshal([]byte(`{
-        "ID": "aws-ebs0",
-        "Type": "controller",
-        "MountDir": "/csi"
-	}`), &expCSIPluginConfig)
 	if taskGroup.Tasks[0].CSIPluginConfig == nil {
 		return fmt.Errorf("error; actual CSIPluginConfig was nil")
 	}
 
+	expCSIPluginConfig := api.TaskCSIPluginConfig{
+		ID:                  "aws-ebs0",
+		Type:                "controller",
+		MountDir:            "/csi",
+		StagePublishBaseDir: "/local/csi",
+		HealthTimeout:       30 * time.Second,
+	}
 	if diff := cmp.Diff(expCSIPluginConfig, *taskGroup.Tasks[0].CSIPluginConfig); diff != "" {
 		return fmt.Errorf("task csi plugin config mismatch (-want +got):\n%s", diff)
 	}
@@ -1792,29 +1792,29 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 		return fmt.Errorf("task group %s not found", taskGroupName)
 	}
 
-	expServices := []*api.Service{}
-	json.Unmarshal([]byte(`[
+	expServices := []*api.Service{
 		{
-			"Name": "count-dashboard",
-			"PortLabel": "9002",
-			"AddressMode": "auto",
-			"Connect": {
-				"SidecarService": {
-					"Tags": ["dashboard", "count"],
-					"Proxy": {
-						"Upstreams": [
+			Name:        "count-dashboard",
+			PortLabel:   "9002",
+			AddressMode: "auto",
+			OnUpdate:    "require_healthy",
+			Provider:    "consul",
+			Connect: &api.ConsulConnect{
+				SidecarService: &api.ConsulSidecarService{
+					Tags: []string{"dashboard", "count"},
+					Proxy: &api.ConsulProxy{
+						Upstreams: []*api.ConsulUpstream{
 							{
-								"DestinationName": "count-api",
-								"LocalBindPort": 8080
-							}
-						]
-					}
-				}
+								DestinationName: "count-api",
+								LocalBindPort:   8080,
+								MeshGateway:     &api.ConsulMeshGateway{},
+							},
+						},
+					},
+				},
 			},
-			"OnUpdate": "require_healthy",
-			"Provider": "consul"
-		}
-	]`), &expServices)
+		},
+	}
 	if diff := cmp.Diff(expServices, taskGroup.Services); diff != "" {
 		return fmt.Errorf("task group services mismatch (-want +got):\n%s", diff)
 	}
