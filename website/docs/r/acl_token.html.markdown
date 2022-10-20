@@ -74,8 +74,8 @@ The following arguments are supported:
   `management`-type tokens. Policies do not need to exist before being
   used here.
 
-- `roles` `(set: [])` - The list of roles attached to the token. Each entry has
-  `name` and `id` attributes.
+- `role` `(set: [])` - The list of roles attached to the token. Each entry has
+  `name` and `id` attributes. It may be used multiple times.
 
 - `global` `(bool: false)` - Whether the token should be replicated to all
   regions, or if it will only be used in the region it was created in.

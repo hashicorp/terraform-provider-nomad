@@ -50,8 +50,8 @@ func resourceACLToken() *schema.Resource {
 				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"roles": {
-				Description: "The roles that should be applied to the token.",
+			"role": {
+				Description: "The roles that should be applied to the token. It may be used multiple times.",
 				Optional:    true,
 				Type:        schema.TypeSet,
 				Elem: &schema.Resource{
@@ -182,7 +182,7 @@ func resourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", token.Name)
 	d.Set("type", token.Type)
 	d.Set("policies", token.Policies)
-	d.Set("roles", roles)
+	d.Set("role", roles)
 	d.Set("global", token.Global)
 	d.Set("create_time", token.CreateTime.UTC().String())
 	d.Set("expiration_tll", token.ExpirationTTL.String())
@@ -221,8 +221,8 @@ func resourceACLTokenGenerate(d *schema.ResourceData) (*api.ACLToken, error) {
 		policies = append(policies, pol.(string))
 	}
 
-	roles := make([]*api.ACLTokenRoleLink, 0, len(d.Get("roles").(*schema.Set).List()))
-	for _, raw := range d.Get("roles").(*schema.Set).List() {
+	roles := make([]*api.ACLTokenRoleLink, 0, len(d.Get("role").(*schema.Set).List()))
+	for _, raw := range d.Get("role").(*schema.Set).List() {
 		role := raw.(map[string]interface{})
 		roles = append(roles, &api.ACLTokenRoleLink{ID: role["id"].(string)})
 	}

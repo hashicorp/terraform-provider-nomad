@@ -389,7 +389,7 @@ resource "nomad_acl_role" "test" {
   name        = "terraform-token-test"
   description = "A Terraform acctest ACL role"
 
-  policies {
+  policy {
     name = nomad_acl_policy.test.name
   }
 }
@@ -399,7 +399,7 @@ resource "nomad_acl_token" "test" {
   type   = %q
   global = %s
 
-  roles {
+  role {
     id = nomad_acl_role.test.id
   }
 }
@@ -436,9 +436,9 @@ resource "nomad_acl_token" "test" {
 			return fmt.Errorf("expected create_time to be set, got %q",
 				instanceState.Attributes["create_time"])
 		}
-		if instanceState.Attributes["roles.#"] != "1" {
+		if instanceState.Attributes["role.#"] != "1" {
 			return fmt.Errorf("expected roles.# to be %q, is %q in state",
-				"1", instanceState.Attributes["roles.#"])
+				"1", instanceState.Attributes["role.#"])
 		}
 
 		client := testProvider.Meta().(ProviderConfig).client
