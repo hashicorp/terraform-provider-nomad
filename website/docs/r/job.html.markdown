@@ -112,7 +112,7 @@ resource "nomad_job" "app" {
 ### Variables
 
 ~> **Warning:** mixing Nomad HCL2 variables and Terraform values may result in
-  plan faiilures. It's best to avoid using variables in job files and instead
+  plan failures. It's best to avoid using variables in job files and instead
   use [string templates][tf_docs_string_template] or render a file with the
   [`templatefile`][tf_docs_templatefile] Terraform function.
 
