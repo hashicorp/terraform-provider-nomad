@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 [ -e /tmp/consul-test.pid ] && echo "Stopping consul" && kill $(cat /tmp/consul-test.pid)
 rm -f /tmp/consul-test.pid
