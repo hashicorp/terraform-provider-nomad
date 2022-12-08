@@ -159,6 +159,7 @@ func Provider() *schema.Provider {
 			"nomad_acl_policy":          resourceACLPolicy(),
 			"nomad_acl_role":            resourceACLRole(),
 			"nomad_acl_token":           resourceACLToken(),
+			"nomad_acl_bootstrap":       resourceACLBootStrap(),
 			"nomad_external_volume":     resourceExternalVolume(),
 			"nomad_job":                 resourceJob(),
 			"nomad_namespace":           resourceNamespace(),
