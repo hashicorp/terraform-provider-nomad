@@ -173,6 +173,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"nomad_acl_auth_method":                  resourceACLAuthMethod(),
 			"nomad_acl_binding_rule":                 resourceACLBindingRule(),
+			"nomad_acl_bootstrap":                    resourceACLBootStrap(),
 			"nomad_acl_policy":                       resourceACLPolicy(),
 			"nomad_acl_role":                         resourceACLRole(),
 			"nomad_acl_token":                        resourceACLToken(),
