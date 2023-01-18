@@ -154,7 +154,7 @@ job "foo-hcl2" {
 ```
 
 Variables must have known-values at plan time. This means that you will not be
-able to reference values from resoruces that don't exist in the Terraform state
+able to reference values from resources that don't exist in the Terraform state
 yet. Instead, use [string templates][tf_docs_string_template] or the
 [`templatefile`][tf_docs_templatefile] Terraform function to provide a fully
 rendered jobspec.
