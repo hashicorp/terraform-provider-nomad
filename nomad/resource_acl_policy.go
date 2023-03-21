@@ -4,6 +4,7 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -43,8 +44,76 @@ func resourceACLPolicy() *schema.Resource {
 				Required:    true,
 				Type:        schema.TypeString,
 			},
+
+			"workload_identity": {
+				Description: "Workload identity that this should be applied to.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"namespace": {
+							Description: "Namespace",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "default",
+						},
+						"job_id": {
+							Description: "Job",
+							Type:        schema.TypeString,
+							Required:    true,
+						},
+						"group": {
+							Description: "Group",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"task": {
+							Description: "Task",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+					},
+				},
+			},
 		},
 	}
+}
+
+func parseWorkloadIdentity(workloadIdentity interface{}) (*api.JobACL, error) {
+	jobPolicyList, ok := workloadIdentity.([]interface{})
+	if !ok || len(jobPolicyList) != 1 {
+		return nil, errors.New("failed to unpack workload_identity configuration block")
+	}
+
+	jobPolicyMap, ok := jobPolicyList[0].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("failed to unpack workload_identity configuration block")
+	}
+
+	jobACL := &api.JobACL{}
+
+	if val, ok := jobPolicyMap["namespace"].(string); ok {
+		if val == "" {
+			val = "default"
+		}
+
+		jobACL.Namespace = val
+	}
+
+	if val, ok := jobPolicyMap["job_id"].(string); ok {
+		jobACL.JobID = val
+	}
+
+	if val, ok := jobPolicyMap["group"].(string); ok {
+		jobACL.Group = val
+	}
+
+	if val, ok := jobPolicyMap["task"].(string); ok {
+		jobACL.Task = val
+	}
+
+	return jobACL, nil
 }
 
 func resourceACLPolicyCreate(d *schema.ResourceData, meta interface{}) error {
@@ -55,6 +124,14 @@ func resourceACLPolicyCreate(d *schema.ResourceData, meta interface{}) error {
 		Name:        d.Get("name").(string),
 		Description: d.Get("description").(string),
 		Rules:       d.Get("rules_hcl").(string),
+	}
+
+	jobPolicy, ok := d.GetOk("workload_identity")
+	if ok {
+		var err error
+		if policy.JobACL, err = parseWorkloadIdentity(jobPolicy); err != nil {
+			return err
+		}
 	}
 
 	// upsert our policy
@@ -77,6 +154,14 @@ func resourceACLPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
 		Name:        d.Get("name").(string),
 		Description: d.Get("description").(string),
 		Rules:       d.Get("rules_hcl").(string),
+	}
+
+	jobPolicy, ok := d.GetOk("workload_identity")
+	if ok {
+		var err error
+		if policy.JobACL, err = parseWorkloadIdentity(jobPolicy); err != nil {
+			return err
+		}
 	}
 
 	// upsert our policy
@@ -123,6 +208,15 @@ func resourceACLPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", policy.Name)
 	d.Set("description", policy.Description)
 	d.Set("rules_hcl", policy.Rules)
+
+	if policy.JobACL != nil {
+		d.Set("workload_identity", map[string]string{
+			"namespace": policy.JobACL.Namespace,
+			"job_id":    policy.JobACL.JobID,
+			"group":     policy.JobACL.Group,
+			"task":      policy.JobACL.Task,
+		})
+	}
 
 	return nil
 }
