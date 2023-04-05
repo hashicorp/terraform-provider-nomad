@@ -185,8 +185,6 @@ func resourceACLAuthMethodUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	log.Printf("[DEBUG] %#v", aclBindingRule.Config)
-
 	// Perform the in-place update of the ACL auth method.
 	log.Printf("[DEBUG] Updating ACL Auth Method %q", aclBindingRule.Name)
 	_, _, err = client.ACLAuthMethods().Update(aclBindingRule, nil)
