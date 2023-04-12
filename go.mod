@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
-	github.com/hashicorp/nomad v1.5.2
+	github.com/hashicorp/nomad v1.5.3
 	github.com/hashicorp/nomad/api v0.0.0-20230321225438-9a2fdb5f53dc
 	github.com/hashicorp/terraform-plugin-sdk v1.17.2
 	github.com/hashicorp/vault v0.10.4

@@ -441,8 +441,8 @@ github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc h1:32lGaCPq5JPY
 github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc/go.mod h1:odKNpEeZv3COD+++SQcPyACuKOlM5eBoQlzRyN5utIQ=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
-github.com/hashicorp/nomad v1.5.2 h1:4dHbKF2UZEYXoXPUfG1VdSDaOaGpuqZUiCnuKuna83o=
-github.com/hashicorp/nomad v1.5.2/go.mod h1:ywYvhApBI9mRlmS8qMhoaWUbzeVGiJHKMjwy8l7fHRY=
+github.com/hashicorp/nomad v1.5.3 h1:IdXNqF7uNMqsnOdUl8jv+8IF0ybQMSXie0q5q7mpTiM=
+github.com/hashicorp/nomad v1.5.3/go.mod h1:ywYvhApBI9mRlmS8qMhoaWUbzeVGiJHKMjwy8l7fHRY=
 github.com/hashicorp/nomad/api v0.0.0-20230321225438-9a2fdb5f53dc h1:XhUHxwOMmGbSun7xsszFLsBqGz3WbWhi5zWVAEo+c8M=
 github.com/hashicorp/nomad/api v0.0.0-20230321225438-9a2fdb5f53dc/go.mod h1:bKUb1ytds5KwUioHdvdq9jmrDqCThv95si0Ub7iNeBg=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
