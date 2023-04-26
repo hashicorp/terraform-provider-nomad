@@ -1,7 +1,4 @@
 ## 1.4.20 (Unreleased)
-* **Target Nomad 1.5.2**: updated the nomad client to support Nomad API, jobspec, and features of version 1.5.2 ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
-* **New Resource**: `nomad_acl_auth_method` manages ACL auth methods in Nomad ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
-* **New Resource**: `nomad_acl_binding_rule` manages ACL binding rules in Nomad ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
 
 ## 1.4.19 (October 20, 2022)
 
