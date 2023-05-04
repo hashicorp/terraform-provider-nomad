@@ -14,19 +14,21 @@ func dataSourceVariable() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Type:     schema.TypeString,
-				Required: true,
+				Description: "The path of the variable",
+				Type:        schema.TypeString,
+				Required:    true,
 			},
 			"namespace": {
-				Description: "Variable namespace filter",
+				Description: "Variable namespace",
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     api.DefaultNamespace,
 			},
 			"items": {
-				Type:      schema.TypeMap,
-				Computed:  true,
-				Sensitive: true,
+				Description: "A map of values from the stored variable",
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Sensitive:   true,
 			},
 		},
 	}
