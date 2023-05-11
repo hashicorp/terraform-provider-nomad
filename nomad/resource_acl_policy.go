@@ -46,7 +46,7 @@ func resourceACLPolicy() *schema.Resource {
 			},
 
 			"job_acl": {
-				Description: "Workload identity that this should be applied to.",
+				Description: "Workload identity association that should be applied to the policy.",
 				Optional:    true,
 				Type:        schema.TypeList,
 				MaxItems:    1,
