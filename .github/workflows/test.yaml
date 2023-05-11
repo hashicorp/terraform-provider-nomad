@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Read Go version
         id: go-version
         run: echo "::set-output name=version::$(cat ./.go-version)"
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: ${{ steps.go-version.outputs.version }}
       - name: Run go vet
@@ -40,7 +40,7 @@ jobs:
           sudo chmod -R 777 /tmp/nomad
           sudo chmod 666 /tmp/nomad.log
       - name: Upload logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: always()
         with:
           name: logs
