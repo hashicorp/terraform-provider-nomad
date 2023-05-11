@@ -16,10 +16,13 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 
-localtestacc: fmtcheck
-	-export NOMAD_TOKEN=$(shell scripts/start-nomad.sh); \
-	export TF_ACC=1; \
-	go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
+localtestacc-start-nomad:
+	scripts/start-nomad.sh
+
+localtestacc: fmtcheck localtestacc-start-nomad
+	-env NOMAD_TOKEN=$(shell cat /tmp/nomad-test.token) \
+		TF_ACC=1 \
+		go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 	scripts/stop-nomad.sh
 
 vet:
