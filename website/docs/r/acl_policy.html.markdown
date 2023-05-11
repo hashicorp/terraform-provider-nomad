@@ -45,3 +45,13 @@ The following arguments are supported:
 - `rules_hcl` `(string: <required>)` - The contents of the policy to register,
    as HCL or JSON.
 - `description` `(string: "")` - A description of the policy.
+- `job_acl`: `(`[`JobACL`](#jobacl-1)`: <optional>)` - Options for assigning the ACL rules to a job, group, or task.
+
+### JobACL
+
+The following arguments are supported:
+
+- `namespace` `(string: "default")` - Job namespace.
+- `job_id` `(string: <optional>` - Job ID. Required if group is set.
+- `group` `(string: <optional>` - Job Group. Required if group is set.
+- `task` `(string: <optional>` - Job Task.

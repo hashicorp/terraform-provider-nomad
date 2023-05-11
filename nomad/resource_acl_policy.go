@@ -229,12 +229,12 @@ func resourceACLPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("rules_hcl", policy.Rules)
 
 	if policy.JobACL != nil {
-		d.Set("job_acl", map[string]string{
+		d.Set("job_acl", []map[string]string{{
 			"namespace": policy.JobACL.Namespace,
 			"job_id":    policy.JobACL.JobID,
 			"group":     policy.JobACL.Group,
 			"task":      policy.JobACL.Task,
-		})
+		}})
 	}
 
 	return nil
