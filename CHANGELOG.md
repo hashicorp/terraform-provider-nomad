@@ -1,5 +1,8 @@
 ## 1.4.21 (Unreleased)
 
+IMPROVEMENTS:
+* resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
+
 ## 1.4.20 (April 20, 2023)
 
 * **Target Nomad 1.5.2**: updated the nomad client to support Nomad API, jobspec, and features of version 1.5.2 ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
