@@ -49,9 +49,16 @@ The following arguments are supported:
 
 ### JobACL
 
-The following arguments are supported:
+The `job_acl` block is used to associate the ACL policy with a given namespace,
+job, group, or task. Refer to [Workload Associated ACL Policies][nomad_docs_wi]
+for more information. The following arguments are supported.
 
-- `namespace` `(string: "default")` - Job namespace.
-- `job_id` `(string: <optional>` - Job ID. Required if group is set.
-- `group` `(string: <optional>` - Job Group. Required if group is set.
-- `task` `(string: <optional>` - Job Task.
+- `namespace` `(string: "default")` - The namespace to attach the policy.
+  Required if `job_id` is set.
+- `job_id` `(string: <optional>` - The job to attach the policy. Required if
+  `group` is set.
+- `group` `(string: <optional>` - The group to attach the policy. Required if
+  `task` is set.
+- `task` `(string: <optional>` - The task to attach the policy.
+
+[nomad_docs_wi]: https://www.nomadproject.io/docs/concepts/workload-identity#workload-associated-acl-policies
