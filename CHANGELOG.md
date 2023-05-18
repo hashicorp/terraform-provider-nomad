@@ -1,5 +1,8 @@
 ## 1.4.21 (Unreleased)
 
+IMPROVEMENTS:
+* resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
+
 BUG FIXES:
 * data source/nomad_volume: fix panic when reading volume ([#323](https://github.com/hashicorp/terraform-provider-nomad/pull/323))
 
