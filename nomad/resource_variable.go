@@ -91,7 +91,7 @@ func resourceVariableDelete(d *schema.ResourceData, meta any) error {
 
 	log.Printf("[DEBUG] Deleting variable %q", variableID)
 	if _, err := client.Variables().Delete(path, &api.WriteOptions{Namespace: ns}); err != nil {
-		return fmt.Errorf("Failed to delete Variable %s: %v", variableID, err)
+		return fmt.Errorf("error deleting variable %s: %v", variableID, err)
 	}
 
 	log.Printf("[DEBUG] Deleted Variable %q", d.Id())
@@ -103,22 +103,17 @@ func resourceVariableDelete(d *schema.ResourceData, meta any) error {
 func resourceVariableRead(d *schema.ResourceData, meta any) error {
 	client := meta.(ProviderConfig).client
 
-	variableID := d.Id()
-	// If the variable has not been created, the ID will be an empty string
-	// which means we can skip attempting to perform the lookup.
-	if variableID == "" {
-		return nil
-	}
-
 	path := d.Get("path").(string)
 	ns := d.Get("namespace").(string)
+	variableID := path + "@" + ns
 
 	log.Printf("[DEBUG] Reading variable %s", variableID)
 	variable, _, err := client.Variables().Read(path, &api.QueryOptions{Namespace: ns})
 	if err != nil {
-		return fmt.Errorf("Failed to get information about %s: %v", variableID, err)
+		return fmt.Errorf("error getting information about %s: %v", variableID, err)
 	}
 
+	d.SetId(variableID)
 	return d.Set("items", variable.Items)
 }
 
@@ -186,7 +181,5 @@ func pathValidation() schema.SchemaValidateFunc {
 		default:
 			return nil, []error{fmt.Errorf("only paths at 'nomad/jobs' or 'nomad/job-templates' and below are valid paths under the top-level 'nomad' directory")}
 		}
-
-		return nil, nil
 	}
 }
