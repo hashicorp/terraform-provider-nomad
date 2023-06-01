@@ -129,6 +129,12 @@ func Provider() *schema.Provider {
 				Description: "A set of environment variables that are ignored by the provider when configuring the Nomad API client.",
 				Elem:        &schema.Schema{Type: schema.TypeBool},
 			},
+			"skip_verify": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NOMAD_SKIP_VERIFY", false),
+				Description: "Skip TLS verification on client side.",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -238,6 +244,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	conf.TLSConfig.CACertPEM = []byte(d.Get("ca_pem").(string))
 	conf.TLSConfig.ClientCertPEM = []byte(d.Get("cert_pem").(string))
 	conf.TLSConfig.ClientKeyPEM = []byte(d.Get("key_pem").(string))
+	conf.TLSConfig.Insecure = d.Get("skip_verify").(bool)
 
 	if _, ok := os.LookupEnv("TF_ACC"); ok {
 		// Revert the Nomad API client to non-pooled to avoid EOF errors when
