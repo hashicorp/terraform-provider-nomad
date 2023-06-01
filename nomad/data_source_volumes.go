@@ -66,6 +66,7 @@ func volumesDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	q := &api.QueryOptions{
 		Namespace: ns,
+		Params:    make(map[string]string, 0),
 	}
 	if v, ok := d.GetOk("node_id"); ok && v != "" {
 		q.Params["node_id"] = v.(string)

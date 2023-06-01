@@ -116,6 +116,9 @@ func testResourceACLPolicy_initialConfig(name string) string {
 resource "nomad_acl_policy" "test" {
   name = "%s"
   description = "A Terraform acctest ACL policy"
+  job_acl {
+    job_id = "job"
+  }
   rules_hcl = <<EOT
 namespace "default" {
   policy = "read"
@@ -160,6 +163,18 @@ func testResourceACLPolicy_initialCheck(name string) resource.TestCheckFunc {
 
 		if instanceState.Attributes["rules_hcl"] != rules_hcl {
 			return fmt.Errorf("expected rules_hcl to be %q, is %q in state", rules_hcl, instanceState.Attributes["rules_hcl"])
+		}
+
+		if instanceState.Attributes["job_acl.#"] != "1" {
+			return fmt.Errorf("expected job_acl to be populated but it is nil")
+		}
+
+		if instanceState.Attributes["job_acl.0.namespace"] != "default" {
+			return fmt.Errorf("expected job_acl.0.namespace to be %q, is %q in state", "default", instanceState.Attributes["job_acl.0.namespace"])
+		}
+
+		if instanceState.Attributes["job_acl.0.job_id"] != "job" {
+			return fmt.Errorf("expected job_acl.0.job_id to be %q, is %q in state", "job", instanceState.Attributes["job_acl.0.job_id"])
 		}
 
 		client := testProvider.Meta().(ProviderConfig).client
