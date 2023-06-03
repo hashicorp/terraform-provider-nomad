@@ -4,6 +4,7 @@
 
 set -e
 
+export NOMAD_TOKEN=00000000-0000-0000-0000-000000000000
 export VAULT_TEST_TOKEN=terraform-provider-nomad-token
 export VAULT_ADDR=http://localhost:8200
 
@@ -46,22 +47,13 @@ EOF
 
     retries=30
     while [ $retries -ge 0 ]; do
-      nomad acl bootstrap -json | jq -r '.SecretID' > /tmp/nomad-test.token && break
+      echo $NOMAD_TOKEN | nomad acl bootstrap -
+      if [ $? -eq 0 ]; then
+        break
+      fi
       sleep 5
       retries=$(( retries - 1 ))
     done
-    NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
-    export NOMAD_TOKEN
-    if [ -z "$NOMAD_TOKEN" ]; then
-      echo "Failed to bootstrap Nomad ACL" 1>&2
-      exit 1
-    fi
-
-    if [ -z "$GITHUB_ENV" ]; then
-      echo "$NOMAD_TOKEN"
-    else
-      echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> "$GITHUB_ENV"
-    fi
 
     # Run hostpath CSI plugin and wait for it to be healthy.
     nomad job run https://raw.githubusercontent.com/hashicorp/nomad/v1.3.1/demo/csi/hostpath/plugin.nomad 1>&2
@@ -74,11 +66,4 @@ EOF
         retries=$(( retries - 1 ))
     done
     nomad plugin status hostpath 1>&2
-elif [ -e /tmp/nomad-test.token ]; then
-    NOMAD_TOKEN=$(cat /tmp/nomad-test.token)
-    if [ -z "$GITHUB_ENV" ]; then
-      echo "$NOMAD_TOKEN"
-    else
-      echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> "$GITHUB_ENV"
-    fi
 fi
