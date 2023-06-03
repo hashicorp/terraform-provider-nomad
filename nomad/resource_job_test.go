@@ -2995,6 +2995,7 @@ job "foo-service-with-deployment" {
     }
     task "sleep" {
       driver = "raw_exec"
+	  kill_timeout = "1s"
       config {
         command = "sleep"
         args = ["3600"]
