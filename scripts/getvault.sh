@@ -5,7 +5,7 @@
 
 set -e
 
-VAULT_VERSION=1.7.2+ent
+VAULT_VERSION=1.13.2+ent
 VAULT_BINARY=https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
 
 curl -L $VAULT_BINARY > vault.zip
