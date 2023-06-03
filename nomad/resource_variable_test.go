@@ -6,13 +6,13 @@ package nomad
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestResourceVariable_basic(t *testing.T) {
@@ -25,6 +25,28 @@ func TestResourceVariable_basic(t *testing.T) {
 			{
 				Config: testResourceVariable_initialConfig(path),
 				Check:  testResourceVariable_initialCheck(path),
+			},
+		},
+
+		CheckDestroy: testResourceVariable_checkDestroy(path),
+	})
+}
+
+func TestResourceVariable_pathChange(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+	newPath := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceVariable_initialConfig(path),
+				Check:  testResourceVariable_initialCheck(path),
+			},
+			{
+				Config: testResourceVariable_initialConfig(newPath),
+				Check:  testResourceVariable_initialCheck(newPath),
 			},
 		},
 
