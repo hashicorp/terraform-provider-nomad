@@ -159,6 +159,7 @@ func Provider() *schema.Provider {
 			"nomad_scheduler_config": dataSourceSchedulerConfig(),
 			"nomad_regions":          dataSourceRegions(),
 			"nomad_volumes":          dataSourceVolumes(),
+			"nomad_variable":         dataSourceVariable(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -174,6 +175,7 @@ func Provider() *schema.Provider {
 			"nomad_sentinel_policy":     resourceSentinelPolicy(),
 			"nomad_volume":              resourceVolume(),
 			"nomad_scheduler_config":    resourceSchedulerConfig(),
+			"nomad_variable":            resourceVariable(),
 		},
 	}
 }

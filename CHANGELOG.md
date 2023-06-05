@@ -1,5 +1,8 @@
 ## 1.4.21 (Unreleased)
 
+* **New Resource**: `nomad_variable` manages Nomad variables ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
+* **New Data Source**: `nomad_variable` retrieves a Nomad variable ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
+
 IMPROVEMENTS:
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
