@@ -187,12 +187,15 @@ func validateNomadACLBindingRule(d *schema.ResourceData) error {
 	bindName := d.Get("bind_name").(string)
 	bindType := d.Get("bind_type").(string)
 
-	if bindType != api.ACLBindingRuleBindTypeManagement && bindName == "" {
-		return fmt.Errorf("error bind_name must be defined if bind_type is not '%q'", api.ACLBindingRuleBindTypeManagement)
-	}
-
-	if bindType == api.ACLBindingRuleBindTypeManagement && bindName != "" {
-		return fmt.Errorf("error bind_name must not be defined if bind_type is '%q'", api.ACLBindingRuleBindTypeManagement)
+	switch bindType {
+	case api.ACLBindingRuleBindTypeManagement:
+		if bindName != "" {
+			return fmt.Errorf("error bind_name must not be defined if bind_type is '%q'", api.ACLBindingRuleBindTypeManagement)
+		}
+	default:
+		if bindName == "" {
+			return fmt.Errorf("error bind_name must be defined if bind_type is '%q'", bindType)
+		}
 	}
 
 	return nil
