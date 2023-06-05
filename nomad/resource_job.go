@@ -500,7 +500,10 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 			if err != nil {
 				return nil, "", err
 			}
-			spew.Dump(allocs)
+			for _, a := range allocs {
+				alloc, _, _ := client.Allocations().Info(a.ID, nil)
+				spew.Dump(alloc)
+			}
 			return deployment, "",
 				fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
 					deployment.ID, deployment.Status, deployment.StatusDescription)
