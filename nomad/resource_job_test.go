@@ -2989,13 +2989,12 @@ job "foo-service-with-deployment" {
   datacenters   = ["dc1"]
   group "service" {
     update {
-      min_healthy_time = "1s"
-      healthy_deadline = "2s"
-      progress_deadline = "3s"
+      min_healthy_time = "10s"
+      healthy_deadline = "20s"
+      progress_deadline = "30s"
     }
     task "sleep" {
       driver = "raw_exec"
-	  kill_timeout = "1s"
       config {
         command = "sleep"
         args = ["3600"]
