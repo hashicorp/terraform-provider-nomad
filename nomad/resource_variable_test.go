@@ -20,7 +20,7 @@ func TestResourceVariable_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0") },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceVariable_initialConfig(path),
