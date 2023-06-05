@@ -1,13 +1,22 @@
 ## 1.4.21 (Unreleased)
 
+IMPROVEMENTS:
+* provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
+* resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
+
+BUG FIXES:
+* data source/nomad_volume: fix panic when reading volume ([#323](https://github.com/hashicorp/terraform-provider-nomad/pull/323))
+
 ## 1.4.20 (April 20, 2023)
 
+IMPROVEMENTS:
 * **Target Nomad 1.5.2**: updated the nomad client to support Nomad API, jobspec, and features of version 1.5.2 ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
 * **New Resource**: `nomad_acl_auth_method` manages ACL auth methods in Nomad ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
 * **New Resource**: `nomad_acl_binding_rule` manages ACL binding rules in Nomad ([#305](https://github.com/hashicorp/terraform-provider-nomad/pull/305))
 
 ## 1.4.19 (October 20, 2022)
 
+IMPROVEMENTS:
 * **Target Nomad 1.4.1**: updated the nomad client to support Nomad API, jobspec, and fetures of version 1.4.1 ([#291](https://github.com/hashicorp/terraform-provider-nomad/pull/291))
 * **New Resource**: `nomad_acl_role` manages ACL roles in Nomad ([#284](https://github.com/hashicorp/terraform-provider-nomad/pull/284))
 * **New Data Source**: `nomad_acl_role` and `nomad_acl_roles` retrieves and lists ACL roles ([#284](https://github.com/hashicorp/terraform-provider-nomad/pull/284))

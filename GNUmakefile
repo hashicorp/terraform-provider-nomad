@@ -16,10 +16,13 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 
-localtestacc: fmtcheck
-	-export NOMAD_TOKEN=$(shell scripts/start-nomad.sh); \
-	export TF_ACC=1; \
-	go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
+localtestacc-start-nomad:
+	scripts/start-nomad.sh
+
+localtestacc: fmtcheck localtestacc-start-nomad
+	-env NOMAD_TOKEN=00000000-0000-0000-0000-000000000000 \
+		TF_ACC=1 \
+		go test $(TEST) -v $(TESTARGS) -timeout 120m -count=1
 	scripts/stop-nomad.sh
 
 vet:
@@ -57,4 +60,3 @@ endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
 .PHONY: build test testacc vet fmt fmtcheck errcheck test-compile website
-

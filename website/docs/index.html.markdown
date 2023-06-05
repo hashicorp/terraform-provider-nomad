@@ -66,6 +66,9 @@ The following arguments are supported:
 - `key_pem` `(string: "")` - PEM-encoded private key. This is required if
   `cert_file` or `cert_pem` is specified.
 
+- `skip_verify` `(boolean: false)` - Set this to true if you want to skip TLS verification on the client side. 
+  This can also be specified via the `NOMAD_SKIP_VERIFY` environment variable.
+
 - `headers` - (Optional) A configuration block, described below, that provides headers
   to be sent along with all requests to Nomad.  This block can be specified
   multiple times.
