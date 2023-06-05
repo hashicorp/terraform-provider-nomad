@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec"
 	"github.com/hashicorp/nomad/jobspec2"
@@ -495,6 +496,11 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 			state = DeploymentSuccessful
 		case "failed", "cancelled":
 			log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
+			allocs, _, err := client.Deployments().Allocations(deploymentID, nil)
+			if err != nil {
+				return nil, "", err
+			}
+			spew.Dump(allocs)
 			return deployment, "",
 				fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
 					deployment.ID, deployment.Status, deployment.StatusDescription)
