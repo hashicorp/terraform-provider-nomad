@@ -46,14 +46,14 @@ func resourceACLBindingRule() *schema.Resource {
 				Required:    true,
 				Type:        schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
+					api.ACLBindingRuleBindTypeManagement,
 					api.ACLBindingRuleBindTypePolicy,
 					api.ACLBindingRuleBindTypeRole,
-					"management",
 				}, false),
 			},
 			"bind_name": {
 				Description: "Target of the binding.",
-				Required:    true,
+				Optional:    true,
 				Type:        schema.TypeString,
 			},
 		},
@@ -61,6 +61,11 @@ func resourceACLBindingRule() *schema.Resource {
 }
 
 func resourceACLBindingRuleCreate(d *schema.ResourceData, meta interface{}) error {
+	err := validateNomadACLBindingRule(d)
+	if err != nil {
+		return err
+	}
+
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -98,6 +103,11 @@ func resourceACLBindingRuleDelete(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceACLBindingRuleUpdate(d *schema.ResourceData, meta interface{}) error {
+	err := validateNomadACLBindingRule(d)
+	if err != nil {
+		return err
+	}
+
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -105,7 +115,7 @@ func resourceACLBindingRuleUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	// Perform the in-place update of the ACL binding rule.
 	log.Printf("[DEBUG] Updating ACL Binding Rule %q", aclBindingRule.ID)
-	_, _, err := client.ACLBindingRules().Update(aclBindingRule, nil)
+	_, _, err = client.ACLBindingRules().Update(aclBindingRule, nil)
 	if err != nil {
 		return fmt.Errorf("error updating ACL Binding Rule %q: %s", aclBindingRule.ID, err.Error())
 	}
@@ -171,4 +181,19 @@ func generateNomadACLBindingRule(d *schema.ResourceData) *api.ACLBindingRule {
 		BindType:    d.Get("bind_type").(string),
 		BindName:    d.Get("bind_name").(string),
 	}
+}
+
+func validateNomadACLBindingRule(d *schema.ResourceData) error {
+	bindName := d.Get("bind_name").(string)
+	bindType := d.Get("bind_type").(string)
+
+	if bindType != api.ACLBindingRuleBindTypeManagement && bindName == "" {
+		return fmt.Errorf("error bind_name must be defined if bind_type is not '%q'", api.ACLBindingRuleBindTypeManagement)
+	}
+
+	if bindType == api.ACLBindingRuleBindTypeManagement && bindName != "" {
+		return fmt.Errorf("error bind_name must not be defined if bind_type is '%q'", api.ACLBindingRuleBindTypeManagement)
+	}
+
+	return nil
 }
