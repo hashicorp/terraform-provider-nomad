@@ -47,6 +47,7 @@ func resourceVariable() *schema.Resource {
 				Description: "Variable namespace",
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Default:     api.DefaultNamespace,
 			},
 			"items": {
@@ -153,12 +154,12 @@ func pathValidation() schema.SchemaValidateFunc {
 
 		// Limit length to 128 characters
 		if len(path) > maxPathLength {
-			errs = append(errs, fmt.Errorf("expecnted path legnth to be less than %v but got a path legnth of %v", maxPathLength, len(path)))
+			errs = append(errs, fmt.Errorf("expected path legnth to be less than %v but got a path legnth of %v", maxPathLength, len(path)))
 		}
 
 		// Limit to RFC3986 URL-safe characters, minus '@' and '.' as they conflict with template blocks
 		if !validVariablePath.MatchString(path) {
-			errs = append(errs, fmt.Errorf("the path %s contains invalid characters", path))
+			errs = append(errs, fmt.Errorf("path %s contains invalid characters", path))
 		}
 
 		// Validate paths that have 'nomad' as the first directory in the path
@@ -167,7 +168,7 @@ func pathValidation() schema.SchemaValidateFunc {
 		parts := strings.Split(path, "/")
 
 		if parts[0] != "nomad" {
-			return nil, nil
+			return nil, errs
 		}
 
 		if len(parts) == 1 {
@@ -176,9 +177,9 @@ func pathValidation() schema.SchemaValidateFunc {
 
 		switch {
 		case parts[1] == "jobs":
-			return nil, nil
+			return nil, errs
 		case parts[1] == "job-templates" && len(parts) == 3:
-			return nil, nil
+			return nil, errs
 		case parts[1] == "job-templates":
 			errs = append(errs, fmt.Errorf("the path 'nomad/job-templates' is reserved, you may write variables at the level below it, for example, 'nomad/job-templates/template-name'"))
 		default:

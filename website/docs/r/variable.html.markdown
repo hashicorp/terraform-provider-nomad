@@ -11,7 +11,7 @@ description: |-
 Creates and manages a variable, including it's contents, within a
 Nomad cluster.
 
-~> **Warning:** this resource will store the sensitive value placed in
+~> **Warning:** this resource will store the sensitive values placed in
   `items` in the Terraform's state file. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
@@ -46,6 +46,7 @@ resource "nomad_variable" "example" {
 ```
 
 ## Argument Reference
+
 - `path` `(string: <required>)` - A unique path to create the variable at.
 - `namespace` `(string: "default")` - The namepsace to create the variable in.
 - `items` `(map[string]string: <required>)` - An arbitrary map of items to create in the variable.

@@ -23,12 +23,12 @@ func TestResourceVariable_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0") },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceVariable_initialConfig(path),
-				Check:  testResourceVariable_initialCheck(path),
+				Config: testResourceVariable_initialConfig(api.DefaultNamespace, path),
+				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, path),
 			},
 		},
 
-		CheckDestroy: testResourceVariable_checkDestroy(path),
+		CheckDestroy: testResourceVariable_checkDestroy(api.DefaultNamespace, path),
 	})
 }
 
@@ -41,34 +41,68 @@ func TestResourceVariable_pathChange(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceVariable_initialConfig(path),
-				Check:  testResourceVariable_initialCheck(path),
+				Config: testResourceVariable_initialConfig(api.DefaultNamespace, path),
+				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, path),
 			},
 			{
-				Config: testResourceVariable_initialConfig(newPath),
-				Check:  testResourceVariable_initialCheck(newPath),
+				Config: testResourceVariable_initialConfig(api.DefaultNamespace, newPath),
+				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, newPath),
 			},
 		},
 
-		CheckDestroy: testResourceVariable_checkDestroy(path),
+		CheckDestroy: testResourceVariable_checkDestroy(api.DefaultNamespace, path),
 	})
 }
 
-func testResourceVariable_initialConfig(path string) string {
+func TestResourceVariable_namespaceChange(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+	newPath := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceVariable_initialConfig(api.DefaultNamespace, path),
+				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, path),
+			},
+			{
+				Config: testResourceVariable_initialConfigWithNamespace("var-test-namespace", newPath),
+				Check:  testResourceVariable_initialCheck("var-test-namespace", newPath),
+			},
+		},
+
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testResourceVariable_checkDestroy(api.DefaultNamespace, path),
+			testResourceVariable_checkDestroy("var-test-namespace", path),
+		),
+	})
+}
+
+func testResourceVariable_initialConfig(namespace, path string) string {
 	return fmt.Sprintf(`
 resource "nomad_variable" "test" {
-  path = "%s"
-  
+  namespace = "%s"
+  path      = "%s"
+
   items = {
     test_key = "test_value"
   }
 }
-`, path)
+`, namespace, path)
 }
 
-func testResourceVariable_initialCheck(path string) resource.TestCheckFunc {
+func testResourceVariable_initialConfigWithNamespace(namespace, path string) string {
+	return fmt.Sprintf(`
+resource nomad_namespace "nomad_var_test" {
+  name = "%s"
+}
+%s
+`, namespace, testResourceVariable_initialConfig(namespace, path))
+}
+
+func testResourceVariable_initialCheck(namespace, path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		namespace := api.DefaultNamespace
 		resourceID := path + "@" + namespace
 
 		resourceState := s.Modules[0].Resources["nomad_variable.test"]
@@ -111,10 +145,9 @@ func testResourceVariable_initialCheck(path string) resource.TestCheckFunc {
 	}
 }
 
-func testResourceVariable_checkDestroy(path string) resource.TestCheckFunc {
+func testResourceVariable_checkDestroy(namespace, path string) resource.TestCheckFunc {
 	return func(*terraform.State) error {
 		client := testProvider.Meta().(ProviderConfig).client
-		namespace := api.DefaultNamespace
 		resourceID := path + "@" + namespace
 
 		variable, _, err := client.Variables().Read(path, &api.QueryOptions{Namespace: namespace})
