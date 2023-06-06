@@ -52,5 +52,6 @@ jobs:
             /tmp/vault.log
             /tmp/nomad/data/**/alloc/logs/plugin*
             !/tmp/nomad/data/**/alloc/logs/*.fifo
+            /tmp/nomad-debug*
           if-no-files-found: warn
           retention-days: 3

@@ -14,5 +14,9 @@ if [ -e /tmp/nomad-test.pid ]; then
     echo "Stopping nomad"
     sudo kill "$(cat /tmp/nomad-test.pid)" && sudo rm -f /tmp/nomad-test.pid
 fi
+if [ -e /tmp/nomad-debug.pid ]; then
+    echo "Stopping nomad debug"
+    sudo kill "$(cat /tmp/nomad-debug.pid)" && sudo rm -f /tmp/nomad-debug.pid
+fi
 
 rm -f /tmp/nomad-test.token

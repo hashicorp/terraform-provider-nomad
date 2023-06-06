@@ -55,6 +55,10 @@ EOF
       retries=$(( retries - 1 ))
     done
 
+    # Start a debug bundle.
+    nomad operator debug -duration=20m -interval=10s -output=/tmp &
+    echo $! > /tmp/nomad-debug.pid
+
     # Run hostpath CSI plugin and wait for it to be healthy.
     nomad job run https://raw.githubusercontent.com/hashicorp/nomad/v1.3.1/demo/csi/hostpath/plugin.nomad 1>&2
     echo "Waiting for hostpath CSI plugin to become healthy" 1>&2
