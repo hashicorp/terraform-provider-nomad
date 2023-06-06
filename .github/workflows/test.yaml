@@ -30,7 +30,7 @@ jobs:
           NOMAD_LICENSE: ${{ secrets.NOMAD_LICENSE }}
         run: ./scripts/start-nomad.sh
       - name: Run acceptance tests
-        run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} TESTARGS="-run TestResourceJob_serviceDeploymentInfo"  make testacc
+        run: NOMAD_TOKEN=${{ env.NOMAD_TOKEN }} make testacc
         env:
           NOMAD_TOKEN: 00000000-0000-0000-0000-000000000000
       - name: Stop nomad

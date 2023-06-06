@@ -510,7 +510,7 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 					select {
 					case log := <-l:
 						if log != nil {
-							spew.Dump(string(log.Data))
+							fmt.Println(string(log.Data))
 							break OUT
 						}
 					case e := <-eCn:
