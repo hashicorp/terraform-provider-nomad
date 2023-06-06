@@ -504,9 +504,19 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 				alloc, _, _ := client.Allocations().Info(a.ID, nil)
 				spew.Dump(alloc)
 				logCn := make(chan struct{})
-				l, _ := client.AllocFS().Logs(alloc, false, "sleep", "stdout", "start", 0, logCn, nil)
-				log := <-l
-				spew.Dump(string(log.Data))
+				l, eCn := client.AllocFS().Logs(alloc, false, "sleep", "stdout", "start", 0, logCn, nil)
+			OUT:
+				for {
+					select {
+					case log := <-l:
+						if log != nil {
+							spew.Dump(string(log.Data))
+							break OUT
+						}
+					case e := <-eCn:
+						return nil, "", e
+					}
+				}
 				close(logCn)
 			}
 			spew.Dump(deployment)
