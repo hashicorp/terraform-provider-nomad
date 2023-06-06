@@ -5,7 +5,7 @@
 
 set -e
 
-CONSUL_VERSION=1.15.3+ent
+CONSUL_VERSION=1.15.3
 CONSUL_BINARY=https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
 
 curl -L $CONSUL_BINARY > consul.zip
