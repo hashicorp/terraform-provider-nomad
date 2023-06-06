@@ -66,7 +66,9 @@ The following arguments are supported:
 - `bind_type` `(string: <required>)` - Adjusts how this binding rule is applied
   at login time. Valid values are `role`, `policy`, and `management`.
 
-- `bind_name` `(string: "")` - Target of the binding.
+- `bind_name` `(string: <optional>)` - Target of the binding. If `bind_type` is
+  `role` or `policy` then `bind_name` is required. If `bind_type` is
+  `management` than `bind_name` must not be defined.
 
 - `config`: `(block: <required>)` - Configuration specific to the auth method
   provider.

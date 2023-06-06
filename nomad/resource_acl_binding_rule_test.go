@@ -34,6 +34,22 @@ func TestResourceACLBindingRule(t *testing.T) {
 				Check:  testResourceACLBindingRuleCheck(updatedDescription, updatedRoleName),
 			},
 		},
+
+		CheckDestroy: testResourceACLBindingRuleCheckDestroy,
+	})
+}
+
+func TestResourceACLManagementBindingRule(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.4-dev") },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceACLBindingManagementRuleConfig(),
+				Check:  testResourceACLBindingManagementRuleCheck(),
+			},
+		},
+
 		CheckDestroy: testResourceACLBindingRuleCheckDestroy,
 	})
 }
@@ -41,38 +57,73 @@ func TestResourceACLBindingRule(t *testing.T) {
 func testResourceACLBindingRuleConfig(description, bindingName string) string {
 	return fmt.Sprintf(`
 resource "nomad_acl_auth_method" "test" {
-  name           = "tf-provider-acl-binding-rule-test-auth-method"
-  type           = "OIDC"
-  token_locality = "global"
-  max_token_ttl  = "10m0s"
-  default        = true
-
-  config {
-    oidc_discovery_url    = "https://uk.auth0.com/"
-    oidc_client_id        = "someclientid"
-    oidc_client_secret    = "someclientsecret-t"
-    bound_audiences       = ["someclientid"]
-    allowed_redirect_uris = [
-      "http://localhost:4649/oidc/callback",
-      "http://localhost:4646/ui/settings/tokens",
-    ]
-    list_claim_mappings = {
-      "http://nomad.internal/roles" : "roles"
-    }
-  }
+	name           = "tf-provider-acl-binding-rule-test-auth-method"
+	type           = "OIDC"
+	token_locality = "global"
+	max_token_ttl  = "10m0s"
+	default        = true
+	
+	config {
+		oidc_discovery_url    = "https://uk.auth0.com/"
+		oidc_client_id        = "someclientid"
+		oidc_client_secret    = "someclientsecret-t"
+		bound_audiences       = ["someclientid"]
+		allowed_redirect_uris = [
+			"http://localhost:4649/oidc/callback",
+			"http://localhost:4646/ui/settings/tokens",
+		]
+		list_claim_mappings = {
+			"http://nomad.internal/roles" : "roles"
+		}
+	}
 }
 
 resource "nomad_acl_binding_rule" "test" {
-  description = %q
-  auth_method = nomad_acl_auth_method.test.name
-  selector    = "engineering in list.roles"
-  bind_type   = "role"
-  bind_name   = %q
+	description = %q
+	auth_method = nomad_acl_auth_method.test.name
+	selector    = "engineering in list.roles"
+	bind_type   = "role"
+	bind_name   = %q
 
-  depends_on = [nomad_acl_auth_method.test]
+	depends_on = [nomad_acl_auth_method.test]
 }
 
 `, description, bindingName)
+}
+
+func testResourceACLBindingManagementRuleConfig() string {
+	return `
+resource "nomad_acl_auth_method" "test" {
+	name           = "tf-provider-acl-binding-rule-test-auth-method"
+	type           = "OIDC"
+	token_locality = "global"
+	max_token_ttl  = "10m0s"
+	default        = true
+	
+	config {
+		oidc_discovery_url    = "https://uk.auth0.com/"
+		oidc_client_id        = "someclientid"
+		oidc_client_secret    = "someclientsecret-t"
+		bound_audiences       = ["someclientid"]
+		allowed_redirect_uris = [
+			"http://localhost:4649/oidc/callback",
+			"http://localhost:4646/ui/settings/tokens",
+		]
+		list_claim_mappings = {
+			"http://nomad.internal/roles" : "roles"
+		}
+	}
+}
+
+resource "nomad_acl_binding_rule" "test" {
+	description = "management token test"
+	auth_method = "tf-provider-acl-binding-rule-test-auth-method"
+	selector    = "engineering in list.roles"
+	bind_type   = "management"
+
+	depends_on = [nomad_acl_auth_method.test]
+}
+`
 }
 
 func testResourceACLBindingRuleCheck(description, bindName string) resource.TestCheckFunc {
@@ -139,6 +190,22 @@ func testResourceACLBindingRuleCheck(description, bindName string) resource.Test
 		if bindingRule.BindName != bindName {
 			return fmt.Errorf("expected bind name to be %q, is %q in API",
 				bindName, bindingRule.BindName)
+		}
+
+		return nil
+	}
+}
+
+func testResourceACLBindingManagementRuleCheck() resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_acl_binding_rule.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
 		}
 
 		return nil

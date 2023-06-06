@@ -9,6 +9,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 * data source/nomad_volume: fix panic when reading volume ([#323](https://github.com/hashicorp/terraform-provider-nomad/pull/323))
+* resources/nomad_acl_binding_rule: fix a bug where `bind_name` was required even when `bind_type` was `management`. ([#330](https://github.com/hashicorp/terraform-provider-nomad/pull/330))
 
 ## 1.4.20 (April 20, 2023)
 
