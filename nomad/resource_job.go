@@ -503,7 +503,13 @@ func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resourc
 			for _, a := range allocs {
 				alloc, _, _ := client.Allocations().Info(a.ID, nil)
 				spew.Dump(alloc)
+				logCn := make(chan struct{})
+				l, _ := client.AllocFS().Logs(alloc, false, "sleep", "stdout", "start", 0, logCn, nil)
+				log := <-l
+				spew.Dump(string(log.Data))
+				close(logCn)
 			}
+			spew.Dump(deployment)
 			return deployment, "",
 				fmt.Errorf("deployment '%s' terminated with status '%s': '%s'",
 					deployment.ID, deployment.Status, deployment.StatusDescription)
