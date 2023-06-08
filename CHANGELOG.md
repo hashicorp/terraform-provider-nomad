@@ -5,6 +5,7 @@
 
 IMPROVEMENTS:
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
+* provider: update Go to 1.20.5 ([#334](https://github.com/hashicorp/terraform-provider-nomad/pull/334))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
 
 BUG FIXES:
