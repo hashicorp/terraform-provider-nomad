@@ -64,8 +64,9 @@ func resourceQuotaSpecificationLimits() *schema.Resource {
 				Elem:        resourceQuotaSpecificationRegionLimits(),
 			},
 			"variables_limit": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Description: "The maximum total size of all variables.",
+				Type:        schema.TypeInt,
+				Optional:    true,
 			},
 		},
 	}
