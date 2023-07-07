@@ -87,6 +87,7 @@ func resourceACLToken() *schema.Resource {
 			"expiration_ttl": {
 				Description: `Provides a TTL for the token in the form of a time duration such as "5m" or "1h".`,
 				Optional:    true,
+				Default:     "0s",
 				ForceNew:    true,
 				Type:        schema.TypeString,
 			},
@@ -188,7 +189,7 @@ func resourceACLTokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("role", roles)
 	d.Set("global", token.Global)
 	d.Set("create_time", token.CreateTime.UTC().String())
-	d.Set("expiration_tll", token.ExpirationTTL.String())
+	d.Set("expiration_ttl", token.ExpirationTTL.String())
 	d.Set("expiration_time", expirationTime)
 
 	return nil
