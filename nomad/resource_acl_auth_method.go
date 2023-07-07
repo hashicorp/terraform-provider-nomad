@@ -218,7 +218,7 @@ func resourceACLAuthMethodRead(d *schema.ResourceData, meta interface{}) error {
 	_ = d.Set("name", authMethod.Name)
 	_ = d.Set("type", authMethod.Type)
 	_ = d.Set("token_locality", authMethod.TokenLocality)
-	_ = d.Set("max_token_ttl", authMethod.MaxTokenTTL)
+	_ = d.Set("max_token_ttl", authMethod.MaxTokenTTL.String())
 	_ = d.Set("default", authMethod.Default)
 	_ = d.Set("config", flattenACLAuthMethodConfig(authMethod.Config))
 
@@ -342,7 +342,7 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 	return &authMethodConfig, nil
 }
 
-func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) *schema.Set {
+func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 	if cfg == nil {
 		return nil
 	}
@@ -353,11 +353,12 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) *schema.Set {
 		"oidc_scopes":           packStringArray(cfg.OIDCScopes),
 		"bound_audiences":       packStringArray(cfg.BoundAudiences),
 		"allowed_redirect_uris": packStringArray(cfg.AllowedRedirectURIs),
+		"discovery_ca_pem":      packStringArray(cfg.DiscoveryCaPem),
 		"signing_algs":          packStringArray(cfg.SigningAlgs),
 		"claim_mappings":        packStringMap(cfg.ClaimMappings),
 		"list_claim_mappings":   packStringMap(cfg.ListClaimMappings),
 	}
-	return schema.NewSet(schema.HashResource(resourceACLAuthMethodConfig()), []interface{}{result})
+	return []any{result}
 }
 
 func unpackStringArray(v interface{}, name string) ([]string, error) {

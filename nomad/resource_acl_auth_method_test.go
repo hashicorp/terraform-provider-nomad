@@ -53,13 +53,19 @@ resource "nomad_acl_auth_method" "test" {
     oidc_discovery_url    = "https://uk.auth0.com/"
     oidc_client_id        = "someclientid"
     oidc_client_secret    = "someclientsecret-t"
+    oidc_scopes           = ["email"]
     bound_audiences       = ["someclientid"]
+    discovery_ca_pem      = ["secretpemcert"]
+    signing_algs          = ["rsa256", "hs256"]
     allowed_redirect_uris = [
       "http://localhost:4649/oidc/callback",
       %q,
     ]
+    claim_mappings = {
+      "http://nomad.internal/name": "name"
+    }
     list_claim_mappings = {
-      "http://nomad.internal/roles" : "roles"
+      "http://nomad.internal/roles": "roles"
     }
   }
 }
@@ -120,10 +126,15 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			"config.0.allowed_redirect_uris.#":                         "2",
 			"config.0.allowed_redirect_uris.0":                         expectedAllowedRedirectURIs[0],
 			"config.0.allowed_redirect_uris.1":                         expectedAllowedRedirectURIs[1],
-			"config.0.oidc_scopes.#":                                   "0",
-			"config.0.discovery_ca_pem.#":                              "0",
-			"config.0.signing_algs.#":                                  "0",
-			"config.0.claim_mappings.%":                                "0",
+			"config.0.oidc_scopes.#":                                   "1",
+			"config.0.oidc_scopes.0":                                   "email",
+			"config.0.discovery_ca_pem.#":                              "1",
+			"config.0.discovery_ca_pem.0":                              "secretpemcert",
+			"config.0.signing_algs.#":                                  "2",
+			"config.0.signing_algs.0":                                  "rsa256",
+			"config.0.signing_algs.1":                                  "hs256",
+			"config.0.claim_mappings.%":                                "1",
+			"config.0.claim_mappings.http://nomad.internal/name":       "name",
 			"config.0.list_claim_mappings.%":                           "1",
 			"config.0.list_claim_mappings.http://nomad.internal/roles": "roles",
 		}
