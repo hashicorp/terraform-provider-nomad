@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestResourceACLBindingRule(t *testing.T) {
@@ -62,7 +62,7 @@ resource "nomad_acl_auth_method" "test" {
 	token_locality = "global"
 	max_token_ttl  = "10m0s"
 	default        = true
-	
+
 	config {
 		oidc_discovery_url    = "https://uk.auth0.com/"
 		oidc_client_id        = "someclientid"
@@ -99,7 +99,7 @@ resource "nomad_acl_auth_method" "test" {
 	token_locality = "global"
 	max_token_ttl  = "10m0s"
 	default        = true
-	
+
 	config {
 		oidc_discovery_url    = "https://uk.auth0.com/"
 		oidc_client_id        = "someclientid"

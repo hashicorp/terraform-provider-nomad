@@ -5,6 +5,7 @@ package nomad
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -12,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceVolume() *schema.Resource {
@@ -645,7 +646,7 @@ func flattenVolumeTopologies(topologies []*api.CSITopology) []interface{} {
 }
 
 // resourceVolumeStateUpgradeV0 migrates a nomad_volume resource schema from v0 to v1.
-func resourceVolumeStateUpgradeV0(rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+func resourceVolumeStateUpgradeV0(_ context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
 	if val, ok := rawState["mount_options"]; ok {
 		rawState["mount_options"] = []interface{}{val}
 	}
