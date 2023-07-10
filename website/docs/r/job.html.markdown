@@ -93,21 +93,21 @@ API endpoint.
 
 ## HCL2 jobspec
 
-The input jobspec can also be provided in the [HCL2 format](https://www.nomadproject.io/docs/job-specification/hcl2)
-by enabling `hcl2` parsing:
+By default, HCL jobs are parsed using the [HCL2 format](https://www.nomadproject.io/docs/job-specification/hcl2).
+If your job is not compatible with HCL2 you may set the `hcl1` argument to
+`true` to use the previous HCL1 parser.
 
 ```hcl
 resource "nomad_job" "app" {
   jobspec = file("${path.module}/jobspec.hcl")
 
-  hcl2 {
-    enabled = true
-  }
+  hcl1 = true
 }
 ```
 
--> **Note:** This option should be enabled whenever possible as it includes
-   support for newer jobspec entries.
+-> **Note:** HCL1 parsing is only provided for backwards compatibility with
+  older jobspecs and may not support newer job features and functionalities, so
+  it should be avoided whenever possible.
 
 ### Variables
 
@@ -126,7 +126,6 @@ values must be provided as strings.
 ```hcl
 resource "nomad_job" "app" {
   hcl2 {
-    enabled  = true
     vars = {
       "restart_attempts" = "5",
       "datacenters"      = "[\"dc1\", \"dc2\"]",
@@ -176,7 +175,6 @@ job "example" {
 EOT
 
   hcl2 {
-    enabled  = true
     vars = {
       datacenter = random_pet.random_dc.id
     }
@@ -192,10 +190,6 @@ job "example" {
   ...
 }
 EOT
-
-  hcl2 {
-    enabled  = true
-  }
 }
 ```
 
@@ -216,7 +210,6 @@ resource "nomad_job" "app" {
   jobspec = file("${path.module}/jobspec.hcl")
 
   hcl2 {
-    enabled  = true
     allow_fs = true
   }
 }
@@ -280,9 +273,13 @@ The following arguments are supported:
 - `json` `(boolean: false)` - Set this to `true` if your jobspec is structured with
   JSON instead of the default HCL.
 
+- `hcl1` `(boolean: false)` - Set this to `true` to use the previous HCL1
+  parser. This option is provided for backwards compatibility only and should
+  not be used unless absolutely necessary.
+
 - `hcl2` `(block: optional)` - Options for the HCL2 jobspec parser.
-  - `enabled` `(boolean: false)` - Set this to `true` if your jobspec uses the HCL2
-    format instead of the default HCL.
+  - `enabled` `(boolean: false)` - **Deprecated** All HCL jobs are parsed as
+    HCL2 by default.
   - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
     [HCL2 filesystem functions](#filesystem-functions)
 

@@ -555,8 +555,12 @@ func TestResourceJob_hcl2(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.0") },
 		Steps: []r.TestStep{
 			{
-				Config:      testResourceJob_hcl2_and_json,
-				ExpectError: regexp.MustCompile("json is true and hcl2.enabled is true"),
+				Config:      testResourceJob_hcl1_and_json,
+				ExpectError: regexp.MustCompile("json is true and hcl1 is true"),
+			},
+			{
+				Config:      testResourceJob_hcl1_hcl2_spec,
+				ExpectError: regexp.MustCompile("error parsing jobspec"),
 			},
 			{
 				Config:      testResourceJob_hcl2_no_fs,
@@ -3248,13 +3252,10 @@ EOT
 }
 `
 
-var testResourceJob_hcl2_and_json = `
+var testResourceJob_hcl1_hcl2_spec = `
 resource "nomad_job" "hcl2" {
-	hcl2 {
-	  enabled  = true
-	}
+	hcl1 = true
 
-	json    = true
 	jobspec = <<EOT
 variables {
 	args = ["10"]
@@ -3275,6 +3276,43 @@ job "foo-hcl2" {
 			config {
 				command = "/bin/sleep"
 				args    = var.args
+			}
+			restart {
+				attempts = 10
+			}
+
+			template {
+			  data        = file("./test-fixtures/hello.txt")
+			  destination = "local/hello.txt"
+			}
+		}
+	}
+}
+EOT
+}
+`
+
+var testResourceJob_hcl1_and_json = `
+resource "nomad_job" "hcl1" {
+	hcl1 = true
+	json = true
+
+	jobspec = <<EOT
+job "foo-hcl1" {
+	datacenters = ["dc1"]
+	group "hcl1" {
+		restart {
+			attempts = 5
+			interval = "10m"
+			delay    = "15s"
+			mode     = "delay"
+		}
+
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args    = ["10"]
 			}
 			restart {
 				attempts = 10
