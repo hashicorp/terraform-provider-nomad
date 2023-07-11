@@ -8,6 +8,9 @@ description: |-
 
 # nomad_volume
 
+~> **Deprecated:** This resource has been deprecated and may be removed in a
+future release. Use `nomad_csi_volume_registration` instead.
+
 Manages an external volume in Nomad.
 
 This can be used to register external volumes in a Nomad cluster.

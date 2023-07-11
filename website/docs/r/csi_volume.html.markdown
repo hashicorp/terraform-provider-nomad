@@ -1,19 +1,16 @@
 ---
 layout: "nomad"
-page_title: "Nomad: nomad_external_volume"
-sidebar_current: "docs-nomad-resource-external-volume"
+page_title: "Nomad: nomad_csi_volume"
+sidebar_current: "docs-nomad-resource-csi-volume"
 description: |-
-  Manages the lifecycle of creating and deleting Nomad volumes.
+  Manages the lifecycle of creating and deleting CSI volumes.
 ---
 
-# nomad_external_volume
+# nomad_csi_volume
 
-~> **Deprecated:** This resource has been deprecated and may be removed in a
-future release. Use `nomad_csi_volume` instead.
+Creates and registers a CSI volume in Nomad.
 
-Creates and registers an external volume in Nomad.
-
-This can be used to create and register external volumes in a Nomad cluster.
+This can be used to create and register CSI volumes in a Nomad cluster.
 
 ~> **Warning:** this resource will store any sensitive values placed in
   `secrets` or `mount_options` in the Terraform's state file. Take care to
@@ -30,9 +27,9 @@ data "nomad_plugin" "ebs" {
   wait_for_healthy = true
 }
 
-resource "nomad_external_volume" "mysql_volume" {
-  depends_on   = [data.nomad_plugin.ebs]
-  type         = "csi"
+resource "nomad_csi_volume" "mysql_volume" {
+  depends_on = [data.nomad_plugin.ebs]
+
   plugin_id    = "aws-ebs0"
   volume_id    = "mysql_volume"
   name         = "mysql_volume"
@@ -71,7 +68,6 @@ resource "nomad_external_volume" "mysql_volume" {
 
 The following arguments are supported:
 
-- `type`: `(string: <required>)` - The type of the volume. Currently, only `csi` is supported.
 - `namespace`: `(string: "default")` - The namespace in which to register the volume.
 - `volume_id`: `(string: <required>)` - The unique ID of the volume.
 - `name`: `(string: <required>)` - The display name for the volume.

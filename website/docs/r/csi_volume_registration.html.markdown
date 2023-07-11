@@ -1,19 +1,18 @@
 ---
 layout: "nomad"
-page_title: "Nomad: nomad_external_volume"
-sidebar_current: "docs-nomad-resource-external-volume"
+page_title: "Nomad: nomad_csi_volume_registration"
+sidebar_current: "docs-nomad-resource-volume-registration"
 description: |-
-  Manages the lifecycle of creating and deleting Nomad volumes.
+  Manages the lifecycle of registering and deregistering CSI volumes.
 ---
 
-# nomad_external_volume
+# nomad_csi_volume_registration
 
-~> **Deprecated:** This resource has been deprecated and may be removed in a
-future release. Use `nomad_csi_volume` instead.
+Manages the registration of a CSI volume in Nomad
 
-Creates and registers an external volume in Nomad.
-
-This can be used to create and register external volumes in a Nomad cluster.
+This can be used to register and deregister CSI volumes in a Nomad cluster. The
+volume must already exist to be registered. Use the `nomad_csi_volume`
+resource to create a new volume.
 
 ~> **Warning:** this resource will store any sensitive values placed in
   `secrets` or `mount_options` in the Terraform's state file. Take care to
@@ -21,7 +20,7 @@ This can be used to create and register external volumes in a Nomad cluster.
 
 ## Example Usage
 
-Creating a volume:
+Registering a volume:
 
 ```hcl
 # It can sometimes be helpful to wait for a particular plugin to be available
@@ -30,14 +29,13 @@ data "nomad_plugin" "ebs" {
   wait_for_healthy = true
 }
 
-resource "nomad_external_volume" "mysql_volume" {
-  depends_on   = [data.nomad_plugin.ebs]
-  type         = "csi"
-  plugin_id    = "aws-ebs0"
-  volume_id    = "mysql_volume"
-  name         = "mysql_volume"
-  capacity_min = "10GiB"
-  capacity_max = "20GiB"
+resource "nomad_volume" "mysql_volume" {
+  depends_on = [data.nomad_plugin.ebs]
+
+  plugin_id   = "aws-ebs0"
+  volume_id   = "mysql_volume"
+  name        = "mysql_volume"
+  external_id = module.hashistack.ebs_test_volume_id
 
   capability {
     access_mode     = "single-node-writer"
@@ -71,22 +69,20 @@ resource "nomad_external_volume" "mysql_volume" {
 
 The following arguments are supported:
 
-- `type`: `(string: <required>)` - The type of the volume. Currently, only `csi` is supported.
 - `namespace`: `(string: "default")` - The namespace in which to register the volume.
 - `volume_id`: `(string: <required>)` - The unique ID of the volume.
 - `name`: `(string: <required>)` - The display name for the volume.
 - `plugin_id`: `(string: <required>)` - The ID of the Nomad plugin for registering this volume.
-- `snapshot_id`: `(string: <optional>)` - The external ID of a snapshot to restore. If ommited, the volume will be created from scratch. Conflicts with `clone_id`.
-- `clone_id`: `(string: <optional>)` - The external ID of an existing volume to restore. If ommited, the volume will be created from scratch. Conflicts with `snapshot_id`.
-- `capacity_min`: `(string: <optional>)` - Option to signal a minimum volume size. This may not be supported by all storage providers.
-- `capacity_max`: `(string: <optional>)` - Option to signal a maximum volume size. This may not be supported by all storage providers.
+- `external_id`: `(string: <required>)` - The ID of the physical volume from the storage provider.
 - `capability`: `(`[`Capability`](#capability-1)`: <required>)` - Options for validating the capability of a volume.
 - `topology_request`: `(`[`TopologyRequest`](#topology-request)`: <optional>)` - Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.
-- `mount_options`: `(block: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
-  - `fs_type`: `(string: optional)` - The file system type.
-  - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
-- `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
-- `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
+- `mount_options`: `(block: <optional>)` Options for mounting `block-device` volumes without a pre-formatted file system.
+  - `fs_type`: `(string: <optional>)` - The file system type.
+  - `mount_flags`: `([]string: <optional>)` - The flags passed to `mount`.
+- `secrets`: `(map[string]string: <optional>)` - An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
+- `parameters`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
+- `context`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
+- `deregister_on_destroy`: `(boolean: false)` - If true, the volume will be deregistered on destroy.
 
 ### Capability
 
@@ -103,7 +99,6 @@ The following arguments are supported:
 ### Topology Request
 
 - `required`: `(`[`Topology`](#topology)`: <optional>)` - Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.
-- `preferred`: `(`[`Topology`](#topology)`: <optional>)` - Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.
 
 ### Topology
 

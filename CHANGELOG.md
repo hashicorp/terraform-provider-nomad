@@ -7,6 +7,10 @@ BACKWARDS INCOMPATIBILITIES:
 * provider: Terraform Plugin SDK upgraded to v2.10.1. **Terraform versions prior to 0.12 are no longer supported.** ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
 * resource/nomad_job: Switch to HCL2 parsing by default. Jobs that require HCL1 parsing must set `hcl1 = true`. ([#343](https://github.com/hashicorp/terraform-provider-nomad/pull/343))
 
+DEPRECATIONS:
+* resource/nomad_volume: The `nomad_volume` resource has been deprecated. Use the new `nomad_csi_volume_registration` resource instead. ([#344](https://github.com/hashicorp/terraform-provider-nomad/pull/344))
+* resource/nomad_external_volume: The `nomad_external_volume` resource has been deprecated. Use the new `nomad_csi_volume` resource instead. ([#344](https://github.com/hashicorp/terraform-provider-nomad/pull/344))
+
 IMPROVEMENTS:
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * provider: update Go to 1.20.5 ([#334](https://github.com/hashicorp/terraform-provider-nomad/pull/334))
