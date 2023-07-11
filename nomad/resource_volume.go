@@ -188,6 +188,7 @@ func resourceVolume() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"required": {
+							ForceNew:    true,
 							Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
 							Optional:    true,
 							Type:        schema.TypeList,
@@ -195,12 +196,14 @@ func resourceVolume() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"topology": {
+										ForceNew:    true,
 										Description: "Defines the location for the volume.",
 										Required:    true,
 										Type:        schema.TypeList,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"segments": {
+													ForceNew:    true,
 													Description: "Define attributes for the topology request.",
 													Required:    true,
 													Type:        schema.TypeMap,
@@ -662,6 +665,9 @@ func flattenVolumeTopologyRequests(topologyReqs *api.CSITopologyRequest) []inter
 
 	if topologyReqs.Required != nil {
 		topologyMap["Required"] = flattenVolumeTopologies(topologyReqs.Required)
+	}
+	if topologyReqs.Preferred != nil {
+		topologyMap["Preferred"] = flattenVolumeTopologies(topologyReqs.Preferred)
 	}
 
 	return topologyRequestList

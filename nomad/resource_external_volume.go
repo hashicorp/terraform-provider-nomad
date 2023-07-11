@@ -196,6 +196,7 @@ func resourceExternalVolume() *schema.Resource {
 			},
 
 			"topology_request": {
+				ForceNew:    true,
 				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
 				Optional:    true,
 				Type:        schema.TypeList,
@@ -203,6 +204,7 @@ func resourceExternalVolume() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"required": {
+							ForceNew:    true,
 							Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
 							Optional:    true,
 							Type:        schema.TypeList,
@@ -210,12 +212,14 @@ func resourceExternalVolume() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"topology": {
+										ForceNew:    true,
 										Description: "Defines the location for the volume.",
 										Required:    true,
 										Type:        schema.TypeList,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"segments": {
+													ForceNew:    true,
 													Description: "Define the attributes for the topology request.",
 													Required:    true,
 													Type:        schema.TypeMap,
@@ -230,6 +234,7 @@ func resourceExternalVolume() *schema.Resource {
 							},
 						},
 						"preferred": {
+							ForceNew:    true,
 							Description: "Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.",
 							Optional:    true,
 							Type:        schema.TypeList,
@@ -237,12 +242,14 @@ func resourceExternalVolume() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"topology": {
+										ForceNew:    true,
 										Description: "Defines the location for the volume.",
 										Required:    true,
 										Type:        schema.TypeList,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"segments": {
+													ForceNew:    true,
 													Description: "Define the attributes for the topology request.",
 													Required:    true,
 													Type:        schema.TypeMap,
