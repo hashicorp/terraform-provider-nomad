@@ -1,7 +1,10 @@
-## 1.4.21 (Unreleased)
+## 2.0.0 (Unreleased)
 
 * **New Resource**: `nomad_variable` manages Nomad variables ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
 * **New Data Source**: `nomad_variable` retrieves a Nomad variable ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
+
+BACKWARDS INCOMPATIBILITIES:
+* provider: Terraform Plugin SDK upgraded to v2.10.1. **Terraform versions prior to 0.12 are no longer supported.** ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
 
 IMPROVEMENTS:
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
@@ -9,6 +12,9 @@ IMPROVEMENTS:
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
 
 BUG FIXES:
+* data source/acl_auth_method: fix a bug where the values of `max_token_ttl` and `discovery_ca_pem` were not persisted to state. ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
+* data source/acl_token: fix a bug where the value of `expiration_ttl` was not persisted to state. ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
+* data source/namespace: use type list to represent capabilities so its values can be indexed with Terraform SDKv2 ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
 * data source/nomad_volume: fix panic when reading volume ([#323](https://github.com/hashicorp/terraform-provider-nomad/pull/323))
 * resources/nomad_acl_binding_rule: fix a bug where `bind_name` was required even when `bind_type` was `management`. ([#330](https://github.com/hashicorp/terraform-provider-nomad/pull/330))
 

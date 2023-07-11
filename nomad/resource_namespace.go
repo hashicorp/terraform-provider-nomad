@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceNamespace() *schema.Resource {
@@ -57,7 +57,7 @@ func resourceNamespace() *schema.Resource {
 			"capabilities": {
 				Description: "Capabilities of the namespace.",
 				Optional:    true,
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Elem:        resourceNamespaceCapabilities(),
 				MaxItems:    1,
 			},
@@ -203,7 +203,7 @@ func resourceNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, er
 	return true, nil
 }
 
-func flattenNamespaceCapabilities(capabilities *api.NamespaceCapabilities) *schema.Set {
+func flattenNamespaceCapabilities(capabilities *api.NamespaceCapabilities) []any {
 	if capabilities == nil {
 		return nil
 	}
@@ -223,12 +223,11 @@ func flattenNamespaceCapabilities(capabilities *api.NamespaceCapabilities) *sche
 		rawCapabilities["disabled_task_drivers"] = disabledI
 	}
 
-	result := []interface{}{rawCapabilities}
-	return schema.NewSet(schema.HashResource(resourceNamespaceCapabilities()), result)
+	return []any{rawCapabilities}
 }
 
 func expandNamespaceCapabilities(d *schema.ResourceData) (*api.NamespaceCapabilities, error) {
-	capabilitiesI := d.Get("capabilities").(*schema.Set).List()
+	capabilitiesI := d.Get("capabilities").([]any)
 	if len(capabilitiesI) < 1 {
 		return nil, nil
 	}

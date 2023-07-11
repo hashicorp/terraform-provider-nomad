@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestDataSourceNamespace(t *testing.T) {
@@ -40,9 +40,9 @@ func TestDataSourceNamespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "quota", ""),
 					resource.TestCheckResourceAttr(resourceName, "meta.key", "value"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "capabilities.795649181.disabled_task_drivers.0", "raw_exec"),
-					resource.TestCheckResourceAttr(resourceName, "capabilities.795649181.enabled_task_drivers.0", "docker"),
-					resource.TestCheckResourceAttr(resourceName, "capabilities.795649181.enabled_task_drivers.1", "exec"),
+					resource.TestCheckResourceAttr(resourceName, "capabilities.0.disabled_task_drivers.0", "raw_exec"),
+					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.0", "docker"),
+					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.1", "exec"),
 				),
 			},
 		},
