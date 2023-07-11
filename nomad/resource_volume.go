@@ -180,6 +180,7 @@ func resourceVolume() *schema.Resource {
 			},
 
 			"topology_request": {
+				ForceNew:    true,
 				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
 				Optional:    true,
 				Type:        schema.TypeList,
@@ -187,6 +188,7 @@ func resourceVolume() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"required": {
+							ForceNew:    true,
 							Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
 							Optional:    true,
 							Type:        schema.TypeList,
@@ -194,12 +196,14 @@ func resourceVolume() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"topology": {
+										ForceNew:    true,
 										Description: "Defines the location for the volume.",
 										Required:    true,
 										Type:        schema.TypeList,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"segments": {
+													ForceNew:    true,
 													Description: "Define attributes for the topology request.",
 													Required:    true,
 													Type:        schema.TypeMap,
@@ -508,6 +512,7 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
 	d.Set("topologies", flattenVolumeTopologies(volume.Topologies))
+	d.Set("topology_request", flattenVolumeTopologyRequests(volume.RequestedTopologies))
 	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
 	// with the response payload; they will remain as is.
 
@@ -645,6 +650,27 @@ func flattenVolumeTopologies(topologies []*api.CSITopology) []interface{} {
 	}
 
 	return topologiesList
+}
+
+// flattenVolumeTopologyRequests turns a list of Nomad API CSITopologyRequest structs into
+// the flat representation used by Terraform.
+func flattenVolumeTopologyRequests(topologyReqs *api.CSITopologyRequest) []interface{} {
+	if topologyReqs == nil {
+		return nil
+	}
+
+	topologyRequestList := make([]interface{}, 1)
+	topologyMap := make(map[string]interface{}, 1)
+	topologyRequestList[0] = topologyMap
+
+	if topologyReqs.Required != nil {
+		topologyMap["Required"] = flattenVolumeTopologies(topologyReqs.Required)
+	}
+	if topologyReqs.Preferred != nil {
+		topologyMap["Preferred"] = flattenVolumeTopologies(topologyReqs.Preferred)
+	}
+
+	return topologyRequestList
 }
 
 // resourceVolumeStateUpgradeV0 migrates a nomad_volume resource schema from v0 to v1.
