@@ -14,33 +14,20 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
-func resourceExternalVolume() *schema.Resource {
+func resourceCSIVolume() *schema.Resource {
 	return &schema.Resource{
-		DeprecationMessage: "nomad_external_volume is deprecated and may be removed in a future release. Use nomad_csi_volume instead.",
+		Create: resourceCSIVolumeCreate,
+		Update: resourceCSIVolumeCreate,
+		Delete: resourceCSIVolumeDelete,
 
-		Create: resourceExternalVolumeCreate,
-		Update: resourceExternalVolumeCreate,
-		Delete: resourceExternalVolumeDelete,
-
-		// Once created, external volumes are automatically registered as a
+		// Once created, CSI volumes are automatically registered as a
 		// normal volume.
-		Read: resourceVolumeRead,
+		Read: resourceCSIVolumeRead,
 
 		Schema: map[string]*schema.Schema{
-			"type": {
-				ForceNew:    true,
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The type of the volume. Currently, only 'csi' is supported.",
-				Default:     "csi",
-				Elem: &schema.Schema{
-					Type:         schema.TypeString,
-					ValidateFunc: validation.StringInSlice([]string{"csi"}, false),
-				},
-			},
-
 			"namespace": {
 				ForceNew:    true,
 				Description: "The namespace in which to create the volume.",
@@ -318,7 +305,7 @@ func resourceExternalVolume() *schema.Resource {
 	}
 }
 
-func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -334,12 +321,12 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	// Parse capabilities set.
-	capabilities, err := parseVolumeCapabilities(d.Get("capability"))
+	capabilities, err := parseCSIVolumeCapabilities(d.Get("capability"))
 	if err != nil {
 		return fmt.Errorf("failed to unpack capabilities: %v", err)
 	}
 
-	topologyRequest, err := parseVolumeTopologyRequest(d.Get("topology_request"))
+	topologyRequest, err := parseCSIVolumeTopologyRequest(d.Get("topology_request"))
 	if err != nil {
 		return fmt.Errorf("failed to unpack topology request: %v", err)
 	}
@@ -354,8 +341,8 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		RequestedCapacityMax:  int64(capacityMax),
 		RequestedCapabilities: capabilities,
 		RequestedTopologies:   topologyRequest,
-		Secrets:               toMapStringString(d.Get("secrets")),
-		Parameters:            toMapStringString(d.Get("parameters")),
+		Secrets:               helper.ToMapStringString(d.Get("secrets")),
+		Parameters:            helper.ToMapStringString(d.Get("parameters")),
 	}
 
 	// Unpack the mount_options if we have any and configure the volume struct.
@@ -384,7 +371,7 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	// Create the volume.
-	log.Printf("[DEBUG] creating volume %q in namespace %q", volume.ID, volume.Namespace)
+	log.Printf("[DEBUG] creating CSI volume %q in namespace %q", volume.ID, volume.Namespace)
 	opts := &api.WriteOptions{
 		Namespace: d.Get("namespace").(string),
 	}
@@ -393,21 +380,21 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 	_, _, err = client.CSIVolumes().Create(volume, opts)
 	if err != nil {
-		return fmt.Errorf("error creating volume: %s", err)
+		return fmt.Errorf("error creating CSI volume: %s", err)
 	}
 
-	log.Printf("[DEBUG] volume %q created in namespace %q", volume.ID, volume.Namespace)
+	log.Printf("[DEBUG] CSI volume %q created in namespace %q", volume.ID, volume.Namespace)
 	d.SetId(volume.ID)
 
-	return resourceVolumeRead(d, meta) // populate other computed attributes
+	return resourceCSIVolumeRead(d, meta) // populate other computed attributes
 }
 
-func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
 	id := d.Id()
-	log.Printf("[DEBUG] deleting volume: %q", id)
+	log.Printf("[DEBUG] deleting CSI volume: %q", id)
 	opts := &api.WriteOptions{
 		Namespace: d.Get("namespace").(string),
 	}
@@ -416,7 +403,7 @@ func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) erro
 	}
 	err := client.CSIVolumes().Delete(id, opts)
 	if err != nil {
-		return fmt.Errorf("error deleting volume: %s", err)
+		return fmt.Errorf("error deleting CSI volume: %s", err)
 	}
 
 	return nil
