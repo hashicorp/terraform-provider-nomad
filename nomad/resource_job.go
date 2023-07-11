@@ -91,6 +91,7 @@ func resourceJob() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"enabled": {
 							Description: "If true, the `jobspec` will be parsed as HCL2 instead of HCL.",
+							Deprecated:  "Starting with version 2.0.0 of the Nomad provider, jobs are parsed using HCL2 by default, so this field is no longer used and may be safely removed from your configuration files. Set 'hcl1 = true' if you must use HCL1 job parsing.",
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
@@ -108,6 +109,13 @@ func resourceJob() *schema.Resource {
 						},
 					},
 				},
+			},
+
+			"hcl1": {
+				Description: "If true, the `jobspec` will be parsed using the HCL1 format.",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
 			},
 
 			"json": {
@@ -298,6 +306,7 @@ func taskGroupSchema() *schema.Schema {
 // JobParserConfig stores configuration options for how to parse the jobspec.
 type JobParserConfig struct {
 	JSON JSONJobParserConfig
+	HCL1 HCL1JobParserConfig
 	HCL2 HCL2JobParserConfig
 }
 
@@ -306,9 +315,13 @@ type JSONJobParserConfig struct {
 	Enabled bool
 }
 
+// HCL1JobParserConfig stores configuration options for the HCL1 jobspec parser.
+type HCL1JobParserConfig struct {
+	Enabled bool
+}
+
 // HCL2JobParserConfig stores configuration options for the HCL2 jobspec parser.
 type HCL2JobParserConfig struct {
-	Enabled bool
 	AllowFS bool
 	Vars    map[string]string
 }
@@ -718,6 +731,12 @@ func parseJobParserConfig(d ResourceFieldGetter) (JobParserConfig, error) {
 		Enabled: jsonEnabled,
 	}
 
+	// Read HCL1 parser configuration.
+	hclEnabled := d.Get("hcl1").(bool)
+	config.HCL1 = HCL1JobParserConfig{
+		Enabled: hclEnabled,
+	}
+
 	// Read HCL2 parser configuration.
 	hcl2Config, err := parseHCL2JobParserConfig(d.Get("hcl2"))
 	if err != nil {
@@ -725,9 +744,9 @@ func parseJobParserConfig(d ResourceFieldGetter) (JobParserConfig, error) {
 	}
 	config.HCL2 = hcl2Config
 
-	// JSON and HCL2 parsing are conflicting options.
-	if config.JSON.Enabled && config.HCL2.Enabled {
-		return config, fmt.Errorf("invalid combination. json is %t and hcl2.enabled is %t", config.JSON.Enabled, config.HCL2.Enabled)
+	// JSON and HCL1 parsing are conflicting options.
+	if config.JSON.Enabled && config.HCL1.Enabled {
+		return config, fmt.Errorf("invalid combination. json is %t and hcl1 is %t", config.JSON.Enabled, config.HCL1.Enabled)
 	}
 
 	return config, nil
@@ -754,9 +773,6 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	}
 
 	// Read map fields into parser config struct.
-	if enabled, ok := hcl2Map["enabled"].(bool); ok {
-		config.Enabled = enabled
-	}
 	if allowFS, ok := hcl2Map["allow_fs"].(bool); ok {
 		config.AllowFS = allowFS
 	}
@@ -777,10 +793,10 @@ func parseJobspec(raw string, config JobParserConfig, vaultToken *string, consul
 	switch {
 	case config.JSON.Enabled:
 		job, err = parseJSONJobspec(raw)
-	case config.HCL2.Enabled:
-		job, err = parseHCL2Jobspec(raw, config.HCL2)
-	default:
+	case config.HCL1.Enabled:
 		job, err = jobspec.Parse(strings.NewReader(raw))
+	default:
+		job, err = parseHCL2Jobspec(raw, config.HCL2)
 	}
 
 	if err != nil {
@@ -933,12 +949,12 @@ func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	case jobParserConfig.JSON.Enabled:
 		oldJob, oldErr = parseJSONJobspec(old)
 		newJob, newErr = parseJSONJobspec(new)
-	case jobParserConfig.HCL2.Enabled:
-		oldJob, oldErr = parseHCL2Jobspec(old, jobParserConfig.HCL2)
-		newJob, newErr = parseHCL2Jobspec(new, jobParserConfig.HCL2)
-	default:
+	case jobParserConfig.HCL1.Enabled:
 		oldJob, oldErr = jobspec.Parse(strings.NewReader(old))
 		newJob, newErr = jobspec.Parse(strings.NewReader(new))
+	default:
+		oldJob, oldErr = parseHCL2Jobspec(old, jobParserConfig.HCL2)
+		newJob, newErr = parseHCL2Jobspec(new, jobParserConfig.HCL2)
 	}
 	if oldErr != nil {
 		log.Println("error parsing old jobspec")
