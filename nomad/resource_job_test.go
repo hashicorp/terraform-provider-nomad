@@ -2287,9 +2287,12 @@ func TestVolumeSorting(t *testing.T) {
 
 var testResourceJob_validVaultConfig = `
 provider "nomad" {
+	alias = "tf_test"
 }
 
 resource "nomad_job" "test" {
+	provider = nomad.tf_test
+
 	jobspec = <<EOT
 		job "test" {
 			datacenters = ["dc1"]
@@ -2323,9 +2326,12 @@ resource "nomad_job" "test" {
 
 var testResourceJob_validVaultNamspaceConfig = `
 provider "nomad" {
+	alias = "tf_test"
 }
 
 resource "nomad_job" "test" {
+	provider = nomad.tf_test
+
 	jobspec = <<EOT
 		job "test" {
 			datacenters = ["dc1"]
@@ -2360,10 +2366,13 @@ resource "nomad_job" "test" {
 
 var testResourceJob_invalidVaultConfig = `
 provider "nomad" {
+	alias = "tf_test"
 	vault_token = "bad-token"
 }
 
 resource "nomad_job" "test" {
+	provider = nomad.tf_test
+
 	jobspec = <<EOT
 		job "test" {
 			datacenters = ["dc1"]
@@ -2399,10 +2408,13 @@ resource "nomad_job" "test" {
 
 var testResourceJob_invalidNomadServerConfig = `
 provider "nomad" {
+	alias = "tf_test"
 	address = "http://invalid.example.com"
 }
 
 resource "nomad_job" "test" {
+	provider = nomad.tf_test
+
 	jobspec = <<EOT
 		job "test" {
 			datacenters = ["dc1"]
