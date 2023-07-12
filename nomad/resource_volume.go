@@ -664,10 +664,18 @@ func flattenVolumeTopologyRequests(topologyReqs *api.CSITopologyRequest) []inter
 	topologyRequestList[0] = topologyMap
 
 	if topologyReqs.Required != nil {
-		topologyMap["Required"] = flattenVolumeTopologies(topologyReqs.Required)
+		topologyMap["required"] = []any{
+			map[string]any{
+				"topology": flattenVolumeTopologies(topologyReqs.Required),
+			},
+		}
 	}
 	if topologyReqs.Preferred != nil {
-		topologyMap["Preferred"] = flattenVolumeTopologies(topologyReqs.Preferred)
+		topologyMap["preferred"] = []any{
+			map[string]any{
+				"topology": flattenVolumeTopologies(topologyReqs.Preferred),
+			},
+		}
 	}
 
 	return topologyRequestList

@@ -12,6 +12,7 @@ DEPRECATIONS:
 * resource/nomad_external_volume: The `nomad_external_volume` resource has been deprecated. Use the new `nomad_csi_volume` resource instead. ([#344](https://github.com/hashicorp/terraform-provider-nomad/pull/344))
 
 IMPROVEMENTS:
+* **Target Nomad 1.6.0*: updated the nomad client to support Nomad API and jobspec version 1.6.0 ([#345](https://github.com/hashicorp/terraform-provider-nomad/pull/345))
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * provider: update Go to 1.20.5 ([#334](https://github.com/hashicorp/terraform-provider-nomad/pull/334))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
