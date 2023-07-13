@@ -395,7 +395,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
 	if d.Get("detach") == false && resp.EvalID != "" {
-		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s'", *job.ID)
+		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s' in namespace '%s'", *job.ID, *job.Namespace)
 		deployment, err := monitorDeployment(client, timeout, *job.Namespace, resp.EvalID)
 		if err != nil {
 			return fmt.Errorf(
@@ -464,7 +464,7 @@ func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEva
 
 	return func() (interface{}, string, error) {
 		// monitor the eval
-		log.Printf("[DEBUG] monitoring evaluation '%s'", evalID)
+		log.Printf("[DEBUG] monitoring evaluation '%s' in namespace '%s'", evalID, namespace)
 		eval, _, err := client.Evaluations().Info(evalID, &api.QueryOptions{
 			Namespace: namespace,
 		})
@@ -477,7 +477,7 @@ func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEva
 		switch eval.Status {
 		case "complete":
 			// Monitor the next eval in the chain, if present
-			log.Printf("[DEBUG] evaluation '%v' complete", eval.ID)
+			log.Printf("[DEBUG] evaluation '%v' in namespace '%s' complete", eval.ID, namespace)
 			if eval.NextEval != "" {
 				log.Printf("[DEBUG] will monitor follow-up eval '%v'", eval.ID)
 				evalID = eval.NextEval
@@ -509,7 +509,7 @@ func deploymentStateRefreshFunc(client *api.Client, namespace string, deployment
 		}
 		switch deployment.Status {
 		case "successful":
-			log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
+			log.Printf("[DEBUG] deployment '%s' in namespace '%s' successful", deployment.ID, namespace)
 			state = DeploymentSuccessful
 		case "failed", "cancelled":
 			log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
