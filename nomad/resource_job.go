@@ -395,8 +395,8 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	d.Set("modify_index", strconv.FormatUint(resp.JobModifyIndex, 10))
 
 	if d.Get("detach") == false && resp.EvalID != "" {
-		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s'", *job.ID)
-		deployment, err := monitorDeployment(client, timeout, resp.EvalID)
+		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s' in namespace '%s'", *job.ID, *job.Namespace)
+		deployment, err := monitorDeployment(client, timeout, *job.Namespace, resp.EvalID)
 		if err != nil {
 			return fmt.Errorf(
 				"error waiting for job '%s' to schedule/deploy successfully: %s",
@@ -416,12 +416,12 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 
 // monitorDeployment monitors the evalution(s) from a job create/update and,
 // if they result in a deployment, monitors that deployment until completion.
-func monitorDeployment(client *api.Client, timeout time.Duration, initialEvalID string) (*api.Deployment, error) {
+func monitorDeployment(client *api.Client, timeout time.Duration, namespace string, initialEvalID string) (*api.Deployment, error) {
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{MonitoringEvaluation},
 		Target:     []string{EvaluationComplete},
-		Refresh:    evaluationStateRefreshFunc(client, initialEvalID),
+		Refresh:    evaluationStateRefreshFunc(client, namespace, initialEvalID),
 		Timeout:    timeout,
 		Delay:      0,
 		MinTimeout: 3 * time.Second,
@@ -441,7 +441,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, initialEvalID 
 	stateConf = &resource.StateChangeConf{
 		Pending:    []string{MonitoringDeployment},
 		Target:     []string{DeploymentSuccessful},
-		Refresh:    deploymentStateRefreshFunc(client, evaluation.DeploymentID),
+		Refresh:    deploymentStateRefreshFunc(client, namespace, evaluation.DeploymentID),
 		Timeout:    timeout,
 		Delay:      0,
 		MinTimeout: 5 * time.Second,
@@ -456,7 +456,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, initialEvalID 
 
 // evaluationStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
 // the evaluation(s) from a job create/update
-func evaluationStateRefreshFunc(client *api.Client, initialEvalID string) resource.StateRefreshFunc {
+func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEvalID string) resource.StateRefreshFunc {
 
 	// evalID is the evaluation that we are currently monitoring. This will change
 	// along with follow-up evaluations.
@@ -464,8 +464,10 @@ func evaluationStateRefreshFunc(client *api.Client, initialEvalID string) resour
 
 	return func() (interface{}, string, error) {
 		// monitor the eval
-		log.Printf("[DEBUG] monitoring evaluation '%s'", evalID)
-		eval, _, err := client.Evaluations().Info(evalID, nil)
+		log.Printf("[DEBUG] monitoring evaluation '%s' in namespace '%s'", evalID, namespace)
+		eval, _, err := client.Evaluations().Info(evalID, &api.QueryOptions{
+			Namespace: namespace,
+		})
 		if err != nil {
 			log.Printf("[ERROR] error on Evaluation.Info during deploymentStateRefresh: %s", err)
 			return nil, "", err
@@ -475,7 +477,7 @@ func evaluationStateRefreshFunc(client *api.Client, initialEvalID string) resour
 		switch eval.Status {
 		case "complete":
 			// Monitor the next eval in the chain, if present
-			log.Printf("[DEBUG] evaluation '%v' complete", eval.ID)
+			log.Printf("[DEBUG] evaluation '%v' in namespace '%s' complete", eval.ID, namespace)
 			if eval.NextEval != "" {
 				log.Printf("[DEBUG] will monitor follow-up eval '%v'", eval.ID)
 				evalID = eval.NextEval
@@ -494,18 +496,20 @@ func evaluationStateRefreshFunc(client *api.Client, initialEvalID string) resour
 
 // deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
 // the deployment from a job create/update
-func deploymentStateRefreshFunc(client *api.Client, deploymentID string) resource.StateRefreshFunc {
+func deploymentStateRefreshFunc(client *api.Client, namespace string, deploymentID string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		// monitor the deployment
 		var state string
-		deployment, _, err := client.Deployments().Info(deploymentID, nil)
+		deployment, _, err := client.Deployments().Info(deploymentID, &api.QueryOptions{
+			Namespace: namespace,
+		})
 		if err != nil {
 			log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
 			return nil, "", err
 		}
 		switch deployment.Status {
 		case "successful":
-			log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
+			log.Printf("[DEBUG] deployment '%s' in namespace '%s' successful", deployment.ID, namespace)
 			state = DeploymentSuccessful
 		case "failed", "cancelled":
 			log.Printf("[DEBUG] deployment unsuccessful: %s", deployment.StatusDescription)
@@ -576,7 +580,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] found job %q in namespace %q", *job.Name, *job.Namespace)
 
-	allocStubs, _, err := client.Jobs().Allocations(id, false, nil)
+	allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
 	if err != nil {
 		log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
 	}
