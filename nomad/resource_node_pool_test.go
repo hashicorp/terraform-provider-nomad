@@ -6,6 +6,7 @@ package nomad
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -89,6 +90,40 @@ func TestResourceNodePool_update(t *testing.T) {
 			},
 		},
 		CheckDestroy: testResourceNodePool_checkDestroy(name),
+	})
+}
+
+func TestResourceNodePool_error(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1") },
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "nomad_node_pool" "empty_name" {
+  name = ""
+}
+`,
+				ExpectError: regexp.MustCompile("expected length of name to be in the range"),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_node_pool" "name_too_long" {
+  name = "%s"
+}
+`, strings.Repeat("A", 200)),
+				ExpectError: regexp.MustCompile("expected length of name to be in the range"),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_node_pool" "desc_too_long" {
+  name        = "tf-test-pool"
+  description = "%s"
+}
+`, strings.Repeat("A", 300)),
+				ExpectError: regexp.MustCompile("expected length of description to be in the range"),
+			},
+		},
 	})
 }
 

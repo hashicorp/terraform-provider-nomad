@@ -30,7 +30,7 @@ func resourceNodePool() *schema.Resource {
 		Exists: resourceNodePoolExists,
 
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -39,11 +39,17 @@ func resourceNodePool() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
+				ValidateFunc: validation.All(
+					validation.StringLenBetween(1, 128),
+				),
 			},
 			"description": {
 				Description: "Description for this node pool.",
 				Type:        schema.TypeString,
 				Optional:    true,
+				ValidateFunc: validation.All(
+					validation.StringLenBetween(0, 256),
+				),
 			},
 			"meta": {
 				Description: "Metadata associated with the node pool",
@@ -77,7 +83,7 @@ func resourceNodePoolSchedulerConfiguration() *schema.Resource {
 				}, false),
 			},
 
-			// This field must be a string instead of a bool (and differ from
+			// This field must be a string instead of a bool (and differs from
 			// Nomad) in order to represent a tristate.
 			// - "enabled": memory oversubscription is enabled in the pool.
 			// - "disabled": memory oversubscription is disabled in the pool.
