@@ -5,7 +5,7 @@
 
 set -e
 
-NOMAD_VERSION=1.5.0
+NOMAD_VERSION='1.6.0-beta.1'
 if [[ -n "$NOMAD_LICENSE" || -n "$NOMAD_LICENSE_PATH" ]]; then
     NOMAD_VERSION=${NOMAD_VERSION}+ent
 fi
