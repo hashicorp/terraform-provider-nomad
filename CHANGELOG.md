@@ -16,6 +16,7 @@ IMPROVEMENTS:
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * provider: update Go to 1.20.5 ([#334](https://github.com/hashicorp/terraform-provider-nomad/pull/334))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
+* resource/nomad_volume and resource/nomad_external_volume: add timeouts for volume creation, registration, deregistration, and deletion ([#346](https://github.com/hashicorp/terraform-provider-nomad/pull/346))
 
 BUG FIXES:
 * data source/acl_auth_method: fix a bug where the values of `max_token_ttl` and `discovery_ca_pem` were not persisted to state. ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))

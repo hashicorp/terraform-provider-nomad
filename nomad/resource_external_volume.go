@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -27,6 +29,11 @@ func resourceExternalVolume() *schema.Resource {
 		// Once created, external volumes are automatically registered as a
 		// normal volume.
 		Read: resourceVolumeRead,
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(10 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			"type": {
@@ -398,15 +405,18 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	_, _, err = client.CSIVolumes().Create(volume, opts)
-	if err != nil {
-		return fmt.Errorf("error creating volume: %s", err)
-	}
 
-	log.Printf("[DEBUG] volume %q created in namespace %q", volume.ID, volume.Namespace)
-	d.SetId(volume.ID)
+	return retry.Retry(d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+		_, _, err = client.CSIVolumes().Create(volume, opts)
+		if err != nil {
+			return retry.RetryableError(fmt.Errorf("error creating volume: %s", err))
+		}
 
-	return resourceVolumeRead(d, meta) // populate other computed attributes
+		log.Printf("[DEBUG] volume %q created in namespace %q", volume.ID, volume.Namespace)
+		d.SetId(volume.ID)
+
+		return retry.RetryableError(resourceVolumeRead(d, meta)) // populate other computed attributes
+	})
 }
 
 func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) error {
@@ -421,10 +431,13 @@ func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) erro
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	err := client.CSIVolumes().Delete(id, opts)
-	if err != nil {
-		return fmt.Errorf("error deleting volume: %s", err)
-	}
 
-	return nil
+	return retry.Retry(d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
+		err := client.CSIVolumes().Delete(id, opts)
+		if err != nil {
+			return retry.RetryableError(fmt.Errorf("error deleting volume: %s", err))
+		}
+
+		return nil
+	})
 }

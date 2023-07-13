@@ -11,8 +11,10 @@ import (
 	"hash/crc32"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -25,6 +27,11 @@ func resourceVolume() *schema.Resource {
 		Update: resourceVolumeCreate,
 		Delete: resourceVolumeDelete,
 		Read:   resourceVolumeRead,
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(10 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			// the following cannot be updated without destroying:
@@ -435,15 +442,18 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	_, err = client.CSIVolumes().Register(volume, opts)
-	if err != nil {
-		return fmt.Errorf("error registering volume: %s", err)
-	}
 
-	log.Printf("[DEBUG] volume %q registered in namespace %q", volume.ID, volume.Namespace)
-	d.SetId(volume.ID)
+	return retry.Retry(d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+		_, err = client.CSIVolumes().Register(volume, opts)
+		if err != nil {
+			return retry.RetryableError(fmt.Errorf("error registering volume: %s", err))
+		}
 
-	return resourceVolumeRead(d, meta) // populate other computed attributes
+		log.Printf("[DEBUG] volume %q registered in namespace %q", volume.ID, volume.Namespace)
+		d.SetId(volume.ID)
+
+		return retry.RetryableError(resourceVolumeRead(d, meta)) // populate other computed attributes
+	})
 }
 
 func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
@@ -467,12 +477,15 @@ func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
-	err := client.CSIVolumes().Deregister(id, true, opts)
-	if err != nil {
-		return fmt.Errorf("error deregistering volume: %s", err)
-	}
 
-	return nil
+	return retry.Retry(d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
+		err := client.CSIVolumes().Deregister(id, true, opts)
+		if err != nil {
+			return retry.RetryableError(fmt.Errorf("error deregistering volume: %s", err))
+		}
+
+		return nil
+	})
 }
 
 func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
