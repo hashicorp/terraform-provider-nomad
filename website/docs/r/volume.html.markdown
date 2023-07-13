@@ -134,7 +134,7 @@ can be referenced:
 `nomad_volume` provides the following [`Timeouts`][tf_docs_timeouts]
 configuration options.
 
-- `create` `(string: "15m")` - Timeout when registering a new volume.
-- `delete` `(string: "15m")` - Timeout when deregistering a volume .
+- `create` `(string: "10m")` - Timeout when registering a new volume.
+- `delete` `(string: "10m")` - Timeout when deregistering a volume.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts

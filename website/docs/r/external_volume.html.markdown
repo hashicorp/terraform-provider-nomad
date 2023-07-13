@@ -130,7 +130,7 @@ can be referenced:
 `nomad_external_volume` provides the following [`Timeouts`][tf_docs_timeouts]
 configuration options.
 
-- `create` `(string: "15m")` - Timeout when creating or updating a new volume.
-- `delete` `(string: "15m")` - Timeout when deleting a volume .
+- `create` `(string: "10m")` - Timeout when creating or updating a new volume.
+- `delete` `(string: "10m")` - Timeout when deleting a volume.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
