@@ -12,8 +12,8 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
-	github.com/hashicorp/nomad v1.6.0-rc.1
-	github.com/hashicorp/nomad/api v0.0.0-20230627125820-f06948fd6406
+	github.com/hashicorp/nomad v1.6.0
+	github.com/hashicorp/nomad/api v0.0.0-20230718185111-87d411f4e3a6
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.27.0
 	github.com/hashicorp/vault v0.10.4
 	github.com/stretchr/testify v1.8.4
@@ -87,5 +87,6 @@ require (
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.56.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
