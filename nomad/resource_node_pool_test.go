@@ -21,7 +21,7 @@ func TestResourceNodePool_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1") },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0") },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNodePoolConfig_basic(name),
@@ -41,7 +41,7 @@ func TestResourceNodePool_schedulerConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1"); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0"); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNodePoolConfig_schedConfig(name),
@@ -56,7 +56,7 @@ func TestResourceNodePool_refresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1") },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0") },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNodePoolConfig_basic(name),
@@ -78,7 +78,7 @@ func TestResourceNodePool_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1"); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0"); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNodePoolConfig_schedConfig(name),
@@ -96,7 +96,7 @@ func TestResourceNodePool_update(t *testing.T) {
 func TestResourceNodePool_error(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1") },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0") },
 		Steps: []resource.TestStep{
 			{
 				Config: `
