@@ -6,6 +6,8 @@ package nomad
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -126,6 +128,64 @@ func TestResourceNamespace_deleteDefault(t *testing.T) {
 		},
 
 		CheckDestroy: testResourceNamespace_checkResetDefault(),
+	})
+}
+
+func TestResourceNamespace_nodePoolConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0"); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  node_pool_config {
+    default = "dev"
+    allowed = ["prod"]
+    denied  = ["qa"]
+  }
+}
+`, name),
+				ExpectError: regexp.MustCompile(".+allowed.+conflicts with.+denied"),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  node_pool_config {
+    default = "dev"
+    allowed = ["prod", "qa"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_nodePoolConfigCheck(name, &api.NamespaceNodePoolConfiguration{
+					Default: "dev",
+					Allowed: []string{"prod", "qa"},
+					Denied:  nil,
+				}),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  node_pool_config {
+    default = "dev"
+    denied  = ["prod", "qa"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_nodePoolConfigCheck(name, &api.NamespaceNodePoolConfiguration{
+					Default: "dev",
+					Denied:  []string{"prod", "qa"},
+					Allowed: nil,
+				}),
+			},
+		},
 	})
 }
 
@@ -309,6 +369,59 @@ func testResourceNamespace_updateCheck(name string) resource.TestCheckFunc {
 		}
 		if namespace.Description != description {
 			return fmt.Errorf("expected description to be %q, is %q in API", description, namespace.Description)
+		}
+
+		return nil
+	}
+}
+
+func testResourceNamespace_nodePoolConfigCheck(name string, expected *api.NamespaceNodePoolConfiguration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_namespace.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		if instanceState.ID != name {
+			return fmt.Errorf("expected ID to be %q, got %q", name, instanceState.ID)
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %s", name, err)
+		}
+
+		if namespace.Name != name {
+			return fmt.Errorf("expected name to be %q, is %q in API", name, namespace.Name)
+		}
+
+		npConfig := namespace.NodePoolConfiguration
+		if npConfig == nil {
+			return errors.New("expected node pool configuration to exist")
+		}
+
+		sortNpConfigSets := cmp.Transformer(
+			"Sort",
+			func(npConfig *api.NamespaceNodePoolConfiguration) *api.NamespaceNodePoolConfiguration {
+				allowed := append([]string(nil), npConfig.Allowed...)
+				denied := append([]string(nil), npConfig.Denied...)
+				sort.Strings(allowed)
+				sort.Strings(denied)
+				return &api.NamespaceNodePoolConfiguration{
+					Default: npConfig.Default,
+					Allowed: allowed,
+					Denied:  denied,
+				}
+			},
+		)
+		if diff := cmp.Diff(npConfig, expected, sortNpConfigSets); diff != "" {
+			return fmt.Errorf("node pool configuration mismatch (-want +got):\n%s", diff)
 		}
 
 		return nil

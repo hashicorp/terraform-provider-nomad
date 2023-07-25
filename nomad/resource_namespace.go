@@ -61,6 +61,17 @@ func resourceNamespace() *schema.Resource {
 				Elem:        resourceNamespaceCapabilities(),
 				MaxItems:    1,
 			},
+			"node_pool_config": {
+				Description: "Node pool configuration",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        resourceNamespaceNodePoolConfig(),
+				MaxItems:    1,
+
+				// Set as computed because in Nomad Enterprise the default node
+				// pool is set to `default` if not set.
+				Computed: true,
+			},
 		},
 	}
 }
@@ -84,6 +95,37 @@ func resourceNamespaceCapabilities() *schema.Resource {
 	}
 }
 
+func resourceNamespaceNodePoolConfig() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"default": {
+				Description: "The node pool to use when none are specified in the job.",
+				Optional:    true,
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+			"allowed": {
+				Description: "The list of node pools allowed to be used in this namespace. Cannot be used with denied.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"node_pool_config.0.denied"},
+			},
+			"denied": {
+				Description: "The list of node pools not allowed to be used in this namespace. Cannot be used with allowed.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"node_pool_config.0.allowed"},
+			},
+		},
+	}
+}
+
 func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
@@ -97,12 +139,18 @@ func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	npConfig, err := expandNamespaceNodePoolConfig(d)
+	if err != nil {
+		return err
+	}
+
 	namespace := api.Namespace{
-		Name:         d.Get("name").(string),
-		Description:  d.Get("description").(string),
-		Quota:        d.Get("quota").(string),
-		Meta:         m,
-		Capabilities: capabilities,
+		Name:                  d.Get("name").(string),
+		Description:           d.Get("description").(string),
+		Quota:                 d.Get("quota").(string),
+		Meta:                  m,
+		Capabilities:          capabilities,
+		NodePoolConfiguration: npConfig,
 	}
 
 	log.Printf("[DEBUG] Upserting namespace %q", namespace.Name)
@@ -173,6 +221,7 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("quota", namespace.Quota)
 	d.Set("meta", namespace.Meta)
 	d.Set("capabilities", flattenNamespaceCapabilities(namespace.Capabilities))
+	d.Set("node_pool_config", flattenNamespaceNodePoolConfig(namespace.NodePoolConfiguration))
 
 	return nil
 }
@@ -261,4 +310,82 @@ func expandNamespaceCapabilities(d *schema.ResourceData) (*api.NamespaceCapabili
 		}
 	}
 	return &res, nil
+}
+
+func expandNamespaceNodePoolConfig(d *schema.ResourceData) (*api.NamespaceNodePoolConfiguration, error) {
+	npConfigI := d.Get("node_pool_config").([]any)
+	if len(npConfigI) < 1 {
+		return nil, nil
+	}
+
+	npConfig, ok := npConfigI[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for namespace node pool configuration, got %T", npConfigI[0])
+	}
+
+	var res api.NamespaceNodePoolConfiguration
+
+	if defaultI, ok := npConfig["default"]; ok {
+		defaultStr, ok := defaultI.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected default to be a string, got %T", defaultI)
+		}
+		res.Default = defaultStr
+
+	}
+
+	if allowedI, ok := npConfig["allowed"]; ok {
+		allowedSet, ok := allowedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected allowed to be a *schema.Set, got %T", allowedI)
+		}
+		if allowedSet.Len() > 0 {
+			res.Allowed = make([]string, allowedSet.Len())
+			for i, v := range allowedSet.List() {
+				res.Allowed[i] = v.(string)
+			}
+		}
+	}
+
+	if deniedI, ok := npConfig["denied"]; ok {
+		deniedSet, ok := deniedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected denied to be a *schema.Set, got %T", deniedI)
+		}
+		if deniedSet.Len() > 0 {
+			res.Denied = make([]string, deniedSet.Len())
+			for i, v := range deniedSet.List() {
+				res.Denied[i] = v.(string)
+			}
+		}
+	}
+
+	return &res, nil
+}
+func flattenNamespaceNodePoolConfig(npConfig *api.NamespaceNodePoolConfiguration) []any {
+	if npConfig == nil {
+		return nil
+	}
+
+	rawNpConfig := map[string]any{
+		"default": npConfig.Default,
+	}
+
+	if npConfig.Allowed != nil {
+		allowed := make([]any, len(npConfig.Allowed))
+		for i, v := range npConfig.Allowed {
+			allowed[i] = v
+		}
+		rawNpConfig["allowed"] = allowed
+	}
+
+	if npConfig.Denied != nil {
+		denied := make([]any, len(npConfig.Denied))
+		for i, v := range npConfig.Denied {
+			denied[i] = v
+		}
+		rawNpConfig["denied"] = denied
+	}
+
+	return []any{rawNpConfig}
 }
