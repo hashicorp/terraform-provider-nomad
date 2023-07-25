@@ -402,7 +402,12 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] CSI volume %q created in namespace %q", volume.ID, volume.Namespace)
 		d.SetId(volume.ID)
 
-		return retry.RetryableError(resourceCSIVolumeRead(d, meta)) // populate other computed attributes
+		err := resourceCSIVolumeRead(d, meta) // populate other computed attributes
+		if err != nil {
+			return retry.RetryableError(err)
+		}
+
+		return nil
 	})
 }
 
