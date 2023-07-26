@@ -36,7 +36,7 @@ func TestDataSourceNodePool(t *testing.T) {
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "description", "Terraform test node pool"),
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "meta.%", "1"),
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "meta.test", "true"),
-					resource.TestCheckNoResourceAttr("data.nomad_node_pool.test", "scheduler_config"),
+					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "scheduler_config.#", "0"),
 				),
 			},
 		},

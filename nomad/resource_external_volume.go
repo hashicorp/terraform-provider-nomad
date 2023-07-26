@@ -415,7 +415,12 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		log.Printf("[DEBUG] volume %q created in namespace %q", volume.ID, volume.Namespace)
 		d.SetId(volume.ID)
 
-		return retry.RetryableError(resourceVolumeRead(d, meta)) // populate other computed attributes
+		err := resourceVolumeRead(d, meta) // populate other computed attributes
+		if err != nil {
+			return retry.RetryableError(err)
+		}
+
+		return nil
 	})
 }
 
