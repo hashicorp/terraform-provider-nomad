@@ -146,6 +146,7 @@ func Provider() *schema.Provider {
 			"nomad_acl_roles":        dataSourceACLRoles(),
 			"nomad_acl_token":        dataSourceACLToken(),
 			"nomad_acl_tokens":       dataSourceACLTokens(),
+			"nomad_allocations":      dataSourceAllocations(),
 			"nomad_datacenters":      dataSourceDatacenters(),
 			"nomad_deployments":      dataSourceDeployments(),
 			"nomad_job":              dataSourceJob(),
