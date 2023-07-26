@@ -35,6 +35,10 @@ func resourceJob() *schema.Resource {
 			Update: schema.DefaultTimeout(5 * time.Minute),
 		},
 
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+
 		Schema: map[string]*schema.Schema{
 			"jobspec": {
 				Description:      "Job specification. If you want to point to a file use the file() function.",
