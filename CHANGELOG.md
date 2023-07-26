@@ -27,6 +27,7 @@ BUG FIXES:
 * data source/nomad_volume: fix panic when reading volume ([#323](https://github.com/hashicorp/terraform-provider-nomad/pull/323))
 * resources/nomad_acl_binding_rule: fix a bug where `bind_name` was required even when `bind_type` was `management`. ([#330](https://github.com/hashicorp/terraform-provider-nomad/pull/330))
 * resources/nomad_job: fix a bug that prevented deployments for jobs in namespaces other than `default` from being monitored. ([#347](https://github.com/hashicorp/terraform-provider-nomad/pull/347))
+* resource/nomad_job: fix a bug that could result in unnecessary plan diffs from irrelevant changes. ([#356](https://github.com/hashicorp/terraform-provider-nomad/pull/356))
 * resource/nomad_volume and resource/nomad_external_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
 
 ## 1.4.20 (April 20, 2023)
