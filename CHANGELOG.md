@@ -2,6 +2,7 @@
 
 * **New Resource**: `nomad_node_pool` manages node pools ([#340](https://github.com/hashicorp/terraform-provider-nomad/pull/340))
 * **New Resource**: `nomad_variable` manages Nomad variables ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
+* **New Data Source**: `nomad_allocations` to retrieve a list of allocations ([#358](https://github.com/hashicorp/terraform-provider-nomad/pull/358))
 * **New Data Source**: `nomad_node_pool` and `nomad_node_pools` to retrieves one or mode node pools ([#340](https://github.com/hashicorp/terraform-provider-nomad/pull/340))
 * **New Data Source**: `nomad_variable` retrieves a Nomad variable ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
 
