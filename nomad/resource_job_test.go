@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -187,7 +186,6 @@ func TestResourceJob_batchNoDetach(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
 					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
-					resource.TestCheckResourceAttrSet(resourceName, "allocation_ids.#"),
 				),
 			},
 		},
@@ -1185,24 +1183,6 @@ func testResourceJob_initialCheckNS(t *testing.T, expectedNamespace string) r.Te
 
 		if got, want := *job.Namespace, expectedNamespace; got != want {
 			return fmt.Errorf("job namespace is %q; want %q", got, want)
-		}
-
-		wantAllocs, _, err := client.Jobs().Allocations(jobID, false, nil)
-		if err != nil {
-			return fmt.Errorf("error reading back job: %s", err)
-		}
-		wantAllocIds := make([]string, 0, len(wantAllocs))
-		for _, a := range wantAllocs {
-			wantAllocIds = append(wantAllocIds, a.ID)
-		}
-		numGotAllocs, _ := strconv.Atoi(instanceState.Attributes["allocation_ids.#"])
-		gotAllocs := make([]string, 0, numGotAllocs)
-		for i := 0; i < numGotAllocs; i++ {
-			id := instanceState.Attributes[fmt.Sprintf("allocation_ids.%d", i)]
-			gotAllocs = append(gotAllocs, id)
-		}
-		if !assert.ElementsMatch(t, gotAllocs, wantAllocIds) {
-			return fmt.Errorf("job 'allocation_ids' is '%v'; want '%v'", gotAllocs, wantAllocIds)
 		}
 
 		return nil

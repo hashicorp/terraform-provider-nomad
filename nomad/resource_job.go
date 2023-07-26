@@ -163,7 +163,16 @@ func resourceJob() *schema.Resource {
 				},
 			},
 
+			"read_allocation_ids": {
+				Description: "",
+				Deprecated:  "Retrieving allocation IDs from the job resource is deprecated and will be removed in a future release. Use the nomad_allocations data source instead.",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+
 			"allocation_ids": {
+				Deprecated:  "Retrieving allocation IDs from the job resource is deprecated and will be removed in a future release. Use the nomad_allocations data source instead.",
 				Description: "The IDs for allocations associated with this job.",
 				Computed:    true,
 				Type:        schema.TypeList,
@@ -580,26 +589,31 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] found job %q in namespace %q", *job.Name, *job.Namespace)
 
-	allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
-	if err != nil {
-		log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
-	}
-	allocIDs := make([]string, 0, len(allocStubs))
-	for _, a := range allocStubs {
-		allocIDs = append(allocIDs, a.ID)
-	}
-
 	d.Set("name", job.ID)
 	d.Set("type", job.Type)
 	d.Set("region", job.Region)
 	d.Set("datacenters", job.Datacenters)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
-	d.Set("allocation_ids", allocIDs)
 	d.Set("namespace", job.Namespace)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
 	} else {
 		d.Set("modify_index", "0")
+	}
+
+	if d.Get("read_allocation_ids").(bool) {
+		allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
+		if err != nil {
+			log.Printf("[WARN] error listing allocations for Job %q, will return empty list", id)
+		}
+		allocIDs := make([]string, 0, len(allocStubs))
+		for _, a := range allocStubs {
+			allocIDs = append(allocIDs, a.ID)
+		}
+
+		d.Set("allocation_ids", allocIDs)
+	} else {
+		d.Set("allocation_ids", nil)
 	}
 
 	return nil
