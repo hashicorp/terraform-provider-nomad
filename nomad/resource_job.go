@@ -626,7 +626,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
 
-	if oldSpecRaw.(string) == newSpecRaw.(string) {
+	if jobspecEqual("jobspec", oldSpecRaw.(string), newSpecRaw.(string), d) {
 		// nothing to do!
 		return nil
 	}
@@ -937,6 +937,10 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 // jobspecDiffSuppress is the DiffSuppressFunc used by the schema to
 // check if two jobspecs are equal.
 func jobspecDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
+	return jobspecEqual(k, old, new, d)
+}
+
+func jobspecEqual(k, old, new string, d ResourceFieldGetter) bool {
 	var oldJob *api.Job
 	var newJob *api.Job
 	var oldErr error
