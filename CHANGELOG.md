@@ -8,6 +8,7 @@
 BACKWARDS INCOMPATIBILITIES:
 * provider: Terraform Plugin SDK upgraded to v2.10.1. **Terraform versions prior to 0.12 are no longer supported.** ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
 * resource/nomad_job: Switch to HCL2 parsing by default. Jobs that require HCL1 parsing must set `hcl1 = true`. ([#343](https://github.com/hashicorp/terraform-provider-nomad/pull/343))
+* resource/nomad_job: Deprecate field `allocation_ids` and do not retrieve the job's allocations by default. Set `read_allocation_ids` to `true` if you must retain existing behavior, but consider using the `nomad_allocations` data source instead. ([#357](https://github.com/hashicorp/terraform-provider-nomad/pull/357))
 
 DEPRECATIONS:
 * resource/nomad_volume: The `nomad_volume` resource has been deprecated. Use the new `nomad_csi_volume_registration` resource instead. ([#344](https://github.com/hashicorp/terraform-provider-nomad/pull/344))
