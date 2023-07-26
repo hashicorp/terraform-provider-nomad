@@ -12,7 +12,7 @@ Requirements
 ------------
 
 -	[Terraform](https://www.terraform.io/downloads.html) 1.0.x
--	[Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.20 (to build the provider plugin)
 
 Building The Provider
 ---------------------
@@ -34,24 +34,48 @@ $ make build
 Using the provider
 ----------------------
 
-To use a released provider in your Terraform environment, run [`terraform init`](https://www.terraform.io/docs/commands/init.html) and Terraform will automatically install the provider. To specify a particular provider version when installing released providers, see the [Terraform documentation on provider versioning](https://www.terraform.io/docs/configuration/providers.html#version-provider-versions).
+To use a released provider in your Terraform environment, run
+[`terraform init`](https://www.terraform.io/docs/commands/init.html) and
+Terraform will automatically install the provider. To specify a particular
+provider version when installing released providers, see the [Terraform
+documentation on provider versioning](https://www.terraform.io/docs/configuration/providers.html#version-provider-versions).
 
-To instead use a custom-built provider in your Terraform environment (e.g. the provider binary from the build instructions above), follow the instructions to [install it as a plugin.](https://www.terraform.io/docs/plugins/basics.html#installing-plugins) After placing the custom-built provider into your plugins directory,  run `terraform init` to initialize it.
+Refer to the section below for instructions on how to to use a custom-built
+version of the provider.
 
-For either installation method, documentation about the provider specific configuration options can be found on the [provider's website](https://www.terraform.io/docs/providers/nomad/).
+For either installation method, documentation about the provider specific
+configuration options can be found on the
+[provider's website](https://www.terraform.io/docs/providers/nomad/).
 
 Developing the Provider
 ---------------------------
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.16+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
+If you wish to work on the provider, you'll first need
+[Go](http://www.golang.org) installed on your machine (version 1.20+ is
+*required*). You'll also need to correctly setup a
+[GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding
+`$GOPATH/bin` to your `$PATH`.
 
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+To compile the provider, run `make build`. This will build the provider and put
+the provider binary in the `$GOPATH/bin` directory.
 
 ```sh
 $ make build
 ...
 $ $GOPATH/bin/terraform-provider-nomad
 ...
+```
+
+To use the provider binary in a local configuration, create a file called
+`.terraformrc` in your home directory and specify a [development
+override][tf_docs_dev_overrides] for the `nomad` provider.
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "hashicorp/nomad" = "<ABSOLUTE PATH TO YOUR GOPATH>/bin/"
+  }
+}
 ```
 
 In order to test the provider, you can simply run `make test`.
@@ -77,6 +101,9 @@ In order to run the full suite of Acceptance tests:
   NOMAD_TOKEN=<output of nomad acl bootstrap's Secret ID> NOMAD_ADDR=http://<host>:<port> make testacc
   ```
 
-Acceptance tests expect fresh instance of nomad agent, so all steps must be performed every time tests are executed.
+Acceptance tests expect fresh instance of nomad agent, so all steps must be
+performed every time tests are executed.
 
 *Note:* Acceptance tests create real resources, and may cost money to run.
+
+[tf_docs_dev_overrides]: https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers
