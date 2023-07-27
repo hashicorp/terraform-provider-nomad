@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package nomad
 
 import (
@@ -56,7 +59,7 @@ func TestDataSourceAllocations_basic(t *testing.T) {
 				),
 			},
 		},
-		CheckDestroy: testResourceJob_checkDestroy("foo"),
+		CheckDestroy: testResourceJob_checkDestroy(name),
 	})
 }
 
