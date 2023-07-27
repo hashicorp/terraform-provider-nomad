@@ -328,14 +328,22 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	client := providerConfig.client
 
 	// Parse capacities from human-friendly string to number.
-	capacityMin, err := humanize.ParseBytes(d.Get("capacity_min").(string))
-	if err != nil {
-		return fmt.Errorf("invalid value 'capacity_min': %v", err)
+	var capacityMin uint64
+	if capacityMinStr := d.Get("capacity_min").(string); capacityMinStr != "" {
+		var err error
+		capacityMin, err = humanize.ParseBytes(capacityMinStr)
+		if err != nil {
+			return fmt.Errorf("invalid value 'capacity_min': %v", err)
+		}
 	}
 
-	capacityMax, err := humanize.ParseBytes(d.Get("capacity_max").(string))
-	if err != nil {
-		return fmt.Errorf("invalid value 'capacity_max': %v", err)
+	var capacityMax uint64
+	if capacityMaxStr := d.Get("capacity_max").(string); capacityMaxStr != "" {
+		var err error
+		capacityMax, err = humanize.ParseBytes(capacityMaxStr)
+		if err != nil {
+			return fmt.Errorf("invalid value 'capacity_max': %v", err)
+		}
 	}
 
 	// Parse capabilities set.
