@@ -19,9 +19,11 @@ IMPROVEMENTS:
 * **Target Nomad 1.6.0*: updated the nomad client to support Nomad API and jobspec version 1.6.0 ([#345](https://github.com/hashicorp/terraform-provider-nomad/pull/345))
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * provider: update Go to 1.20.5 ([#334](https://github.com/hashicorp/terraform-provider-nomad/pull/334))
+* data source/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
 * resource/nomad_csi_volume and resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
 * resource/nomad_job: add support to import existing jobs. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
+* resource/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 * resource/nomad_volume and resource/nomad_external_volume: add timeouts for volume creation, registration, deregistration, and deletion ([#346](https://github.com/hashicorp/terraform-provider-nomad/pull/346))
 
 BUG FIXES:

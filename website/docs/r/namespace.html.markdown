@@ -63,8 +63,9 @@ The following arguments are supported:
 - `description` `(string: "")` - A description of the namespace.
 - `quota` `(string: "")` - A resource quota to attach to the namespace.
 - `meta` `(map[string]string: <optional>)` -  Specifies arbitrary KV metadata to associate with the namespace.
-- `capabilities` `(block: <optional>)` - A block of capabilities for the namespace. Can't 
+- `capabilities` `(block: <optional>)` - A block of capabilities for the namespace. Can't
   be repeated. See below for the structure of this block.
+- `node_pool_config` `(block: <optional>)` - A block with node pool configuration for the namespace (Nomad Enterprise only).
 
 
 ### `capabilities` blocks
@@ -74,3 +75,12 @@ the following arguments:
 
 - `enabled_task_drivers` `([]string: <optional>)` - Task drivers enabled for the namespace.
 - `disabled_task_drivers` `([]string: <optional>)` - Task drivers disabled for the namespace.
+
+### `node_pool_config` blocks
+
+The `node_pool_config` block describes the node pool configuration for the
+namespace.
+
+- `default` `(string: <optional>)` - The default node pool for jobs that don't define one.
+- `allowed` `([]string: <optional>)` - The list of node pools that are allowed to be used in this namespace.
+- `denied` `([]string: <optional>)` - The list of node pools that are not allowed to be used in this namespace.

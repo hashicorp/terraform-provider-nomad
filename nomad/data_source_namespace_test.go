@@ -18,7 +18,7 @@ func TestDataSourceNamespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceDefaultNamespaceConfig,
@@ -43,6 +43,68 @@ func TestDataSourceNamespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.disabled_task_drivers.0", "raw_exec"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.0", "docker"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.1", "exec"),
+				),
+			},
+		},
+	})
+}
+
+func TestDataSourceNamespace_nodePoolConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0"); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  node_pool_config {
+    default = "dev"
+    allowed = ["prod", "qa"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.default", "dev"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.allowed.#", "2"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.allowed.0", "prod"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.allowed.1", "qa"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.denied.#", "0"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  node_pool_config {
+    default = "dev"
+    denied  = ["prod", "qa"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.default", "dev"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.denied.#", "2"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.denied.0", "prod"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.denied.1", "qa"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "node_pool_config.0.allowed.#", "0"),
 				),
 			},
 		},

@@ -16,7 +16,7 @@ func TestDataSourceNodePool(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1") },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0") },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceNodePoolConfig_builtIn,
@@ -48,7 +48,7 @@ func TestDataSourceNodePool_schedConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0-beta.1"); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.6.0"); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceNodePoolConfig_schedConfig(name),
