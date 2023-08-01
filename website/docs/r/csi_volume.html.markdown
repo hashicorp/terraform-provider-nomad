@@ -12,9 +12,13 @@ Creates and registers a CSI volume in Nomad.
 
 This can be used to create and register CSI volumes in a Nomad cluster.
 
-~> **Warning:** this resource will store any sensitive values placed in
+~> **Warning:** This resource will store any sensitive values placed in
   `secrets` or `mount_options` in the Terraform's state file. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
+
+~> **Warning:** Destroying this resource **will result in data loss**. Use the
+  [`prevent_destroy`][tf_docs_prevent_destroy] directive to avoid accidental
+  deletions.
 
 ## Example Usage
 
@@ -29,6 +33,10 @@ data "nomad_plugin" "ebs" {
 
 resource "nomad_csi_volume" "mysql_volume" {
   depends_on = [data.nomad_plugin.ebs]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
   plugin_id    = "aws-ebs0"
   volume_id    = "mysql_volume"
@@ -130,3 +138,4 @@ configuration options.
 - `delete` `(string: "10m")` - Timeout when deleting a CSI volume.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
+[tf_docs_prevent_destroy]: https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#prevent_destroy
