@@ -5,7 +5,7 @@ package nomad
 
 import (
 	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"hash/crc32"
 	"log"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -21,9 +22,9 @@ import (
 
 func resourceCSIVolume() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceCSIVolumeCreate,
-		Update: resourceCSIVolumeCreate,
-		Delete: resourceCSIVolumeDelete,
+		CreateContext: resourceCSIVolumeCreate,
+		UpdateContext: resourceCSIVolumeCreate,
+		DeleteContext: resourceCSIVolumeDelete,
 
 		// Once created, CSI volumes are automatically registered as a
 		// normal volume.
@@ -323,9 +324,11 @@ func resourceCSIVolume() *schema.Resource {
 	}
 }
 
-func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
+
+	var parsingDiags diag.Diagnostics
 
 	// Parse capacities from human-friendly string to number.
 	var capacityMin uint64
@@ -333,7 +336,10 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		var err error
 		capacityMin, err = humanize.ParseBytes(capacityMinStr)
 		if err != nil {
-			return fmt.Errorf("invalid value 'capacity_min': %v", err)
+			parsingDiags = append(parsingDiags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("invalid value 'capacity_min': %v", err),
+			})
 		}
 	}
 
@@ -342,19 +348,33 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		var err error
 		capacityMax, err = humanize.ParseBytes(capacityMaxStr)
 		if err != nil {
-			return fmt.Errorf("invalid value 'capacity_max': %v", err)
+			parsingDiags = append(parsingDiags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("invalid value 'capacity_max': %v", err),
+			})
 		}
 	}
 
 	// Parse capabilities set.
 	capabilities, err := parseCSIVolumeCapabilities(d.Get("capability"))
 	if err != nil {
-		return fmt.Errorf("failed to unpack capabilities: %v", err)
+		parsingDiags = append(parsingDiags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("failed to unpack capabilities: %v", err),
+		})
 	}
 
 	topologyRequest, err := parseCSIVolumeTopologyRequest(d.Get("topology_request"))
 	if err != nil {
-		return fmt.Errorf("failed to unpack topology request: %v", err)
+		parsingDiags = append(parsingDiags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("failed to unpack topology request: %v", err),
+		})
+	}
+
+	// Check for parsing errors before creating the resource.
+	if parsingDiags.HasError() {
+		return parsingDiags
 	}
 
 	volume := &api.CSIVolume{
@@ -376,12 +396,12 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	if ok {
 		mountOptsList, ok := mountOpts.([]interface{})
 		if !ok || len(mountOptsList) != 1 {
-			return errors.New("failed to unpack mount_options configuration block")
+			return diag.Errorf("failed to unpack mount_options configuration block")
 		}
 
 		mountOptsMap, ok := mountOptsList[0].(map[string]interface{})
 		if !ok {
-			return errors.New("failed to unpack mount_options configuration block")
+			return diag.Errorf("failed to unpack mount_options configuration block")
 		}
 		volume.MountOptions = &api.CSIMountOptions{}
 
@@ -405,7 +425,7 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 		opts.Namespace = "default"
 	}
 
-	return retry.Retry(d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
 		_, _, err = client.CSIVolumes().Create(volume, opts)
 		if err != nil {
 			return retry.RetryableError(fmt.Errorf("error creating CSI volume: %s", err))
@@ -416,14 +436,14 @@ func resourceCSIVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 
 		err := resourceCSIVolumeRead(d, meta) // populate other computed attributes
 		if err != nil {
-			return retry.RetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		return nil
-	})
+	}))
 }
 
-func resourceCSIVolumeDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -436,11 +456,11 @@ func resourceCSIVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 		opts.Namespace = "default"
 	}
 
-	return retry.Retry(d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
+	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
 		err := client.CSIVolumes().Delete(id, opts)
 		if err != nil {
 			return retry.RetryableError(fmt.Errorf("error deleting CSI volume: %s", err))
 		}
 		return nil
-	})
+	}))
 }
