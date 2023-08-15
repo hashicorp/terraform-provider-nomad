@@ -98,7 +98,7 @@ func resourceJob() *schema.Resource {
 							Deprecated:  "Starting with version 2.0.0 of the Nomad provider, jobs are parsed using HCL2 by default, so this field is no longer used and may be safely removed from your configuration files. Set 'hcl1 = true' if you must use HCL1 job parsing.",
 							Type:        schema.TypeBool,
 							Optional:    true,
-							Default:     false,
+							Default:     true,
 						},
 						"allow_fs": {
 							Description: "If true, HCL2 file system functions will be enabled when parsing the `jobspec`.",
