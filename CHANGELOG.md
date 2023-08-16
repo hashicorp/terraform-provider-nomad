@@ -24,7 +24,6 @@ IMPROVEMENTS:
 * resource/nomad_csi_volume and resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
 * resource/nomad_job: add support to import existing jobs. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
 * resource/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
-* resource/nomad_volume and resource/nomad_external_volume: add timeouts for volume creation, registration, deregistration, and deletion ([#346](https://github.com/hashicorp/terraform-provider-nomad/pull/346))
 
 BUG FIXES:
 * data source/acl_auth_method: fix a bug where the values of `max_token_ttl` and `discovery_ca_pem` were not persisted to state. ([#339](https://github.com/hashicorp/terraform-provider-nomad/issues/339))
