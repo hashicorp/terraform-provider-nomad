@@ -5,7 +5,7 @@ package nomad
 
 import (
 	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"hash/crc32"
 	"log"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -21,10 +22,10 @@ import (
 
 func resourceCSIVolumeRegistration() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceCSIVolumeRegistrationCreate,
-		Update: resourceCSIVolumeRegistrationCreate,
-		Delete: resourceCSIVolumeRegistrationDelete,
-		Read:   resourceCSIVolumeRead,
+		CreateContext: resourceCSIVolumeRegistrationCreate,
+		UpdateContext: resourceCSIVolumeRegistrationCreate,
+		DeleteContext: resourceCSIVolumeRegistrationDelete,
+		Read:          resourceCSIVolumeRead,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -288,18 +289,31 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 	}
 }
 
-func resourceCSIVolumeRegistrationCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
+	var parsingDiags diag.Diagnostics
+
 	capabilities, err := parseCSIVolumeCapabilities(d.Get("capability"))
 	if err != nil {
-		return fmt.Errorf("failed to unpack capabilities: %v", err)
+		parsingDiags = append(parsingDiags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("failed to unpack capabilities: %v", err),
+		})
 	}
 
 	topologyRequest, err := parseCSIVolumeTopologyRequest(d.Get("topology_request"))
 	if err != nil {
-		return fmt.Errorf("failed to unpack topology request: %v", err)
+		parsingDiags = append(parsingDiags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("failed to unpack topology request: %v", err),
+		})
+	}
+
+	// Check for parsing errors before creating the resource.
+	if parsingDiags.HasError() {
+		return parsingDiags
 	}
 
 	volume := &api.CSIVolume{
@@ -324,12 +338,12 @@ func resourceCSIVolumeRegistrationCreate(d *schema.ResourceData, meta interface{
 	if ok {
 		mountOptsList, ok := mountOpts.([]interface{})
 		if !ok || len(mountOptsList) != 1 {
-			return errors.New("failed to unpack mount_options configuration block")
+			return diag.Errorf("failed to unpack mount_options configuration block")
 		}
 
 		mountOptsMap, ok := mountOptsList[0].(map[string]interface{})
 		if !ok {
-			return errors.New("failed to unpack mount_options configuration block")
+			return diag.Errorf("failed to unpack mount_options configuration block")
 		}
 		volume.MountOptions = &api.CSIMountOptions{}
 
@@ -354,7 +368,7 @@ func resourceCSIVolumeRegistrationCreate(d *schema.ResourceData, meta interface{
 		opts.Namespace = "default"
 	}
 
-	return retry.Retry(d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
 		_, err = client.CSIVolumes().Register(volume, opts)
 		if err != nil {
 			return retry.RetryableError(fmt.Errorf("error registering CSI volume: %s", err))
@@ -365,14 +379,14 @@ func resourceCSIVolumeRegistrationCreate(d *schema.ResourceData, meta interface{
 
 		err := resourceCSIVolumeRead(d, meta) // populate other computed attributes
 		if err != nil {
-			return retry.RetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		return nil
-	})
+	}))
 }
 
-func resourceCSIVolumeRegistrationDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeRegistrationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -394,14 +408,14 @@ func resourceCSIVolumeRegistrationDelete(d *schema.ResourceData, meta interface{
 		opts.Namespace = "default"
 	}
 
-	return retry.Retry(d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
+	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete)-time.Minute, func() *retry.RetryError {
 		err := client.CSIVolumes().Deregister(id, true, opts)
 		if err != nil {
 			return retry.RetryableError(fmt.Errorf("error deregistering CSI volume: %s", err))
 		}
 
 		return nil
-	})
+	}))
 }
 
 func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
