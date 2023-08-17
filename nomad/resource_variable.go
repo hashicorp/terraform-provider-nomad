@@ -130,12 +130,9 @@ func resourceVariableExists(d *schema.ResourceData, meta any) (bool, error) {
 
 	_, _, err := client.Variables().Read(path, &api.QueryOptions{Namespace: ns})
 	if err != nil {
-		// As of Nomad 0.4.1, the API client returns an error for 404
-		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
+		if strings.Contains(err.Error(), "404") || errors.Is(err, api.ErrVariablePathNotFound) {
 			return false, nil
 		}
-
 		return true, fmt.Errorf("error checking for variable %s: %#v", variableID, err)
 	}
 
