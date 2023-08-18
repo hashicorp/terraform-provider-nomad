@@ -556,6 +556,9 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 		Namespace: d.Get("namespace").(string),
 	}
 	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
+	}
+	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
 	purge := d.Get("purge_on_destroy").(bool)
@@ -574,6 +577,9 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 	opts := &api.QueryOptions{
 		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
 	}
 	if opts.Namespace == "" {
 		opts.Namespace = "default"

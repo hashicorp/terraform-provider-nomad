@@ -365,6 +365,9 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		Namespace: d.Get("namespace").(string),
 	}
 	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
+	}
+	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
 
@@ -405,6 +408,9 @@ func resourceCSIVolumeRegistrationDelete(ctx context.Context, d *schema.Resource
 		Namespace: d.Get("namespace").(string),
 	}
 	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
+	}
+	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
 
@@ -425,6 +431,9 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 	opts := &api.QueryOptions{
 		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
 	}
 	if opts.Namespace == "" {
 		opts.Namespace = "default"

@@ -422,6 +422,9 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		Namespace: d.Get("namespace").(string),
 	}
 	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
+	}
+	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
 
@@ -451,6 +454,9 @@ func resourceCSIVolumeDelete(ctx context.Context, d *schema.ResourceData, meta i
 	log.Printf("[DEBUG] deleting CSI volume: %q", id)
 	opts := &api.WriteOptions{
 		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
 	}
 	if opts.Namespace == "" {
 		opts.Namespace = "default"

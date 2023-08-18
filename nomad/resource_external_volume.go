@@ -404,6 +404,9 @@ func resourceExternalVolumeCreate(d *schema.ResourceData, meta interface{}) erro
 		Namespace: d.Get("namespace").(string),
 	}
 	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
+	}
+	if opts.Namespace == "" {
 		opts.Namespace = "default"
 	}
 	_, _, err = client.CSIVolumes().Create(volume, opts)
@@ -425,6 +428,9 @@ func resourceExternalVolumeDelete(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] deleting volume: %q", id)
 	opts := &api.WriteOptions{
 		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = providerConfig.config.Namespace
 	}
 	if opts.Namespace == "" {
 		opts.Namespace = "default"
