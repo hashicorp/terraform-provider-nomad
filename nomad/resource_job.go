@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
 func resourceJob() *schema.Resource {
@@ -36,7 +37,7 @@ func resourceJob() *schema.Resource {
 		},
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: helper.NamespacedImporter(resourceJobRead),
 		},
 
 		Schema: map[string]*schema.Schema{
