@@ -4,12 +4,15 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -32,16 +35,16 @@ func resourceVariable() *schema.Resource {
 		Exists: resourceVariableExists,
 
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Description:  "The path at which the variable items will be stored, must be between 1 and 128 characters in length, be URL safe, and not include '@' or '.' characters",
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				ValidateFunc: pathValidation(),
+				Description:      "The path at which the variable items will be stored, must be between 1 and 128 characters in length, be URL safe, and not include '@' or '.' characters",
+				Type:             schema.TypeString,
+				Required:         true,
+				ForceNew:         true,
+				ValidateDiagFunc: pathValidation(),
 			},
 			"namespace": {
 				Description: "Variable namespace",
@@ -130,36 +133,41 @@ func resourceVariableExists(d *schema.ResourceData, meta any) (bool, error) {
 
 	_, _, err := client.Variables().Read(path, &api.QueryOptions{Namespace: ns})
 	if err != nil {
-		// As of Nomad 0.4.1, the API client returns an error for 404
-		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
+		if strings.Contains(err.Error(), "404") || errors.Is(err, api.ErrVariablePathNotFound) {
 			return false, nil
 		}
-
 		return true, fmt.Errorf("error checking for variable %s: %#v", variableID, err)
 	}
 
 	return true, nil
 }
 
-func pathValidation() schema.SchemaValidateFunc {
-	return func(i interface{}, k string) ([]string, []error) {
+func pathValidation() schema.SchemaValidateDiagFunc {
+	return func(i any, k cty.Path) diag.Diagnostics {
 		// Verify path actually is a string
 		path, ok := i.(string)
 		if !ok {
-			return nil, []error{fmt.Errorf("expected type of %s to be string", k)}
+			return diag.Errorf("expected type of %s to be string", k)
 		}
 
-		errs := []error{}
+		var diags diag.Diagnostics
 
 		// Limit length to 128 characters
 		if len(path) > maxPathLength {
-			errs = append(errs, fmt.Errorf("expected path legnth to be less than %v but got a path legnth of %v", maxPathLength, len(path)))
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       fmt.Sprintf("expected path legnth to be less than %v but got a path legnth of %v", maxPathLength, len(path)),
+				AttributePath: k,
+			})
 		}
 
 		// Limit to RFC3986 URL-safe characters, minus '@' and '.' as they conflict with template blocks
 		if !validVariablePath.MatchString(path) {
-			errs = append(errs, fmt.Errorf("path %s contains invalid characters", path))
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       fmt.Sprintf("path %s contains invalid characters", path),
+				AttributePath: k,
+			})
 		}
 
 		// Validate paths that have 'nomad' as the first directory in the path
@@ -168,24 +176,37 @@ func pathValidation() schema.SchemaValidateFunc {
 		parts := strings.Split(path, "/")
 
 		if parts[0] != "nomad" {
-			return nil, errs
+			return diags
 		}
 
 		if len(parts) == 1 {
-			errs = append(errs, fmt.Errorf("path of 'nomad' is a reserved top-level directory path"))
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "path of 'nomad' is a reserved top-level directory path",
+				AttributePath: k,
+			})
+			return diags
 		}
 
 		switch {
 		case parts[1] == "jobs":
-			return nil, errs
+			return diags
 		case parts[1] == "job-templates" && len(parts) == 3:
-			return nil, errs
+			return diags
 		case parts[1] == "job-templates":
-			errs = append(errs, fmt.Errorf("the path 'nomad/job-templates' is reserved, you may write variables at the level below it, for example, 'nomad/job-templates/template-name'"))
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "the path 'nomad/job-templates' is reserved, you may write variables at the level below it, for example, 'nomad/job-templates/template-name'",
+				AttributePath: k,
+			})
 		default:
-			errs = append(errs, fmt.Errorf("only paths at 'nomad/jobs' or 'nomad/job-templates' and below are valid paths under the top-level 'nomad' directory"))
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "only paths at 'nomad/jobs' or 'nomad/job-templates' and below are valid paths under the top-level 'nomad' directory",
+				AttributePath: k,
+			})
 		}
 
-		return nil, errs
+		return diags
 	}
 }
