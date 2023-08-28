@@ -1,4 +1,6 @@
-## 2.0.0 (Unreleased)
+## 2.0.1 (Unreleased)
+
+## 2.0.0 (August 28th, 2023)
 
 * **New Resource**: `nomad_node_pool` manages node pools ([#340](https://github.com/hashicorp/terraform-provider-nomad/pull/340))
 * **New Resource**: `nomad_variable` manages Nomad variables ([#325](https://github.com/hashicorp/terraform-provider-nomad/pull/325))
@@ -16,12 +18,13 @@ DEPRECATIONS:
 * resource/nomad_external_volume: The `nomad_external_volume` resource has been deprecated. Use the new `nomad_csi_volume` resource instead. ([#344](https://github.com/hashicorp/terraform-provider-nomad/pull/344))
 
 IMPROVEMENTS:
-* **Target Nomad 1.6.0*: updated the nomad client to support Nomad API and jobspec version 1.6.0 ([#345](https://github.com/hashicorp/terraform-provider-nomad/pull/345))
+* **Target Nomad 1.6.0**: updated the nomad client to support Nomad API and jobspec version 1.6.0 ([#345](https://github.com/hashicorp/terraform-provider-nomad/pull/345))
 * provider: add `skip_verify` configuration to skip TLS verification ([#319](https://github.com/hashicorp/terraform-provider-nomad/pull/319))
 * provider: update Go to 1.21.0 ([#369](https://github.com/hashicorp/terraform-provider-nomad/pull/369))
 * data source/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
-* resource/nomad_csi_volume and resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
+* resource/nomad_csi_volume: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
+* resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
 * resource/nomad_job: add support to import existing jobs. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
 * resource/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 
@@ -34,7 +37,8 @@ BUG FIXES:
 * resources/nomad_job: fix a bug that prevented deployments for jobs in namespaces other than `default` from being monitored. ([#347](https://github.com/hashicorp/terraform-provider-nomad/pull/347))
 * resource/nomad_job: fix a bug that could result in unnecessary plan diffs from irrelevant changes. ([#356](https://github.com/hashicorp/terraform-provider-nomad/pull/356))
 * resource/nomad_volume: fix a bug that caused `capacity_min` and `capacity_max` to be mandatory. ([#363](https://github.com/hashicorp/terraform-provider-nomad/pull/363))
-* resource/nomad_volume and resource/nomad_external_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
+* resource/nomad_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
+* resource/nomad_external_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
 
 ## 1.4.20 (April 20, 2023)
 
