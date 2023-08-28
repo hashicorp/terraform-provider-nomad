@@ -23,9 +23,9 @@ IMPROVEMENTS:
 * provider: update Go to 1.21.0 ([#369](https://github.com/hashicorp/terraform-provider-nomad/pull/369))
 * data source/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 * resource/nomad_acl_policy: add support for `job_acl` ([#314](https://github.com/hashicorp/terraform-provider-nomad/pull/314))
-* resource/nomad_csi_volume: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
-* resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
-* resource/nomad_job: add support to import existing jobs. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359)]
+* resource/nomad_csi_volume: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359))
+* resource/nomad_csi_volume_registration: add support to import existing volumes. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359))
+* resource/nomad_job: add support to import existing jobs. ([#359](https://github.com/hashicorp/terraform-provider-nomad/pull/359))
 * resource/nomad_namespace: add `node_pool_config` attribute ([#355](https://github.com/hashicorp/terraform-provider-nomad/pull/355))
 
 BUG FIXES:
@@ -38,7 +38,7 @@ BUG FIXES:
 * resource/nomad_job: fix a bug that could result in unnecessary plan diffs from irrelevant changes. ([#356](https://github.com/hashicorp/terraform-provider-nomad/pull/356))
 * resource/nomad_volume: fix a bug that caused `capacity_min` and `capacity_max` to be mandatory. ([#363](https://github.com/hashicorp/terraform-provider-nomad/pull/363))
 * resource/nomad_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
-* resource/nomad_external_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342)
+* resource/nomad_external_volume: fix a bug where `topology_request` was not persisted to state. ([#342](https://github.com/hashicorp/terraform-provider-nomad/pull/342))
 
 ## 1.4.20 (April 20, 2023)
 
