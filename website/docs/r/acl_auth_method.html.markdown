@@ -6,7 +6,7 @@ description: |-
 Manages an ACL Auth Method in Nomad.
 ---
 
-# nomad_acl_binding_rule
+# nomad_acl_auth_method
 
 Manages an ACL Auth Method in Nomad.
 
