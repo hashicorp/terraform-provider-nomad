@@ -1,5 +1,8 @@
 ## 2.0.1 (Unreleased)
 
+IMPROVEMENTS:
+* provider: update Go to 1.21.1 ([#380](https://github.com/hashicorp/terraform-provider-nomad/pull/380))
+
 ## 2.0.0 (August 28th, 2023)
 
 * **New Resource**: `nomad_node_pool` manages node pools ([#340](https://github.com/hashicorp/terraform-provider-nomad/pull/340))
