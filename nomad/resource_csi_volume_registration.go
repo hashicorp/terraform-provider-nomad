@@ -717,12 +717,13 @@ func capacityStateFunc(val any) string {
 // capacityValidate checks capacity input to ensure human-readable storage values
 func capacityValidate(val interface{}, _ cty.Path) diag.Diagnostics {
 	var diags diag.Diagnostics
-	_, err := humanize.ParseBytes(val.(string))
+	s := val.(string)
+	_, err := humanize.ParseBytes(s)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "invalid capacity",
-			Detail:   err.Error(), // TODO: better
+			Detail:   fmt.Sprintf(`unable to parse "%v" as human-readable capacity (err: %s)`, s, err),
 		})
 	}
 	return diags
@@ -745,7 +746,8 @@ func parseCapacity(d *schema.ResourceData) (capMin, capMax uint64, diags diag.Di
 		if capMax < capMin {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
-				Summary: fmt.Sprintf("capacity_max (%v) may not be less than capacity_min (%v)",
+				Summary:  "invalid capacity value(s)",
+				Detail: fmt.Sprintf("capacity_max (%v) less than capacity_min (%v)",
 					capacityMaxStr, capacityMinStr),
 			})
 		}
@@ -753,7 +755,8 @@ func parseCapacity(d *schema.ResourceData) (capMin, capMax uint64, diags diag.Di
 		if int(capMax) < current {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
-				Summary: fmt.Sprintf("capacity_max (%v) may not be less than current real capacity (%v)",
+				Summary:  "invalid capacity value(s)",
+				Detail: fmt.Sprintf("capacity_max (%v) less than current real capacity (%v)",
 					capacityMaxStr, humanize.IBytes(uint64(current))),
 			})
 		}
