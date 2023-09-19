@@ -74,6 +74,8 @@ The following arguments are supported:
 - `name`: `(string: <required>)` - The display name for the volume.
 - `plugin_id`: `(string: <required>)` - The ID of the Nomad plugin for registering this volume.
 - `external_id`: `(string: <required>)` - The ID of the physical volume from the storage provider.
+- `capacity_min`: `(string: <optional>)` - Option to signal a minimum volume size. This may not be supported by all storage providers.
+- `capacity_max`: `(string: <optional>)` - Option to signal a maximum volume size. This may not be supported by all storage providers.
 - `capability`: `(`[`Capability`](#capability-1)`: <required>)` - Options for validating the capability of a volume.
 - `topology_request`: `(`[`TopologyRequest`](#topology-request)`: <optional>)` - Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.
 - `mount_options`: `(block: <optional>)` Options for mounting `block-device` volumes without a pre-formatted file system.
