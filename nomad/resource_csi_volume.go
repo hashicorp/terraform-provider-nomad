@@ -11,7 +11,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -85,17 +84,19 @@ func resourceCSIVolume() *schema.Resource {
 			},
 
 			"capacity_min": {
-				ForceNew:    true,
-				Description: "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
-				Optional:    true,
-				Type:        schema.TypeString,
+				Description:      "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
+				Optional:         true,
+				Type:             schema.TypeString,
+				StateFunc:        capacityStateFunc,
+				ValidateDiagFunc: capacityValidate,
 			},
 
 			"capacity_max": {
-				ForceNew:    true,
-				Description: "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
-				Optional:    true,
-				Type:        schema.TypeString,
+				Description:      "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
+				Optional:         true,
+				Type:             schema.TypeString,
+				StateFunc:        capacityStateFunc,
+				ValidateDiagFunc: capacityValidate,
 			},
 
 			"capability": {
@@ -266,6 +267,21 @@ func resourceCSIVolume() *schema.Resource {
 				},
 			},
 
+			"capacity": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"capacity_min_bytes": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"capacity_max_bytes": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
 			"controller_required": {
 				Computed: true,
 				Type:     schema.TypeBool,
@@ -330,30 +346,8 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 
 	var parsingDiags diag.Diagnostics
 
-	// Parse capacities from human-friendly string to number.
-	var capacityMin uint64
-	if capacityMinStr := d.Get("capacity_min").(string); capacityMinStr != "" {
-		var err error
-		capacityMin, err = humanize.ParseBytes(capacityMinStr)
-		if err != nil {
-			parsingDiags = append(parsingDiags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("invalid value 'capacity_min': %v", err),
-			})
-		}
-	}
-
-	var capacityMax uint64
-	if capacityMaxStr := d.Get("capacity_max").(string); capacityMaxStr != "" {
-		var err error
-		capacityMax, err = humanize.ParseBytes(capacityMaxStr)
-		if err != nil {
-			parsingDiags = append(parsingDiags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("invalid value 'capacity_max': %v", err),
-			})
-		}
-	}
+	capacityMin, capacityMax, capacityDiags := parseCapacity(d)
+	parsingDiags = append(parsingDiags, capacityDiags...)
 
 	// Parse capabilities set.
 	capabilities, err := parseCSIVolumeCapabilities(d.Get("capability"))
@@ -425,10 +419,14 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		opts.Namespace = "default"
 	}
 
-	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
 		_, _, err = client.CSIVolumes().Create(volume, opts)
 		if err != nil {
-			return retry.RetryableError(fmt.Errorf("error creating CSI volume: %s", err))
+			err = fmt.Errorf("error creating CSI volume: %s", err)
+			if csiErrIsRetryable(err) {
+				return retry.RetryableError(err)
+			}
+			return retry.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] CSI volume %q created in namespace %q", volume.ID, volume.Namespace)
@@ -440,7 +438,18 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		}
 
 		return nil
-	}))
+	})
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	var warnings diag.Diagnostics
+
+	capacityAfter := uint64(d.Get("capacity").(int))
+	warnings = append(warnings, checkCapacity(capacityAfter, capacityMin)...)
+
+	return warnings
 }
 
 func resourceCSIVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

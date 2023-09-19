@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -75,6 +77,22 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 				Description: "The ID of the physical volume from the storage provider.",
 				Required:    true,
 				Type:        schema.TypeString,
+			},
+
+			"capacity_min": {
+				Description:      "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
+				Optional:         true,
+				Type:             schema.TypeString,
+				StateFunc:        capacityStateFunc,
+				ValidateDiagFunc: capacityValidate,
+			},
+
+			"capacity_max": {
+				Description:      "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
+				Optional:         true,
+				Type:             schema.TypeString,
+				StateFunc:        capacityStateFunc,
+				ValidateDiagFunc: capacityValidate,
 			},
 
 			"capability": {
@@ -231,6 +249,23 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 
+			// computed
+
+			"capacity": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"capacity_min_bytes": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
+			"capacity_max_bytes": {
+				Computed: true,
+				Type:     schema.TypeInt,
+			},
+
 			"controller_required": {
 				Computed: true,
 				Type:     schema.TypeBool,
@@ -295,6 +330,9 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 
 	var parsingDiags diag.Diagnostics
 
+	capacityMin, capacityMax, capacityDiags := parseCapacity(d)
+	parsingDiags = append(parsingDiags, capacityDiags...)
+
 	capabilities, err := parseCSIVolumeCapabilities(d.Get("capability"))
 	if err != nil {
 		parsingDiags = append(parsingDiags, diag.Diagnostic{
@@ -320,6 +358,8 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		ID:                    d.Get("volume_id").(string),
 		Name:                  d.Get("name").(string),
 		ExternalID:            d.Get("external_id").(string),
+		RequestedCapacityMin:  int64(capacityMin),
+		RequestedCapacityMax:  int64(capacityMax),
 		RequestedCapabilities: capabilities,
 		RequestedTopologies:   topologyRequest,
 		Secrets:               helper.ToMapStringString(d.Get("secrets")),
@@ -368,10 +408,14 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		opts.Namespace = "default"
 	}
 
-	return diag.FromErr(retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate)-time.Minute, func() *retry.RetryError {
 		_, err = client.CSIVolumes().Register(volume, opts)
 		if err != nil {
-			return retry.RetryableError(fmt.Errorf("error registering CSI volume: %s", err))
+			err = fmt.Errorf("error creating CSI volume: %s", err)
+			if csiErrIsRetryable(err) {
+				return retry.RetryableError(err)
+			}
+			return retry.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] CSI volume %q registered in namespace %q", volume.ID, volume.Namespace)
@@ -383,7 +427,18 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		}
 
 		return nil
-	}))
+	})
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	var warnings diag.Diagnostics
+
+	capacityAfter := uint64(d.Get("capacity").(int))
+	warnings = append(warnings, checkCapacity(capacityAfter, capacityMin)...)
+
+	return warnings
 }
 
 func resourceCSIVolumeRegistrationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -445,6 +500,15 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] found CSI volume %q in namespace %q", volume.Name, volume.Namespace)
 
 	d.Set("name", volume.Name)
+	d.Set("capacity", int(volume.Capacity))
+	d.Set("capacity_min_bytes", volume.RequestedCapacityMin)
+	d.Set("capacity_max_bytes", volume.RequestedCapacityMax)
+	if volume.RequestedCapacityMin > 0 {
+		d.Set("capacity_min", humanize.IBytes(uint64(volume.RequestedCapacityMin)))
+	}
+	if volume.RequestedCapacityMax > 0 {
+		d.Set("capacity_max", humanize.IBytes(uint64(volume.RequestedCapacityMax)))
+	}
 	d.Set("controller_required", volume.ControllerRequired)
 	d.Set("controllers_expected", volume.ControllersExpected)
 	d.Set("controllers_healthy", volume.ControllersHealthy)
@@ -622,4 +686,105 @@ func flattenCSIVolumeTopologyRequests(topologyReqs *api.CSITopologyRequest) []in
 	}
 
 	return topologyRequestList
+}
+
+func csiErrIsRetryable(err error) bool {
+	contains := func(e error, s string) bool {
+		return strings.Contains(e.Error(), s)
+	}
+	if contains(err, "requested capacity") {
+		return false
+	}
+	if contains(err, "LimitBytes cannot be less than") {
+		return false
+	}
+	return true
+}
+
+// capacityStateFunc turns the input value into total bytes to match what
+// Nomad API returns, then back to human-readable for puny human eyeballs.
+// This double-conversion accounts for minor differences like "5mb" vs "5 MB"
+// so what's stored in state for comparison is both stable and human-readable.
+func capacityStateFunc(val any) string {
+	s := val.(string)
+	i, err := humanize.ParseBytes(s)
+	if err != nil {
+		return s
+	}
+	return humanize.IBytes(i)
+}
+
+// capacityValidate checks capacity input to ensure human-readable storage values
+func capacityValidate(val interface{}, _ cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	_, err := humanize.ParseBytes(val.(string))
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "invalid capacity",
+			Detail:   err.Error(), // TODO: better
+		})
+	}
+	return diags
+}
+
+// parseCapacity checks min/max/current for consistency
+// (parameters can not be compared with one another sooner than this)
+func parseCapacity(d *schema.ResourceData) (capMin, capMax uint64, diags diag.Diagnostics) {
+	capacityMinStr := d.Get("capacity_min").(string)
+	if capacityMinStr != "" {
+		// err already handled in capacityValidate()
+		capMin, _ = humanize.ParseBytes(capacityMinStr)
+	}
+	capacityMaxStr := d.Get("capacity_max").(string)
+	if capacityMaxStr != "" {
+		capMax, _ = humanize.ParseBytes(capacityMaxStr)
+	}
+
+	if capMax > 0 {
+		if capMax < capMin {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary: fmt.Sprintf("capacity_max (%v) may not be less than capacity_min (%v)",
+					capacityMaxStr, capacityMinStr),
+			})
+		}
+		current := d.Get("capacity").(int)
+		if int(capMax) < current {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary: fmt.Sprintf("capacity_max (%v) may not be less than current real capacity (%v)",
+					capacityMaxStr, humanize.IBytes(uint64(current))),
+			})
+		}
+	}
+
+	return capMin, capMax, diags
+}
+
+// checkCapacity warns the user if the min requested capacity after apply
+// is higher than current real capacity, which would indicate that
+// an expand operation has not occurred (likely due to a version of Nomad
+// which does not support it).
+func checkCapacity(capacity, reqMin uint64) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if capacity == 0 || reqMin == 0 {
+		return diags
+	}
+	// increasing min above real capacity is the only way to trigger an expand.
+	// other inconsistencies are errors covered elsewhere.
+	if reqMin > capacity {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "capacity out of requested range",
+			Detail: fmt.Sprintf(
+				"A volume expand operation may not have occurred on Nomad prior to v1.6.3.\n"+
+					"Real capacity after apply: %d -- Requested min: %d\n\n"+
+					"Upgrading Nomad will enable volume expansion (for CSI plugins that support it),\n"+
+					"or you may change capacity_min to fit the actual capacity.",
+				capacity, reqMin,
+			),
+		})
+	}
+	return diags
 }
