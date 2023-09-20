@@ -500,15 +500,18 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] found CSI volume %q in namespace %q", volume.Name, volume.Namespace)
 
 	d.Set("name", volume.Name)
+
 	d.Set("capacity", int(volume.Capacity))
 	d.Set("capacity_min_bytes", volume.RequestedCapacityMin)
 	d.Set("capacity_max_bytes", volume.RequestedCapacityMax)
-	if volume.RequestedCapacityMin > 0 {
+	// only save capacity min/max in state if the user has set it/them
+	if cMin := d.Get("capacity_min").(string); cMin != "" {
 		d.Set("capacity_min", humanize.IBytes(uint64(volume.RequestedCapacityMin)))
 	}
-	if volume.RequestedCapacityMax > 0 {
+	if cMax := d.Get("capacity_max").(string); cMax != "" {
 		d.Set("capacity_max", humanize.IBytes(uint64(volume.RequestedCapacityMax)))
 	}
+
 	d.Set("controller_required", volume.ControllerRequired)
 	d.Set("controllers_expected", volume.ControllersExpected)
 	d.Set("controllers_healthy", volume.ControllersHealthy)
