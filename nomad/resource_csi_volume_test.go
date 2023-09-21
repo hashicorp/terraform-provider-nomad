@@ -276,6 +276,7 @@ func TestCapacityStateFunc(t *testing.T) {
 		{"5.5 Gib", "5.5 GiB"},
 		{"5GB", "4.7 GiB"},
 		{"ugh", "ugh"}, // validation happens elsewhere
+		{"", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
@@ -295,6 +296,7 @@ func TestCapacityValidate(t *testing.T) {
 		{"5GB", ""},
 		{"5 TiB", ""},
 		{"nope", `unable to parse "nope"`},
+		{"", `unable to parse ""`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {
