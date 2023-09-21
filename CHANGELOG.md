@@ -2,7 +2,8 @@
 
 IMPROVEMENTS:
 * provider: update Go to 1.21.1 ([#380](https://github.com/hashicorp/terraform-provider-nomad/pull/380))
-* resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
+* resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement,
+  on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 
 ## 2.0.0 (August 28th, 2023)
 
