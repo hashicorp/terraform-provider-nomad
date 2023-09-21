@@ -692,14 +692,15 @@ func flattenCSIVolumeTopologyRequests(topologyReqs *api.CSITopologyRequest) []in
 }
 
 func csiErrIsRetryable(err error) bool {
-	contains := func(e error, s string) bool {
-		return strings.Contains(e.Error(), s)
+	ignore := []string{
+		"already exist",
+		"requested capacity",
+		"LimitBytes cannot be less than",
 	}
-	if contains(err, "requested capacity") {
-		return false
-	}
-	if contains(err, "LimitBytes cannot be less than") {
-		return false
+	for _, e := range ignore {
+		if strings.Contains(err.Error(), e) {
+			return false
+		}
 	}
 	return true
 }

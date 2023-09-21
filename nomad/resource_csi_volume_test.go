@@ -240,21 +240,13 @@ resource "nomad_csi_volume" "test" {
 
 func TestCSIErrIsRetryable(t *testing.T) {
 	cases := []struct {
-		err         string
 		isRetryable bool
+		err         string
 	}{
-		{
-			"requested capacity is bad",
-			false,
-		},
-		{
-			"LimitBytes cannot be less than other things",
-			false,
-		},
-		{
-			"anything else",
-			true,
-		},
+		{false, "requested capacity is bad"},
+		{false, "LimitBytes cannot be less than other things"},
+		{false, `volume "vol_name" already exists but`},
+		{true, "anything else"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.err, func(t *testing.T) {
