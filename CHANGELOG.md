@@ -1,6 +1,7 @@
 ## 2.0.1 (Unreleased)
 
 IMPROVEMENTS:
+* **Target Nomad 1.6.2**: updated the nomad client to support Nomad API and jobspec version 1.6.2 ([#384](https://github.com/hashicorp/terraform-provider-nomad/pull/384))
 * provider: update Go to 1.21.1 ([#380](https://github.com/hashicorp/terraform-provider-nomad/pull/380))
 
 ## 2.0.0 (August 28th, 2023)
