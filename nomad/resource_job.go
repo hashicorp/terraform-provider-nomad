@@ -399,11 +399,13 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		wantModifyIndex = 0
 	}
-
+	ns := *job.Namespace
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
 		ModifyIndex:    wantModifyIndex,
-	}, nil)
+	}, &api.WriteOptions{
+		Namespace: ns,
+	})
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
 	}
