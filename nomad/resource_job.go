@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -148,6 +149,12 @@ func resourceJob() *schema.Resource {
 
 			"type": {
 				Description: "The type of the job, as derived from the jobspec.",
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+
+			"status": {
+				Description: "The status of the job.",
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
@@ -604,6 +611,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		d.Set("modify_index", "0")
 	}
+	d.Set("status", job.Status)
 
 	if d.Get("read_allocation_ids").(bool) {
 		allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
@@ -639,7 +647,12 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 		d.SetNewComputed("task_groups")
 		d.SetNewComputed("deployment_id")
 		d.SetNewComputed("deployment_status")
+		d.SetNewComputed("status")
 		return nil
+	}
+
+	if !slices.Contains([]string{"running", "pending"}, d.Get("status").(string)) {
+		d.SetNewComputed("status")
 	}
 
 	oldSpecRaw, newSpecRaw := d.GetChange("jobspec")
@@ -696,6 +709,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	d.SetNew("type", job.Type)
 	d.SetNew("region", job.Region)
 	d.SetNew("datacenters", job.Datacenters)
+	d.SetNew("status", job.Status)
 
 	// If the identity has changed and the config asks us to deregister on identity
 	// change then the id field "forces new resource".
