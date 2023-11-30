@@ -92,7 +92,7 @@ func parseWorkloadIdentity(workloadIdentity interface{}) (*api.JobACL, error) {
 	}
 
 	var namespace, jobID, group, task string
-	if val, ok := jobACL["namepace"].(string); ok {
+	if val, ok := jobACL["namespace"].(string); ok {
 		namespace = val
 	}
 
