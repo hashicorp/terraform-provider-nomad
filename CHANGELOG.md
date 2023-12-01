@@ -6,6 +6,9 @@ IMPROVEMENTS:
 * resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement,
   on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 
+BUG FIXES:
+ * resources/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))
+
 ## 2.0.0 (August 28th, 2023)
 
 * **New Resource**: `nomad_node_pool` manages node pools ([#340](https://github.com/hashicorp/terraform-provider-nomad/pull/340))
