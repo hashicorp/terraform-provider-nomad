@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/nomad/api"
@@ -344,6 +345,29 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
+	volumeID := d.Get("volume_id").(string)
+	queryOpts := &api.QueryOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if queryOpts.Namespace == "" {
+		queryOpts.Namespace = "default"
+	}
+
+	log.Printf("[DEBUG] checking for CSI volume %q in namespace %q", volumeID, queryOpts.Namespace)
+	_, _, err := client.CSIVolumes().Info(volumeID, queryOpts)
+	if err == nil || !strings.Contains(err.Error(), "404") {
+		return diag.Diagnostics{diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "volume exists",
+			Detail:   fmt.Sprintf("a volume with id %s already exists", volumeID),
+		}}
+	} else if err != nil {
+		return diag.Diagnostics{diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("failed to check for existing volume: %v", err),
+		}}
+	}
+
 	var parsingDiags diag.Diagnostics
 
 	capacityMin, capacityMax, capacityDiags := parseCapacity(d)
@@ -372,7 +396,7 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	volume := &api.CSIVolume{
-		ID:                    d.Get("volume_id").(string),
+		ID:                    volumeID,
 		PluginID:              d.Get("plugin_id").(string),
 		Name:                  d.Get("name").(string),
 		SnapshotID:            d.Get("snapshot_id").(string),
