@@ -35,7 +35,7 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 		},
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceCSIVolumeRegistrationImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -527,6 +527,63 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	// with the response payload; they will remain as is.
 
 	return nil
+}
+
+func resourceCSIVolumeRegistrationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	providerConfig := meta.(ProviderConfig)
+	client := providerConfig.client
+	id := d.Id()
+	opts := &api.QueryOptions{
+		Namespace: d.Get("namespace").(string),
+	}
+	if opts.Namespace == "" {
+		opts.Namespace = "default"
+	}
+	log.Printf("[DEBUG] reading information for CSI volume %q in namespace %q", id, opts.Namespace)
+
+	volume, _, err := client.CSIVolumes().Info(id, opts)
+	if err != nil {
+		// As of Nomad 0.4.1, the API client returns an error for 404
+		// rather than a nil result, so we must check this way.
+		if strings.Contains(err.Error(), "404") {
+			log.Fatalf("[DEBUG] CSI volume %q does not exist", id)
+		}
+
+		return nil, fmt.Errorf("error checking for CSI volume: %s", err)
+	}
+
+	mountOpts, ok := d.GetOk("mount_options")
+	if ok {
+		mountOptsList, ok := mountOpts.([]interface{})
+		if !ok || len(mountOptsList) != 1 {
+			return nil, fmt.Errorf("failed to unpack mount_options configuration block")
+		}
+
+		mountOptsMap, ok := mountOptsList[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to unpack mount_options configuration block")
+		}
+		volume.MountOptions = &api.CSIMountOptions{}
+
+		if val, ok := mountOptsMap["fs_type"].(string); ok {
+			volume.MountOptions.FSType = val
+		}
+		rawMountFlags := mountOptsMap["mount_flags"].([]interface{})
+		volume.MountOptions.MountFlags = make([]string, len(rawMountFlags))
+		for index, value := range rawMountFlags {
+			if val, ok := value.(string); ok {
+				volume.MountOptions.MountFlags[index] = val
+			}
+		}
+	}
+
+	d.Set("capacity", int(volume.Capacity))
+	d.Set("external_id", volume.ExternalID)
+	d.Set("namespace", volume.Namespace)
+	d.Set("volume_id", volume.ID)
+	d.Set("plugin_id", volume.PluginID)
+	log.Printf("volume registration data: %v\n", d)
+	return []*schema.ResourceData{d}, nil
 }
 
 func parseCSIVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) {
