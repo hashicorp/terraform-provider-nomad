@@ -8,6 +8,7 @@ IMPROVEMENTS:
 * resource/nomad_csi_volume: update import key to be `<volume id>@<namespace>` to allow importing volumes from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
 * resource/nomad_csi_volume_registration: update import key to be `<volume id>@<namespace>` to allow importing volume registrations from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
   on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
+* resource/nomad_job: read and submit original jobspec on state refresh and job register ([#405](https://github.com/hashicorp/terraform-provider-nomad/pull/405))
 * resource/nomad_job: Add `rerun_if_dead` attribute to allow forcing a job to run again if it's marked as `dead`. ([#407](https://github.com/hashicorp/terraform-provider-nomad/pull/407))
 * resource/nomad_job: update import key to be `<job id>@<namespace>` to allow importing jobs from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
 
