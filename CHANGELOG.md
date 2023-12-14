@@ -5,6 +5,7 @@ IMPROVEMENTS:
 * provider: update Go to 1.21.5 ([#399](https://github.com/hashicorp/terraform-provider-nomad/pull/399))
 * resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement,
   on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
+* resource/acl_auth_method: add support for `token_name_format` ([#394](https://github.com/hashicorp/terraform-provider-nomad/issues/394))
 
 BUG FIXES:
 * resource/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))

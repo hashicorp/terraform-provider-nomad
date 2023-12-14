@@ -16,11 +16,12 @@ Creating an ALC Auth Method:
 
 ```hcl
 resource "nomad_acl_auth_method" "my_nomad_acl_auth_method" {
-  name           = "my-nomad-acl-auth-method"
-  type           = "OIDC"
-  token_locality = "global"
-  max_token_ttl  = "10m0s"
-  default        = true
+  name              = "my-nomad-acl-auth-method"
+  type              = "OIDC"
+  token_locality    = "global"
+  max_token_ttl     = "10m0s"
+  token_name_format = "$${auth_method_type}-$${value.user}"
+  default           = true
 
   config {
     oidc_discovery_url    = "https://uk.auth0.com/"
@@ -53,6 +54,10 @@ The following arguments are supported:
 
 - `max_token_ttl` `(string: <required>)` - Defines the maximum life of a token 
   created by this method and is specified as a time duration such as "15h".
+
+- `token_name_format` `(string: <optional>)` - Defines the token name format for the
+  generated tokens This can be lightly templated using HIL '${foo}' syntax. 
+  Defaults to `${auth_method_type}-${auth_method_name}`.
 
 - `default` `(bool: false)` - Defines whether this ACL Auth Method is to be set
   as default.

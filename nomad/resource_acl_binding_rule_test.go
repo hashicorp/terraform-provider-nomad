@@ -57,11 +57,12 @@ func TestResourceACLManagementBindingRule(t *testing.T) {
 func testResourceACLBindingRuleConfig(description, bindingName string) string {
 	return fmt.Sprintf(`
 resource "nomad_acl_auth_method" "test" {
-	name           = "tf-provider-acl-binding-rule-test-auth-method"
-	type           = "OIDC"
-	token_locality = "global"
-	max_token_ttl  = "10m0s"
-	default        = true
+	name           	  = "tf-provider-acl-binding-rule-test-auth-method"
+	type           	  = "OIDC"
+	token_locality 	  = "global"
+	token_name_format = "$${auth_method_type}-$${auth_method_name}-$${value.user}"
+	max_token_ttl  	  = "10m0s"
+	default        	  = true
 
 	config {
 		oidc_discovery_url    = "https://uk.auth0.com/"
@@ -94,11 +95,12 @@ resource "nomad_acl_binding_rule" "test" {
 func testResourceACLBindingManagementRuleConfig() string {
 	return `
 resource "nomad_acl_auth_method" "test" {
-	name           = "tf-provider-acl-binding-rule-test-auth-method"
-	type           = "OIDC"
-	token_locality = "global"
-	max_token_ttl  = "10m0s"
-	default        = true
+	name              = "tf-provider-acl-binding-rule-test-auth-method"
+	type              = "OIDC"
+	token_locality 	  = "global"
+	token_name_format = "$${auth_method_type}-$${auth_method_name}-$${value.user}"
+	max_token_ttl     = "10m0s"
+	default           = true
 
 	config {
 		oidc_discovery_url    = "https://uk.auth0.com/"
