@@ -1686,7 +1686,8 @@ func testResourceJob_lifecycleCheck(s *terraform.State) error {
         "Interval": 600000000000,
 		"Delay": 15000000000,
 		"Mode": "delay",
- 	    "Attempts": 10
+ 	    "Attempts": 10,
+		"RenderTemplates": false
 	}`), &expTaskRestart)
 
 	if diff := cmp.Diff(expTaskLifecycle, *taskGroup.Tasks[0].Lifecycle); diff != "" {
@@ -1853,6 +1854,7 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 			AddressMode: "auto",
 			OnUpdate:    "require_healthy",
 			Provider:    "consul",
+			Cluster:     "default",
 			Connect: &api.ConsulConnect{
 				SidecarService: &api.ConsulSidecarService{
 					Tags: []string{"dashboard", "count"},
@@ -1963,7 +1965,8 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 				}
 			},
 		    "OnUpdate": "require_healthy",
-			"Provider": "consul"
+			"Provider": "consul",
+			"Cluster": "default"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -2040,7 +2043,8 @@ func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) er
 				}
 			},
 			"OnUpdate": "require_healthy",
-			"Provider": "consul"
+			"Provider": "consul",
+			"Cluster": "default"
 		}
 	]`), &expServices)
 	if err != nil {
