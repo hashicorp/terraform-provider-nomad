@@ -407,9 +407,23 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		wantModifyIndex = 0
 	}
+
+	sub := &api.JobSubmission{
+		Source:        jobspecRaw,
+		Format:        "hcl2",
+		VariableFlags: jobParserConfig.HCL2.Vars,
+	}
+	switch {
+	case jobParserConfig.JSON.Enabled:
+		sub.Format = "json"
+	case jobParserConfig.HCL1.Enabled:
+		sub.Format = "hcl1"
+	}
+
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
 		ModifyIndex:    wantModifyIndex,
+		Submission:     sub,
 	}, &api.WriteOptions{
 		Namespace: *job.Namespace,
 	})
