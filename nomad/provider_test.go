@@ -98,7 +98,7 @@ func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
 			t.Skip("could not parse node version: ", err)
 		} else {
 			if !versionCheck(*version) {
-				t.Skip(fmt.Sprintf("node version '%v' not appropriate for test", version.String()))
+				t.Skipf("node version '%v' not appropriate for test", version.String())
 			}
 		}
 	} else {
