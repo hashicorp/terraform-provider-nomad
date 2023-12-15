@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -151,6 +150,13 @@ func resourceJob() *schema.Resource {
 				Description: "The type of the job, as derived from the jobspec.",
 				Computed:    true,
 				Type:        schema.TypeString,
+			},
+
+			"rerun_if_dead": {
+				Description: "If true, forces the job to run again on apply if it is currently dead",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
 			},
 
 			"status": {
@@ -651,7 +657,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 		return nil
 	}
 
-	if !slices.Contains([]string{"running", "pending"}, d.Get("status").(string)) {
+	if d.Get("status").(string) == "dead" && d.Get("rerun_if_dead").(bool) {
 		d.SetNewComputed("status")
 	}
 

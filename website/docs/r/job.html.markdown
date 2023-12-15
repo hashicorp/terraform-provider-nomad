@@ -264,6 +264,9 @@ The following arguments are supported:
 - `deregister_on_id_change` `(boolean: true)` - Determines if the job will be
   deregistered if the ID of the job in the jobspec changes.
 
+- `rerun_if_dead` `(boolean: false)` - Set this to true to force the job to run
+  again if its status is `dead`.
+
 - `detach` `(boolean: true)` - If true, the provider will return immediately
   after creating or updating, instead of monitoring.
 
