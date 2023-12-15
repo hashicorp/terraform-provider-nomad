@@ -340,6 +340,11 @@ func resourceCSIVolume() *schema.Resource {
 	}
 }
 
+func resourceCSIVolumeRead(d *schema.ResourceData, meta any) error {
+	_, err := readCSIVolume(d, meta)
+	return err
+}
+
 func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
