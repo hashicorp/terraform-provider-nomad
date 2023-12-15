@@ -7,7 +7,9 @@ IMPROVEMENTS:
   on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 
 BUG FIXES:
- * resources/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))
+* resource/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))
+* resource/nomad_csi_volume_registration: fixed a bug that cause an import operation to not load all of the volume attributes ([#402](https://github.com/hashicorp/terraform-provider-nomad/pull/402))
+* resource/nomad_volume: fixed a bug that cause an import operation to not load all of the volume attributes ([#402](https://github.com/hashicorp/terraform-provider-nomad/pull/402))
 
 ## 2.0.0 (August 28th, 2023)
 
