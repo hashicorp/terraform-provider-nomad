@@ -159,6 +159,20 @@ func TestResourceJob_lifecycle(t *testing.T) {
 	})
 }
 
+func TestResourceJob_actions(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.7.0") },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_actions,
+				Check:  testResourceJob_actionsCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("actions"),
+	})
+}
+
 func TestResourceJob_serviceDeploymentInfo(t *testing.T) {
 	//TODO(luiz): fix this test.
 	t.Skip("This test started failing when running the full suite on Nomad v1.5.1+")
@@ -1672,7 +1686,8 @@ func testResourceJob_lifecycleCheck(s *terraform.State) error {
         "Interval": 600000000000,
 		"Delay": 15000000000,
 		"Mode": "delay",
- 	    "Attempts": 10
+ 	    "Attempts": 10,
+		"RenderTemplates": false
 	}`), &expTaskRestart)
 
 	if diff := cmp.Diff(expTaskLifecycle, *taskGroup.Tasks[0].Lifecycle); diff != "" {
@@ -1681,6 +1696,57 @@ func testResourceJob_lifecycleCheck(s *terraform.State) error {
 
 	if diff := cmp.Diff(expTaskRestart, *taskGroup.Tasks[0].RestartPolicy); diff != "" {
 		return fmt.Errorf("task restart policy mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
+func testResourceJob_actionsCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.test"
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// Verify task has action.
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected job to have 1 group, got %d", len(job.TaskGroups))
+	}
+
+	tg := job.TaskGroups[0]
+	if len(tg.Tasks) != 1 {
+		return fmt.Errorf("expected group to have 1 task, got %d", len(tg.Tasks))
+	}
+	task := tg.Tasks[0]
+
+	// Verify task has expected actions.
+	expected := []*api.Action{
+		{
+			Name:    "echo",
+			Command: "/bin/echo",
+			Args:    []string{"hi"},
+		},
+	}
+	if diff := cmp.Diff(expected, task.Actions); diff != "" {
+		return fmt.Errorf("task actions mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -1788,6 +1854,7 @@ func testResourceJob_consulConnectCheck(s *terraform.State) error {
 			AddressMode: "auto",
 			OnUpdate:    "require_healthy",
 			Provider:    "consul",
+			Cluster:     "default",
 			Connect: &api.ConsulConnect{
 				SidecarService: &api.ConsulSidecarService{
 					Tags: []string{"dashboard", "count"},
@@ -1898,7 +1965,8 @@ func testResourceJob_consulConnectIngressGatewayCheck(s *terraform.State) error 
 				}
 			},
 		    "OnUpdate": "require_healthy",
-			"Provider": "consul"
+			"Provider": "consul",
+			"Cluster": "default"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -1975,7 +2043,8 @@ func testResourceJob_consulConnectTerminatingGatewayCheck(s *terraform.State) er
 				}
 			},
 			"OnUpdate": "require_healthy",
-			"Provider": "consul"
+			"Provider": "consul",
+			"Cluster": "default"
 		}
 	]`), &expServices)
 	if err != nil {
@@ -3078,6 +3147,28 @@ resource "nomad_job" "test" {
 		}
 	}
 	EOT
+}
+`
+
+var testResourceJob_actions = `
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+job "actions" {
+  group "foo" {
+    task "sidecar" {
+      driver = "raw_exec"
+      config {
+        command = "/bin/sleep"
+        args = ["10"]
+      }
+      action "echo" {
+        command = "/bin/echo"
+        args = ["hi"]
+      }
+    }
+  }
+}
+EOT
 }
 `
 
