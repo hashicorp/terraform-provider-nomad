@@ -35,7 +35,7 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 		},
 
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceCSIVolumeRegistrationImport,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -500,6 +500,9 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] found CSI volume %q in namespace %q", volume.Name, volume.Namespace)
 
 	d.Set("name", volume.Name)
+	d.Set("external_id", volume.ExternalID)
+	d.Set("namespace", volume.Namespace)
+	d.Set("volume_id", volume.ID)
 
 	d.Set("capacity", int(volume.Capacity))
 	d.Set("capacity_min_bytes", volume.RequestedCapacityMin)
@@ -516,74 +519,19 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("controllers_expected", volume.ControllersExpected)
 	d.Set("controllers_healthy", volume.ControllersHealthy)
 	d.Set("controllers_healthy", volume.ControllersHealthy)
+	d.Set("plugin_id", volume.PluginID)
 	d.Set("plugin_provider", volume.Provider)
 	d.Set("plugin_provider_version", volume.ProviderVersion)
 	d.Set("nodes_healthy", volume.NodesHealthy)
 	d.Set("nodes_expected", volume.NodesExpected)
 	d.Set("schedulable", volume.Schedulable)
+	d.Set("capability", flattenCSIVolumeCapabilities(volume.RequestedCapabilities))
 	d.Set("topologies", flattenCSIVolumeTopologies(volume.Topologies))
 	d.Set("topology_request", flattenCSIVolumeTopologyRequests(volume.RequestedTopologies))
 	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
 	// with the response payload; they will remain as is.
 
 	return nil
-}
-
-func resourceCSIVolumeRegistrationImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
-	id := d.Id()
-	opts := &api.QueryOptions{
-		Namespace: d.Get("namespace").(string),
-	}
-	if opts.Namespace == "" {
-		opts.Namespace = "default"
-	}
-	log.Printf("[DEBUG] reading information for CSI volume %q in namespace %q", id, opts.Namespace)
-
-	volume, _, err := client.CSIVolumes().Info(id, opts)
-	if err != nil {
-		// As of Nomad 0.4.1, the API client returns an error for 404
-		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
-			log.Fatalf("[DEBUG] CSI volume %q does not exist", id)
-		}
-
-		return nil, fmt.Errorf("error checking for CSI volume: %s", err)
-	}
-
-	mountOpts, ok := d.GetOk("mount_options")
-	if ok {
-		mountOptsList, ok := mountOpts.([]interface{})
-		if !ok || len(mountOptsList) != 1 {
-			return nil, fmt.Errorf("failed to unpack mount_options configuration block")
-		}
-
-		mountOptsMap, ok := mountOptsList[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("failed to unpack mount_options configuration block")
-		}
-		volume.MountOptions = &api.CSIMountOptions{}
-
-		if val, ok := mountOptsMap["fs_type"].(string); ok {
-			volume.MountOptions.FSType = val
-		}
-		rawMountFlags := mountOptsMap["mount_flags"].([]interface{})
-		volume.MountOptions.MountFlags = make([]string, len(rawMountFlags))
-		for index, value := range rawMountFlags {
-			if val, ok := value.(string); ok {
-				volume.MountOptions.MountFlags[index] = val
-			}
-		}
-	}
-
-	d.Set("capacity", int(volume.Capacity))
-	d.Set("external_id", volume.ExternalID)
-	d.Set("namespace", volume.Namespace)
-	d.Set("volume_id", volume.ID)
-	d.Set("plugin_id", volume.PluginID)
-	log.Printf("volume registration data: %v\n", d)
-	return []*schema.ResourceData{d}, nil
 }
 
 func parseCSIVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) {
@@ -700,6 +648,23 @@ func parseCSIVolumeTopologies(prefix string, i interface{}) ([]*api.CSITopology,
 	}
 
 	return topologies, nil
+}
+
+// flattenCSIVolumeCapabilities turns a list of Nomad API CSIVolumeCapability
+// structs into the flat representation used by Terraform.
+func flattenCSIVolumeCapabilities(capabilities []*api.CSIVolumeCapability) []any {
+	capList := []any{}
+	for _, c := range capabilities {
+		if c == nil {
+			continue
+		}
+		capItem := make(map[string]any)
+		capItem["access_mode"] = c.AccessMode
+		capItem["attachment_mode"] = c.AttachmentMode
+		capList = append(capList, capItem)
+	}
+
+	return capList
 }
 
 // flattenVolumeTopologies turns a list of Nomad API CSITopology structs into
