@@ -3457,3 +3457,48 @@ job "example" {
 		})
 	}
 }
+
+func testResourceJob_externalStopCheck(t *testing.T) r.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_job.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		jobID := instanceState.ID
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+		_, _, err := client.Jobs().Deregister(jobID, false, &api.WriteOptions{
+			Namespace: instanceState.Attributes["namespace"],
+		})
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+
+		return nil
+	}
+}
+
+func TestResourceJob_externalStop(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_initialConfig,
+				Check:  testResourceJob_initialCheck(t),
+			},
+			{
+				Config:             testResourceJob_initialConfig,
+				Check:              testResourceJob_externalStopCheck(t),
+				ExpectNonEmptyPlan: true,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo"),
+	})
+}
