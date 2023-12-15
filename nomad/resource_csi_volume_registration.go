@@ -27,7 +27,7 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 		CreateContext: resourceCSIVolumeRegistrationCreate,
 		UpdateContext: resourceCSIVolumeRegistrationCreate,
 		DeleteContext: resourceCSIVolumeRegistrationDelete,
-		Read:          resourceCSIVolumeRead,
+		Read:          resourceCSIVolumeRegistrationRead,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -421,7 +421,7 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		log.Printf("[DEBUG] CSI volume %q registered in namespace %q", volume.ID, volume.Namespace)
 		d.SetId(volume.ID)
 
-		err := resourceCSIVolumeRead(d, meta) // populate other computed attributes
+		err := resourceCSIVolumeRegistrationRead(d, meta) // populate other computed attributes
 		if err != nil {
 			return retry.NonRetryableError(err)
 		}
@@ -473,7 +473,19 @@ func resourceCSIVolumeRegistrationDelete(ctx context.Context, d *schema.Resource
 	}))
 }
 
-func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
+func resourceCSIVolumeRegistrationRead(d *schema.ResourceData, meta any) error {
+	vol, err := readCSIVolume(d, meta)
+	if err != nil {
+		return err
+	}
+	d.Set("external_id", vol.ExternalID)
+	return nil
+}
+
+// readCSIVolume is shared between nomad_csi_volume and
+// nomad_csi_volume_registration, but the external_id attribute should only be
+// set on nomad_csi_volume_registration.
+func readCSIVolume(d *schema.ResourceData, meta interface{}) (*api.CSIVolume, error) {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -492,15 +504,14 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 		if strings.Contains(err.Error(), "404") {
 			log.Printf("[DEBUG] CSI volume %q does not exist, so removing", id)
 			d.SetId("")
-			return nil
+			return nil, nil
 		}
 
-		return fmt.Errorf("error checking for CSI volume: %s", err)
+		return nil, fmt.Errorf("error checking for CSI volume: %s", err)
 	}
 	log.Printf("[DEBUG] found CSI volume %q in namespace %q", volume.Name, volume.Namespace)
 
 	d.Set("name", volume.Name)
-	d.Set("external_id", volume.ExternalID)
 	d.Set("namespace", volume.Namespace)
 	d.Set("volume_id", volume.ID)
 
@@ -531,7 +542,7 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
 	// with the response payload; they will remain as is.
 
-	return nil
+	return volume, nil
 }
 
 func parseCSIVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) {
