@@ -54,6 +54,11 @@ func resourceACLAuthMethod() *schema.Resource {
 				Required:    true,
 				Type:        schema.TypeString,
 			},
+			"token_name_format": {
+				Description: "Defines the token format for the authenticated users. This can be lightly templated using HIL '${foo}' syntax.",
+				Optional:    true,
+				Type:        schema.TypeString,
+			},
 			"default": {
 				Description: "Defines whether this ACL Auth Method is to be set as default.",
 				Optional:    true,
@@ -219,6 +224,7 @@ func resourceACLAuthMethodRead(d *schema.ResourceData, meta interface{}) error {
 	_ = d.Set("type", authMethod.Type)
 	_ = d.Set("token_locality", authMethod.TokenLocality)
 	_ = d.Set("max_token_ttl", authMethod.MaxTokenTTL.String())
+	_ = d.Set("token_name_format", authMethod.TokenNameFormat)
 	_ = d.Set("default", authMethod.Default)
 	_ = d.Set("config", flattenACLAuthMethodConfig(authMethod.Config))
 
@@ -248,10 +254,11 @@ func resourceACLAuthMethodExists(d *schema.ResourceData, meta interface{}) (bool
 func generateNomadACLAuthMethod(d *schema.ResourceData) (*api.ACLAuthMethod, error) {
 
 	aclAuthMethod := api.ACLAuthMethod{
-		Name:          d.Get("name").(string),
-		Type:          d.Get("type").(string),
-		TokenLocality: d.Get("token_locality").(string),
-		Default:       d.Get("default").(bool),
+		Name:            d.Get("name").(string),
+		Type:            d.Get("type").(string),
+		TokenLocality:   d.Get("token_locality").(string),
+		TokenNameFormat: d.Get("token_name_format").(string),
+		Default:         d.Get("default").(bool),
 	}
 
 	// Pull the string value of the token TTL and parse this as a time

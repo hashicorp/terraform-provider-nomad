@@ -43,11 +43,12 @@ func TestResourceACLAuthMethod(t *testing.T) {
 func testResourceACLAuthMethodConfig(name, uiCallback string, defaultVal bool) string {
 	return fmt.Sprintf(`
 resource "nomad_acl_auth_method" "test" {
-  name           = "%s"
-  type           = "OIDC"
-  token_locality = "global"
-  max_token_ttl  = "10m0s"
-  default        = %v
+  name           	= "%s"
+  type           	= "OIDC"
+  token_locality 	= "global"
+  token_name_format	= "$${auth_method_type}-$${auth_method_name}-$${value.user}"
+  max_token_ttl  	= "10m0s"
+  default        	= %v
 
   config {
     oidc_discovery_url    = "https://uk.auth0.com/"
@@ -78,6 +79,7 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			expectedType             = "OIDC"
 			expectedTokenLocality    = "global"
 			expectedMaxTokenTTL      = "10m0s"
+			expectedTokenNameFormat  = "${auth_method_type}-${auth_method_name}-${value.user}"
 			expectedOIDCDiscoveryURL = "https://uk.auth0.com/"
 			expectedOIDCClientID     = "someclientid"
 			expectedOIDCClientSecret = "someclientsecret-t"
@@ -165,6 +167,9 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 		}
 		if authMethod.MaxTokenTTL.String() != expectedMaxTokenTTL {
 			return fmt.Errorf("expected max token TTL to be %q, is %q in API", expectedMaxTokenTTL, authMethod.MaxTokenTTL)
+		}
+		if authMethod.TokenNameFormat != expectedTokenNameFormat {
+			return fmt.Errorf("expected token name format to be %q, is %q in API", expectedTokenNameFormat, authMethod.TokenNameFormat)
 		}
 		if strconv.FormatBool(authMethod.Default) != defaultVal {
 			return fmt.Errorf(`expected default to be %q, is "%v" in API`, defaultVal, authMethod.Default)
