@@ -7,6 +7,7 @@ IMPROVEMENTS:
 * resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement,
   on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 * resource/nomad_job: Add `rerun_if_dead` attribute to allow forcing a job to run again if it's marked as `dead`. ([#407](https://github.com/hashicorp/terraform-provider-nomad/pull/407))
+* resource/nomad_job: add support for importing jobs from non-default namespace ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
 
 BUG FIXES:
 * resource/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))
