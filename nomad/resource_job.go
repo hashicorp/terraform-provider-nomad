@@ -399,12 +399,11 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		wantModifyIndex = 0
 	}
-	ns := *job.Namespace
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
 		ModifyIndex:    wantModifyIndex,
 	}, &api.WriteOptions{
-		Namespace: ns,
+		Namespace: *job.Namespace,
 	})
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
@@ -697,7 +696,9 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	resp, _, err := client.Jobs().PlanOpts(job, &api.PlanOptions{
 		Diff:           false,
 		PolicyOverride: d.Get("policy_override").(bool),
-	}, nil)
+	}, &api.WriteOptions{
+		Namespace: *job.Namespace,
+	})
 	if err != nil {
 		log.Printf("[WARN] failed to validate Nomad plan: %s", err)
 	}
