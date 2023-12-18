@@ -302,8 +302,7 @@ options when [`detach`](#detach) is set to `false`:
 
 ## Importing Jobs
 
-You can use the ID format `<job ID>@<namespace>` to import jobs from
-non-default namespaces.
+Jobs are imported using the pattern `<job ID>@<namespace>`.
 
 ```console
 $ terraform import nomad_job.example example@my-namespace
@@ -317,9 +316,6 @@ Import successful!
 The resources that were imported are shown above. These resources are now in
 your Terraform state and will henceforth be managed by Terraform.
 ```
-
-The `@<namespace>` component my be omitted if the job is registered in the
-`default` namespace.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
 [tf_docs_templatefile]: https://www.terraform.io/docs/configuration/functions/templatefile.html

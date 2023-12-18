@@ -132,8 +132,8 @@ can be referenced:
 
 ## Importing CSI Volume Registrations
 
-You can use the ID format `<volume ID>@<namespace>` to import CSI volume
-registrations from non-default namespaces.
+CSI volume registrations are imported using the pattern
+`<volume ID>@<namespace>`.
 
 ```console
 $ terraform import nomad_csi_volume.mysql mysql@my-namespace
@@ -147,8 +147,5 @@ Import successful!
 The resources that were imported are shown above. These resources are now in
 your Terraform state and will henceforth be managed by Terraform.
 ```
-
-The `@<namespace>` component my be omitted if the volume is registered in the
-`default` namespace.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts

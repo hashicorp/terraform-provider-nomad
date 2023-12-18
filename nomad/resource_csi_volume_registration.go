@@ -35,7 +35,7 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 		},
 
 		Importer: &schema.ResourceImporter{
-			StateContext: helper.NamespacedImporter(resourceCSIVolumeRegistrationRead),
+			StateContext: helper.NamespacedImporterContext,
 		},
 
 		Schema: map[string]*schema.Schema{

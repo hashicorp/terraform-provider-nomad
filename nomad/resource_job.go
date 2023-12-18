@@ -37,7 +37,7 @@ func resourceJob() *schema.Resource {
 		},
 
 		Importer: &schema.ResourceImporter{
-			StateContext: helper.NamespacedImporter(resourceJobRead),
+			StateContext: helper.NamespacedImporterContext,
 		},
 
 		Schema: map[string]*schema.Schema{

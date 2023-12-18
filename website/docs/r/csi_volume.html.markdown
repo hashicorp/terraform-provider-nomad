@@ -139,8 +139,7 @@ configuration options.
 
 ## Importing CSI Volumes
 
-You can use the ID format `<volume ID>@<namespace>` to import CSI volumes from
-non-default namespaces.
+CSI volumes are imported using the pattern `<volume ID>@<namespace>` .
 
 ```console
 $ terraform import nomad_csi_volume.mysql mysql@my-namespace
@@ -154,9 +153,6 @@ Import successful!
 The resources that were imported are shown above. These resources are now in
 your Terraform state and will henceforth be managed by Terraform.
 ```
-
-The `@<namespace>` component my be omitted if the volume is registered in the
-`default` namespace.
 
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
 [tf_docs_prevent_destroy]: https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#prevent_destroy
