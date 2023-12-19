@@ -362,6 +362,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	timeout := d.Timeout(schema.TimeoutCreate)
 	if !d.IsNewResource() {
 		timeout = d.Timeout(schema.TimeoutUpdate)
+		d.Partial(true)
 	}
 
 	providerConfig := meta.(ProviderConfig)
@@ -413,6 +414,10 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	})
 	if err != nil {
 		return fmt.Errorf("error applying jobspec: %s", err)
+	}
+
+	if !d.IsNewResource() {
+		d.Partial(false)
 	}
 
 	log.Printf("[DEBUG] job '%s' registered in namespace '%s'", *job.ID, *job.Namespace)
