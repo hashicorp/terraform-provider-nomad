@@ -137,5 +137,22 @@ configuration options.
 - `create` `(string: "10m")` - Timeout when creating or updating a new CSI volume.
 - `delete` `(string: "10m")` - Timeout when deleting a CSI volume.
 
+## Importing CSI Volumes
+
+CSI volumes are imported using the pattern `<volume ID>@<namespace>` .
+
+```console
+$ terraform import nomad_csi_volume.mysql mysql@my-namespace
+nomad_csi_volume.mysql: Importing from ID "mysql@my-namespace"...
+nomad_csi_volume.mysql: Import prepared!
+  Prepared nomad_csi_volume for import
+nomad_csi_volume.mysql: Refreshing state... [id=mysql@my-namespace]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
 [tf_docs_prevent_destroy]: https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#prevent_destroy

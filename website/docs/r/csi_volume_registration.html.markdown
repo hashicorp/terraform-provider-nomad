@@ -130,4 +130,22 @@ can be referenced:
 - `create` `(string: "10m")` - Timeout when registering a new CSI volume.
 - `delete` `(string: "10m")` - Timeout when deregistering a CSI volume.
 
+## Importing CSI Volume Registrations
+
+CSI volume registrations are imported using the pattern
+`<volume ID>@<namespace>`.
+
+```console
+$ terraform import nomad_csi_volume.mysql mysql@my-namespace
+nomad_csi_volume_registration.mysql: Importing from ID "mysql@my-namespace"...
+nomad_csi_volume_registration.mysql: Import prepared!
+  Prepared nomad_csi_volume_registration for import
+nomad_csi_volume_registration.mysql: Refreshing state... [id=mysql@my-namespace]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts

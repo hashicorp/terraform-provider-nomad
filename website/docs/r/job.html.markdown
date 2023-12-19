@@ -300,6 +300,23 @@ options when [`detach`](#detach) is set to `false`:
 - `create` `(string: "5m")` - Timeout when registering a new job.
 - `update` `(string: "5m")` - Timeout when updating an existing job.
 
+## Importing Jobs
+
+Jobs are imported using the pattern `<job ID>@<namespace>`.
+
+```console
+$ terraform import nomad_job.example example@my-namespace
+nomad_job.example: Importing from ID "example@my-namespace"...
+nomad_job.example: Import prepared!
+  Prepared nomad_job for import
+nomad_job.example: Refreshing state... [id=example@my-namespace]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
 [tf_docs_timeouts]: https://www.terraform.io/docs/configuration/blocks/resources/syntax.html#operation-timeouts
 [tf_docs_templatefile]: https://www.terraform.io/docs/configuration/functions/templatefile.html
 [tf_docs_string_template]: https://www.terraform.io/language/expressions/strings#string-templates
