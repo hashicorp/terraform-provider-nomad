@@ -671,8 +671,9 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		// Update HCL2 variables if present.
-		if sub.Format == "hcl2" {
-			hcl2Config, err := parseHCL2JobParserConfig(d.Get("hcl2"))
+		hcl2, ok := d.GetOk("hcl2")
+		if sub.Format == "hcl2" && ok {
+			hcl2Config, err := parseHCL2JobParserConfig(hcl2)
 			if err != nil {
 				log.Printf("[WARN] failed to parse HCL2 config: %v", err)
 			} else {
