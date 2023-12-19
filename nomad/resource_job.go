@@ -351,6 +351,11 @@ type HCL1JobParserConfig struct {
 type HCL2JobParserConfig struct {
 	AllowFS bool
 	Vars    map[string]string
+
+	// Deprecated: Starting in v2.0.0 the provider assumes HCL2 parsing by
+	// default. This field should only be used to update the `hcl2` attribute
+	// in state without causing a diff.
+	Enabled bool
 }
 
 // ResourceFieldGetter are able to retrieve field values.
@@ -655,6 +660,28 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("allocation_ids", nil)
 	}
 
+	// Update jobspec submission data if available.
+	// Safely ignore errors as this is an optional step.
+	sub, _, err := client.Jobs().Submission(*job.ID, int(*job.Version), opts)
+	if err != nil {
+		log.Printf("[WARN] failed to read job submission: %v", err)
+	} else if sub != nil {
+		if sub.Source != "" {
+			d.Set("jobspec", sub.Source)
+		}
+
+		// Update HCL2 variables if present.
+		if sub.Format == "hcl2" {
+			hcl2Config, err := parseHCL2JobParserConfig(d.Get("hcl2"))
+			if err != nil {
+				log.Printf("[WARN] failed to parse HCL2 config: %v", err)
+			} else {
+				hcl2Config.Vars = sub.VariableFlags
+				d.Set("hcl2", flattenHCL2JobParserConfig(hcl2Config))
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -841,6 +868,9 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	if allowFS, ok := hcl2Map["allow_fs"].(bool); ok {
 		config.AllowFS = allowFS
 	}
+	if enabled, ok := hcl2Map["enabled"].(bool); ok {
+		config.Enabled = enabled
+	}
 	if vars, ok := hcl2Map["vars"].(map[string]interface{}); ok {
 		config.Vars = make(map[string]string)
 		for k, v := range vars {
@@ -849,6 +879,14 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	}
 
 	return config, nil
+}
+
+func flattenHCL2JobParserConfig(c HCL2JobParserConfig) []any {
+	return []any{map[string]any{
+		"allow_fs": c.AllowFS,
+		"enabled":  c.Enabled,
+		"vars":     c.Vars,
+	}}
 }
 
 func parseJobspec(raw string, config JobParserConfig, vaultToken *string, consulToken *string) (*api.Job, error) {
