@@ -20,7 +20,7 @@ var (
 // its namespace as part of the Terraform resource ID.
 func NamespacedImporterContext(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
 	namespacedID := d.Id()
-	sepIdx := strings.LastIndex(d.Id(), "@")
+	sepIdx := strings.LastIndex(namespacedID, "@")
 	if sepIdx == -1 {
 		return nil, missingNamespaceImportErr
 	}
