@@ -3458,6 +3458,74 @@ job "example" {
 	}
 }
 
+func TestResourceJob_externalStop(t *testing.T) {
+	jobID := "rerun-if-dead"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			// Run job for the first time with rerun_if_dead = false.
+			{
+				Config: testResourceJob_rerunIfDead(jobID, false),
+				Check:  testResourceJob_initialCheck(t),
+			},
+			// Simulate an external job stop.
+			// Expect empty plan since nothing should happen.
+			{
+				Config:             testResourceJob_rerunIfDead(jobID, false),
+				Check:              testResourceJob_externalStopCheck(t),
+				ExpectNonEmptyPlan: false,
+			},
+			// Verify job doesn't rerun on apply.
+			{
+				Config: testResourceJob_rerunIfDead(jobID, false),
+				Check:  testResourceJob_statusCheck(t, "dead"),
+			},
+			// Update config with rerun_if_dead = true.
+			{
+				Config: testResourceJob_rerunIfDead(jobID, true),
+				Check:  testResourceJob_statusCheck(t, "running"),
+			},
+			// Simulate an external job stop.
+			// Expect non-empty plan since job should rerun.
+			{
+				Config:             testResourceJob_rerunIfDead(jobID, true),
+				Check:              testResourceJob_externalStopCheck(t),
+				ExpectNonEmptyPlan: true,
+			},
+			// Verify job reruns on apply.
+			{
+				Config: testResourceJob_rerunIfDead(jobID, true),
+				Check:  testResourceJob_statusCheck(t, "running"),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy(jobID),
+	})
+}
+
+func testResourceJob_rerunIfDead(name string, rerunIfDead bool) string {
+	return fmt.Sprintf(`
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+job "%s" {
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+	  config {
+        command = "/bin/sleep"
+        args = ["300"]
+      }
+    }
+  }
+}
+EOT
+
+  detach        = false
+  rerun_if_dead = %t
+}
+`, name, rerunIfDead)
+}
+
 func testResourceJob_externalStopCheck(t *testing.T) r.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["nomad_job.test"]
@@ -3477,28 +3545,39 @@ func testResourceJob_externalStopCheck(t *testing.T) r.TestCheckFunc {
 			Namespace: instanceState.Attributes["namespace"],
 		})
 		if err != nil {
-			return fmt.Errorf("error reading back job: %s", err)
+			return fmt.Errorf("error deregistering job: %s", err)
 		}
 
 		return nil
 	}
 }
 
-func TestResourceJob_externalStop(t *testing.T) {
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
-			{
-				Config: testResourceJob_initialConfig,
-				Check:  testResourceJob_initialCheck(t),
-			},
-			{
-				Config:             testResourceJob_initialConfig,
-				Check:              testResourceJob_externalStopCheck(t),
-				ExpectNonEmptyPlan: true,
-			},
-		},
-		CheckDestroy: testResourceJob_checkDestroy("foo"),
-	})
+func testResourceJob_statusCheck(t *testing.T, status string) r.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_job.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		jobID := instanceState.ID
+		job, _, err := client.Jobs().Info(jobID, &api.QueryOptions{
+			Namespace: instanceState.Attributes["namespace"],
+		})
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+		if *job.Status != status {
+			return fmt.Errorf("job statu is %q, want %q", *job.Status, status)
+		}
+
+		return nil
+	}
 }
