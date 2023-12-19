@@ -27,7 +27,7 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 		CreateContext: resourceCSIVolumeRegistrationCreate,
 		UpdateContext: resourceCSIVolumeRegistrationCreate,
 		DeleteContext: resourceCSIVolumeRegistrationDelete,
-		Read:          resourceCSIVolumeRegistrationRead,
+		Read:          resourceCSIVolumeRead,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -421,7 +421,7 @@ func resourceCSIVolumeRegistrationCreate(ctx context.Context, d *schema.Resource
 		log.Printf("[DEBUG] CSI volume %q registered in namespace %q", volume.ID, volume.Namespace)
 		d.SetId(volume.ID)
 
-		err := resourceCSIVolumeRegistrationRead(d, meta) // populate other computed attributes
+		err := resourceCSIVolumeRead(d, meta) // populate other computed attributes
 		if err != nil {
 			return retry.NonRetryableError(err)
 		}
@@ -471,78 +471,6 @@ func resourceCSIVolumeRegistrationDelete(ctx context.Context, d *schema.Resource
 
 		return nil
 	}))
-}
-
-func resourceCSIVolumeRegistrationRead(d *schema.ResourceData, meta any) error {
-	vol, err := readCSIVolume(d, meta)
-	if err != nil {
-		return err
-	}
-	d.Set("external_id", vol.ExternalID)
-	return nil
-}
-
-// readCSIVolume is shared between nomad_csi_volume and
-// nomad_csi_volume_registration, but the external_id attribute should only be
-// set on nomad_csi_volume_registration.
-func readCSIVolume(d *schema.ResourceData, meta interface{}) (*api.CSIVolume, error) {
-	providerConfig := meta.(ProviderConfig)
-	client := providerConfig.client
-
-	id := d.Id()
-	opts := &api.QueryOptions{
-		Namespace: d.Get("namespace").(string),
-	}
-	if opts.Namespace == "" {
-		opts.Namespace = "default"
-	}
-	log.Printf("[DEBUG] reading information for CSI volume %q in namespace %q", id, opts.Namespace)
-	volume, _, err := client.CSIVolumes().Info(id, opts)
-	if err != nil {
-		// As of Nomad 0.4.1, the API client returns an error for 404
-		// rather than a nil result, so we must check this way.
-		if strings.Contains(err.Error(), "404") {
-			log.Printf("[DEBUG] CSI volume %q does not exist, so removing", id)
-			d.SetId("")
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("error checking for CSI volume: %s", err)
-	}
-	log.Printf("[DEBUG] found CSI volume %q in namespace %q", volume.Name, volume.Namespace)
-
-	d.Set("name", volume.Name)
-	d.Set("namespace", volume.Namespace)
-	d.Set("volume_id", volume.ID)
-
-	d.Set("capacity", int(volume.Capacity))
-	d.Set("capacity_min_bytes", volume.RequestedCapacityMin)
-	d.Set("capacity_max_bytes", volume.RequestedCapacityMax)
-	// only save capacity min/max in state if the user has set it/them
-	if cMin := d.Get("capacity_min").(string); cMin != "" {
-		d.Set("capacity_min", humanize.IBytes(uint64(volume.RequestedCapacityMin)))
-	}
-	if cMax := d.Get("capacity_max").(string); cMax != "" {
-		d.Set("capacity_max", humanize.IBytes(uint64(volume.RequestedCapacityMax)))
-	}
-
-	d.Set("controller_required", volume.ControllerRequired)
-	d.Set("controllers_expected", volume.ControllersExpected)
-	d.Set("controllers_healthy", volume.ControllersHealthy)
-	d.Set("controllers_healthy", volume.ControllersHealthy)
-	d.Set("plugin_id", volume.PluginID)
-	d.Set("plugin_provider", volume.Provider)
-	d.Set("plugin_provider_version", volume.ProviderVersion)
-	d.Set("nodes_healthy", volume.NodesHealthy)
-	d.Set("nodes_expected", volume.NodesExpected)
-	d.Set("schedulable", volume.Schedulable)
-	d.Set("capability", flattenCSIVolumeCapabilities(volume.RequestedCapabilities))
-	d.Set("topologies", flattenCSIVolumeTopologies(volume.Topologies))
-	d.Set("topology_request", flattenCSIVolumeTopologyRequests(volume.RequestedTopologies))
-	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
-	// with the response payload; they will remain as is.
-
-	return volume, nil
 }
 
 func parseCSIVolumeCapabilities(i interface{}) ([]*api.CSIVolumeCapability, error) {
