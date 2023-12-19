@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -641,13 +641,35 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 	}
 	got := *tpl.EmbeddedTmpl
 
-	want, err := ioutil.ReadFile("./test-fixtures/hello.txt")
+	want, err := os.ReadFile("./test-fixtures/hello.txt")
 	if err != nil {
 		return fmt.Errorf("failed to open template data: %v", err)
 	}
 
 	if diff := cmp.Diff(string(want), got); diff != "" {
 		return fmt.Errorf("template content mismatch (-want +got):\n%s", diff)
+	}
+
+	sub, _, err := client.Jobs().Submission(jobID, int(*job.Version), &api.QueryOptions{
+		Namespace: *job.Namespace,
+	})
+	if err != nil {
+		return fmt.Errorf("error reading job submissions: %s", err)
+	}
+	if diff := cmp.Diff(instanceState.Attributes["jobspec"], sub.Source); diff != "" {
+		return fmt.Errorf("job source mismatch (-want +got):\n%s", diff)
+	}
+
+	wantVars := make(map[string]string)
+	for k, v := range instanceState.Attributes {
+		if !strings.HasPrefix(k, "hcl2.0.vars") || k == "hcl2.0.vars.%" {
+			continue
+		}
+		varKey := strings.TrimPrefix(k, "hcl2.0.vars.")
+		wantVars[varKey] = v
+	}
+	if diff := cmp.Diff(wantVars, sub.VariableFlags); diff != "" {
+		return fmt.Errorf("job hcl2 variables mismatch (-want +got):\n%s", diff)
 	}
 
 	return nil
@@ -1197,6 +1219,16 @@ func testResourceJob_initialCheckNS(t *testing.T, expectedNamespace string) r.Te
 
 		if got, want := *job.Namespace, expectedNamespace; got != want {
 			return fmt.Errorf("job namespace is %q; want %q", got, want)
+		}
+
+		sub, _, err := client.Jobs().Submission(jobID, int(*job.Version), &api.QueryOptions{
+			Namespace: expectedNamespace,
+		})
+		if err != nil {
+			return fmt.Errorf("error reading job submissions: %s", err)
+		}
+		if diff := cmp.Diff(instanceState.Attributes["jobspec"], sub.Source); diff != "" {
+			return fmt.Errorf("job source mismatch (-want +got):\n%s", diff)
 		}
 
 		return nil

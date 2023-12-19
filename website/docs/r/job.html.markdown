@@ -249,6 +249,13 @@ EOF
 }
 ```
 
+## Tracking Jobspec Changes
+
+The Nomad API allows [submitting the raw jobspec when registering and updating
+jobs](https://developer.hashicorp.com/nomad/api-docs/jobs#submission). If
+available, the job submission source is used to detect changes to the `jobspec`
+and `hcl2.vars` arguments.
+
 ## Argument Reference
 
 The following arguments are supported:

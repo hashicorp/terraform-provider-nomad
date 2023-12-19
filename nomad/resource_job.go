@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"golang.org/x/exp/maps"
+
 	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
@@ -351,6 +353,11 @@ type HCL1JobParserConfig struct {
 type HCL2JobParserConfig struct {
 	AllowFS bool
 	Vars    map[string]string
+
+	// Deprecated: Starting in v2.0.0 the provider assumes HCL2 parsing by
+	// default. This field should only be used to update the `hcl2` attribute
+	// in state without causing a diff.
+	Enabled bool
 }
 
 // ResourceFieldGetter are able to retrieve field values.
@@ -407,9 +414,23 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		wantModifyIndex = 0
 	}
+
+	sub := &api.JobSubmission{
+		Source:        jobspecRaw,
+		Format:        "hcl2",
+		VariableFlags: jobParserConfig.HCL2.Vars,
+	}
+	switch {
+	case jobParserConfig.JSON.Enabled:
+		sub.Format = "json"
+	case jobParserConfig.HCL1.Enabled:
+		sub.Format = "hcl1"
+	}
+
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
 		ModifyIndex:    wantModifyIndex,
+		Submission:     sub,
 	}, &api.WriteOptions{
 		Namespace: *job.Namespace,
 	})
@@ -641,6 +662,56 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("allocation_ids", nil)
 	}
 
+	// Update jobspec submission data if available.
+	// Safely ignore errors as this is an optional step.
+	sub, _, err := client.Jobs().Submission(*job.ID, int(*job.Version), opts)
+	if err != nil {
+		log.Printf("[WARN] failed to read job submission: %v", err)
+	} else {
+		err := resourceJobReadSubmission(sub, d, meta)
+		if err != nil {
+			log.Printf("[WARN] failed to update job submission: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func resourceJobReadSubmission(sub *api.JobSubmission, d *schema.ResourceData, meta any) error {
+	if sub == nil {
+		return nil
+	}
+
+	if sub.Source != "" {
+		d.Set("jobspec", sub.Source)
+	}
+
+	if sub.Format == "hcl2" {
+		var err error
+		var hcl2Config HCL2JobParserConfig
+
+		hcl2, ok := d.GetOk("hcl2")
+		if ok {
+			hcl2Config, err = parseHCL2JobParserConfig(hcl2)
+			if err != nil {
+				return fmt.Errorf("failed to parse HCL2 config: %v", err)
+			}
+		} else {
+			// Use default values if hcl2 is not set.
+			hcl2Config = HCL2JobParserConfig{
+				AllowFS: false,
+				Enabled: true,
+			}
+		}
+
+		// Only update hcl2 if there are changes to variables to avoid
+		// unnecessary updates if hcl2 is not set.
+		if !maps.Equal(sub.VariableFlags, hcl2Config.Vars) {
+			hcl2Config.Vars = sub.VariableFlags
+			d.Set("hcl2", flattenHCL2JobParserConfig(hcl2Config))
+		}
+	}
+
 	return nil
 }
 
@@ -827,6 +898,9 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	if allowFS, ok := hcl2Map["allow_fs"].(bool); ok {
 		config.AllowFS = allowFS
 	}
+	if enabled, ok := hcl2Map["enabled"].(bool); ok {
+		config.Enabled = enabled
+	}
 	if vars, ok := hcl2Map["vars"].(map[string]interface{}); ok {
 		config.Vars = make(map[string]string)
 		for k, v := range vars {
@@ -835,6 +909,14 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 	}
 
 	return config, nil
+}
+
+func flattenHCL2JobParserConfig(c HCL2JobParserConfig) []any {
+	return []any{map[string]any{
+		"allow_fs": c.AllowFS,
+		"enabled":  c.Enabled,
+		"vars":     c.Vars,
+	}}
 }
 
 func parseJobspec(raw string, config JobParserConfig, vaultToken *string, consulToken *string) (*api.Job, error) {
