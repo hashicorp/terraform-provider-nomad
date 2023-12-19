@@ -12,6 +12,7 @@ BUG FIXES:
 * resource/nomad_acl_policy: fixed a bug where the namespace would be incorrectly calculated from a job identity ([#396](https://github.com/hashicorp/terraform-provider-nomad/pull/396))
 * resource/nomad_csi_volume_registration: fixed a bug that cause an import operation to not load all of the volume attributes ([#402](https://github.com/hashicorp/terraform-provider-nomad/pull/402))
 * resource/nomad_job: fixed a bug that could cause jobs to be registered in the incorrect namespace if the `NOMAD_NAMESPACE` environment variable is set ([#386](https://github.com/hashicorp/terraform-provider-nomad/pull/386))
+* resource/nomad_job: fixed a bug that caused state changes even in case of errors during apply ([#412](https://github.com/hashicorp/terraform-provider-nomad/pull/412))
 * resource/nomad_volume: fixed a bug that cause an import operation to not load all of the volume attributes ([#402](https://github.com/hashicorp/terraform-provider-nomad/pull/402))
 
 ## 2.0.0 (August 28th, 2023)
