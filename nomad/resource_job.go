@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"golang.org/x/exp/maps"
+
 	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
@@ -665,21 +667,48 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	sub, _, err := client.Jobs().Submission(*job.ID, int(*job.Version), opts)
 	if err != nil {
 		log.Printf("[WARN] failed to read job submission: %v", err)
-	} else if sub != nil {
-		if sub.Source != "" {
-			d.Set("jobspec", sub.Source)
+	} else {
+		err := resourceJobReadSubmission(sub, d, meta)
+		if err != nil {
+			log.Printf("[WARN] failed to update job submission: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func resourceJobReadSubmission(sub *api.JobSubmission, d *schema.ResourceData, meta any) error {
+	if sub == nil {
+		return nil
+	}
+
+	if sub.Source != "" {
+		d.Set("jobspec", sub.Source)
+	}
+
+	if sub.Format == "hcl2" {
+		var err error
+		var hcl2Config HCL2JobParserConfig
+
+		hcl2, ok := d.GetOk("hcl2")
+		if ok {
+			hcl2Config, err = parseHCL2JobParserConfig(hcl2)
+			if err != nil {
+				return fmt.Errorf("failed to parse HCL2 config: %v", err)
+			}
+		} else {
+			// Use default values if hcl2 is not set.
+			hcl2Config = HCL2JobParserConfig{
+				AllowFS: false,
+				Enabled: true,
+			}
 		}
 
-		// Update HCL2 variables if present.
-		hcl2, ok := d.GetOk("hcl2")
-		if sub.Format == "hcl2" && ok {
-			hcl2Config, err := parseHCL2JobParserConfig(hcl2)
-			if err != nil {
-				log.Printf("[WARN] failed to parse HCL2 config: %v", err)
-			} else {
-				hcl2Config.Vars = sub.VariableFlags
-				d.Set("hcl2", flattenHCL2JobParserConfig(hcl2Config))
-			}
+		// Only update hcl2 if there are changes to variables to avoid
+		// unnecessary updates if hcl2 is not set.
+		if !maps.Equal(sub.VariableFlags, hcl2Config.Vars) {
+			hcl2Config.Vars = sub.VariableFlags
+			d.Set("hcl2", flattenHCL2JobParserConfig(hcl2Config))
 		}
 	}
 
