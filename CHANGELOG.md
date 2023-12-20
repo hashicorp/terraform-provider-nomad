@@ -1,13 +1,14 @@
-## 2.0.1 (Unreleased)
+## 2.1.1 (Unreleased)
+
+## 2.1.0 (December 20th, 2023)
 
 IMPROVEMENTS:
 * **Target Nomad 1.7.2**: updated the nomad client to support Nomad API and jobspec version 1.7.2 ([#404](https://github.com/hashicorp/terraform-provider-nomad/pull/404))
 * provider: update Go to 1.21.5 ([#399](https://github.com/hashicorp/terraform-provider-nomad/pull/399))
-* resource/resource_acl_auth_method: add support for `token_name_format` ([#403](https://github.com/hashicorp/terraform-provider-nomad/pull/403))
-* resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement,
+* resource/nomad_acl_auth_method: add support for `token_name_format` ([#403](https://github.com/hashicorp/terraform-provider-nomad/pull/403))
+* resource/nomad_csi_volume: changes to `capacity_min` or `capacity_max` may now expand the volume instead of forcing replacement, on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 * resource/nomad_csi_volume: update import key to be `<volume id>@<namespace>` to allow importing volumes from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
 * resource/nomad_csi_volume_registration: update import key to be `<volume id>@<namespace>` to allow importing volume registrations from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
-  on Nomad version 1.6.3 or later, if the CSI plugin supports it ([#382](https://github.com/hashicorp/terraform-provider-nomad/pull/382))
 * resource/nomad_job: read and submit original jobspec on state refresh and job register ([#405](https://github.com/hashicorp/terraform-provider-nomad/pull/405))
 * resource/nomad_job: Add `rerun_if_dead` attribute to allow forcing a job to run again if it's marked as `dead`. ([#407](https://github.com/hashicorp/terraform-provider-nomad/pull/407))
 * resource/nomad_job: update import key to be `<job id>@<namespace>` to allow importing jobs from namespaces other than `default` ([#408](https://github.com/hashicorp/terraform-provider-nomad/pull/408))
