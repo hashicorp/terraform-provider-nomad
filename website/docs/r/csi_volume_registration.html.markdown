@@ -29,7 +29,7 @@ data "nomad_plugin" "ebs" {
   wait_for_healthy = true
 }
 
-resource "nomad_volume" "mysql_volume" {
+resource "nomad_csi_volume_registration" "mysql_volume" {
   depends_on = [data.nomad_plugin.ebs]
 
   plugin_id   = "aws-ebs0"
