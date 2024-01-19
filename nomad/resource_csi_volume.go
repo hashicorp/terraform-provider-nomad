@@ -152,6 +152,14 @@ func resourceCSIVolume() *schema.Resource {
 					return 0
 				},
 			},
+			"context": {
+				Description: "An optional key-value map of strings passed directly to the CSI plugin to validate the volume.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 
 			"mount_options": {
 				Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
@@ -451,6 +459,7 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		RequestedTopologies:   topologyRequest,
 		Secrets:               helper.ToMapStringString(d.Get("secrets")),
 		Parameters:            helper.ToMapStringString(d.Get("parameters")),
+		Context:               helper.ToMapStringString(d.Get("context")),
 	}
 
 	// Unpack the mount_options if we have any and configure the volume struct.
