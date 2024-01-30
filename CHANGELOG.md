@@ -1,4 +1,4 @@
-## 2.1.1 (Unreleased)
+## 2.1.1 (January 30, 2024)
 
 NOTES:
 * deps: update Nomad dependency to ensure all code used is licensed under MPL-2.0
