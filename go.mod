@@ -6,6 +6,10 @@ go 1.21
 // https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
 replace github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
 
+// Pin Nomad to a commit where jobspec and jobspec2 are lincesed under MPL-2.0.
+// Remove when updating to Nomad 1.7.3+
+replace github.com/hashicorp/nomad => github.com/hashicorp/nomad v0.0.0-20240129172537-56ea3f7cdafd
+
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/go-cmp v0.6.0
@@ -44,7 +48,7 @@ require (
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cty-funcs v0.0.0-20200930094925-2721b1e36840 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
-	github.com/hashicorp/go-plugin v1.4.10 // indirect
+	github.com/hashicorp/go-plugin v1.6.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hc-install v0.5.2 // indirect
