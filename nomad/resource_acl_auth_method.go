@@ -95,6 +95,11 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Required:    true,
 				Sensitive:   true,
 			},
+			"oidc_disable_userinfo": {
+				Description: "Nomad will not make a request to the identity provider to get OIDC UserInfo.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+			},
 			"oidc_scopes": {
 				Description: "List of OIDC scopes.",
 				Type:        schema.TypeList,
@@ -301,6 +306,8 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 			authMethodConfig.OIDCClientID = v.(string)
 		case "oidc_client_secret":
 			authMethodConfig.OIDCClientSecret = v.(string)
+		case "oidc_disable_userinfo":
+			authMethodConfig.OIDCDisableUserInfo = v.(bool)
 		case "oidc_scopes":
 			unpacked, err := unpackStringArray(v, "oidc_scopes")
 			if err != nil {
@@ -358,6 +365,7 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 		"oidc_client_id":        cfg.OIDCClientID,
 		"oidc_client_secret":    cfg.OIDCClientSecret,
 		"oidc_scopes":           packStringArray(cfg.OIDCScopes),
+		"oidc_disable_userinfo": cfg.OIDCDisableUserInfo,
 		"bound_audiences":       packStringArray(cfg.BoundAudiences),
 		"allowed_redirect_uris": packStringArray(cfg.AllowedRedirectURIs),
 		"discovery_ca_pem":      packStringArray(cfg.DiscoveryCaPem),
