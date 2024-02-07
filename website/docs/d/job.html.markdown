@@ -19,7 +19,8 @@ Get the data about a snapshot:
 
 ```hcl
 data "nomad_job" "example" {
-  job_id = "example"
+  job_id    = "example"
+  namespace = "dev"
 }
 ```
 
@@ -28,6 +29,7 @@ data "nomad_job" "example" {
 The following arguments are supported:
 
 * `job_id`: `(string)` ID of the job.
+* `namespace`: `(string)` Namespace of the specified job.
 
 ## Attributes Reference
 
@@ -36,7 +38,6 @@ The following attributes are exported:
 * `name`: `(string)` Name of the job.
 * `type`: `(string)` Scheduler type used during job creation.
 * `version`: `(integer)` Version of the specified job.
-* `namespace`: `(string)` Namespace of the specified job.
 * `region`: `(string)` Region where the Nomad cluster resides.
 * `datacenters`: `(list of strings)` Datacenters allowed to run the specified job.
 * `status`: `(string)` Execution status of the specified job.
