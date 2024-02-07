@@ -84,7 +84,7 @@ The following arguments are supported:
 - `secrets`: `(map[string]string: <optional>)` - An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
 - `parameters`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
 - `context`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
-- `deregister_on_destroy`: `(boolean: false)` - If true, the volume will be deregistered on destroy.
+- `deregister_on_destroy`: `(boolean: true)` - If true, the volume will be deregistered on destroy.
 - `access_mode`: `(string: <optional>)` - **Deprecated**. Use [`capability`](#capability) block instead. Defines whether a volume should be available concurrently. Possible values are:
   - `single-node-reader-only`
   - `single-node-writer`
