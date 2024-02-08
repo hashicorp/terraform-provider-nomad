@@ -52,12 +52,49 @@ The following arguments are supported:
   creates a local or global token when performing SSO login. This field must be
   set to either `local` or `global`.
 
-- `max_token_ttl` `(string: <required>)` - Defines the maximum life of a token 
+- `max_token_ttl` `(string: <required>)` - Defines the maximum life of a token
   created by this method and is specified as a time duration such as "15h".
 
 - `token_name_format` `(string: <optional>)` - Defines the token name format for the
-  generated tokens This can be lightly templated using HIL '${foo}' syntax. 
+  generated tokens This can be lightly templated using HIL '${foo}' syntax.
   Defaults to `${auth_method_type}-${auth_method_name}`.
 
 - `default` `(bool: false)` - Defines whether this ACL Auth Method is to be set
   as default.
+
+- `config`: `(block: <required>)` - Configuration specific to the auth method
+  provider.
+
+  - `oidc_discovery_url`: `(string: <required>)` - The OIDC Discovery URL,
+    without any .well-known component (base path).
+
+  - `oidc_client_id`: `(string: <required>)` - The OAuth Client ID configured
+    with the OIDC provider.
+
+  - `oidc_client_secret`: `(string: <required>)` - The OAuth Client Secret
+    configured with the OIDC provider.
+
+  - `oidc_scopes`: `([]string: <optional>)` - List of OIDC scopes.
+
+  - `oidc_disable_userinfo`: `(bool: false)` - When set to `true`, Nomad will
+     not make a request to the identity provider to get OIDC `UserInfo`.
+     You may wish to set this if your identity provider doesn't send any
+     additional claims from the `UserInfo` endpoint.
+
+  - `bound_audiences`: `([]string: <optional>)` - List of auth claims that are
+    valid for login.
+
+  - `allowed_redirect_uris`: `([]string: <optional>)` - A list of allowed values
+    that can be used for the redirect URI.
+
+  - `discovery_ca_pem`: `([]string: <optional>)` - PEM encoded CA certs for use
+    by the TLS client used to talk with the OIDC Discovery URL.
+
+  - `signing_algs`: `([]string: <optional>)` - A list of supported signing
+    algorithms.
+
+  - `claim_mappings`: `(map[string]string: <optional>)` - Mappings of claims (key)
+    that will be copied to a metadata field (value).
+
+  - `list_claim_mappings`: `(map[string]string: <optional>)` - Mappings of list
+    claims (key) that will be copied to a metadata field (value).
