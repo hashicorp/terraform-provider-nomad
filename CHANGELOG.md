@@ -1,5 +1,8 @@
 ## 2.1.2 (Unreleased)
 
+IMPROVEMENTS:
+* resource/acl_auth_method: add support for `oidc_disable_userinfo` ([#429](https://github.com/hashicorp/terraform-provider-nomad/pull/429))
+
 ## 2.1.1 (January 30, 2024)
 
 NOTES:

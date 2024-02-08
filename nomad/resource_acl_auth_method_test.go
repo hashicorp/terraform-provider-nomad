@@ -58,6 +58,7 @@ resource "nomad_acl_auth_method" "test" {
     bound_audiences       = ["someclientid"]
     discovery_ca_pem      = ["secretpemcert"]
     signing_algs          = ["rsa256", "hs256"]
+    oidc_disable_userinfo = true
     allowed_redirect_uris = [
       "http://localhost:4649/oidc/callback",
       %q,
@@ -76,13 +77,14 @@ resource "nomad_acl_auth_method" "test" {
 func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		const (
-			expectedType             = "OIDC"
-			expectedTokenLocality    = "global"
-			expectedMaxTokenTTL      = "10m0s"
-			expectedTokenNameFormat  = "${auth_method_type}-${auth_method_name}-${value.user}"
-			expectedOIDCDiscoveryURL = "https://uk.auth0.com/"
-			expectedOIDCClientID     = "someclientid"
-			expectedOIDCClientSecret = "someclientsecret-t"
+			expectedType                = "OIDC"
+			expectedTokenLocality       = "global"
+			expectedMaxTokenTTL         = "10m0s"
+			expectedTokenNameFormat     = "${auth_method_type}-${auth_method_name}-${value.user}"
+			expectedOIDCDiscoveryURL    = "https://uk.auth0.com/"
+			expectedOIDCClientID        = "someclientid"
+			expectedOIDCDisableUserInfo = true
+			expectedOIDCClientSecret    = "someclientsecret-t"
 		)
 		var (
 			expectedBoundAudiences      = []string{"someclientid"}
@@ -181,6 +183,10 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 		if authMethod.Config.OIDCClientID != expectedOIDCClientID {
 			return fmt.Errorf(`expected OIDC client ID to be %q, is %q" in API`,
 				expectedOIDCClientID, authMethod.Config.OIDCClientID)
+		}
+		if authMethod.Config.OIDCDisableUserInfo != expectedOIDCDisableUserInfo {
+			return fmt.Errorf(`expected OIDC disable userinfo to be %t, is %t" in API`,
+				expectedOIDCDisableUserInfo, authMethod.Config.OIDCDisableUserInfo)
 		}
 		if authMethod.Config.OIDCClientSecret != expectedOIDCClientSecret {
 			return fmt.Errorf(`expected OIDC client secret to be %q, is %q in API`,
