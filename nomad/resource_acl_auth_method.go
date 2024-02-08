@@ -99,6 +99,7 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Description: "Nomad will not make a request to the identity provider to get OIDC UserInfo.",
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Default:     false,
 			},
 			"oidc_scopes": {
 				Description: "List of OIDC scopes.",

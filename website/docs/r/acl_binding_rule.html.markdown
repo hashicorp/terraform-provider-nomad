@@ -83,11 +83,11 @@ The following arguments are supported:
     configured with the OIDC provider.
 
   - `oidc_scopes`: `([]string: <optional>)` - List of OIDC scopes.
-  
-  - `oidc_disable_userinfo`: `(bool: <optional>)` - When set to true, Nomad will 
-     not make a request to the identity provider to get OIDC UserInfo. 
-     You may wish to set this if your identity provider doesn't send any 
-     additional claims from the UserInfo endpoint.
+
+  - `oidc_disable_userinfo`: `(bool: false)` - When set to `true`, Nomad will
+     not make a request to the identity provider to get OIDC `UserInfo`.
+     You may wish to set this if your identity provider doesn't send any
+     additional claims from the `UserInfo` endpoint.
 
   - `bound_audiences`: `([]string: <optional>)` - List of auth claims that are
     valid for login.
@@ -100,7 +100,7 @@ The following arguments are supported:
 
   - `signing_algs`: `([]string: <optional>)` - A list of supported signing
     algorithms.
-  
+
   - `claim_mappings`: `(map[string]string: <optional>)` - Mappings of claims (key)
     that will be copied to a metadata field (value).
 
