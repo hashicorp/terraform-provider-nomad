@@ -27,6 +27,11 @@ func dataSourceAllocations() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
+			"namespace": {
+				Description: "Specifies the namespace to search for allocation in.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
 			"allocations": {
 				Description: "List of node pools returned",
 				Type:        schema.TypeList,
@@ -124,10 +129,16 @@ func dataSourceAllocationsRead(d *schema.ResourceData, meta any) error {
 	id := strconv.Itoa(schema.HashString(prefix + filter))
 
 	log.Printf("[DEBUG] Reading allocation list")
-	resp, _, err := client.Allocations().List(&api.QueryOptions{
+
+	queryOptions := api.QueryOptions{
 		Prefix: prefix,
 		Filter: filter,
-	})
+	}
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		queryOptions.Namespace = namespace
+	}
+	resp, _, err := client.Allocations().List(&queryOptions)
 	if err != nil {
 		return fmt.Errorf("error reading allocations: %w", err)
 	}
