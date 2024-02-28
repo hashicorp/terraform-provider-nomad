@@ -1,6 +1,7 @@
 ## 2.1.2 (Unreleased)
 
 IMPROVEMENTS:
+* data source/allocations: add support for `namespace` ([#434](https://github.com/hashicorp/terraform-provider-nomad/pull/434))
 * resource/acl_auth_method: add support for `oidc_disable_userinfo` ([#429](https://github.com/hashicorp/terraform-provider-nomad/pull/429))
 
 ## 2.1.1 (January 30, 2024)
