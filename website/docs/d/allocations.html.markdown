@@ -26,6 +26,8 @@ The following arguments are supported:
   based on an ID prefix.
 - `filter` `(string: <optional>)` - Specifies the
   [expression][nomad_api_filter] used to filter the results.
+- `namespace` `(string: <optional>)` - Specifies the namespace to search for
+  allocations in.
 
 ## Attribute Reference
 

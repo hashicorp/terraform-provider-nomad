@@ -28,7 +28,7 @@ func dataSourceAllocations() *schema.Resource {
 				Optional:    true,
 			},
 			"namespace": {
-				Description: "Specifies the namespace to search for allocation in.",
+				Description: "Specifies the namespace to search for allocations in.",
 				Type:        schema.TypeString,
 				Optional:    true,
 			},
