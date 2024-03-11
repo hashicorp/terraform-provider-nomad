@@ -22,7 +22,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.32.0
 	github.com/hashicorp/vault v0.10.4
 	github.com/shoenig/test v1.7.2
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb
 )
 
