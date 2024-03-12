@@ -55,9 +55,9 @@ The following arguments are supported:
 - `max_token_ttl` `(string: <required>)` - Defines the maximum life of a token
   created by this method and is specified as a time duration such as "15h".
 
-- `token_name_format` `(string: <optional>)` - Defines the token name format for the
-  generated tokens This can be lightly templated using HIL '${foo}' syntax.
-  Defaults to `${auth_method_type}-${auth_method_name}`.
+- `token_name_format` `(string: "${auth_method_type}-${auth_method_name}")` -
+  Defines the token name format for the generated tokens This can be lightly
+  templated using HIL '${foo}' syntax.
 
 - `default` `(bool: false)` - Defines whether this ACL Auth Method is to be set
   as default.
