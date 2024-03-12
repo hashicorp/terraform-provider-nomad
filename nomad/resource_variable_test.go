@@ -98,7 +98,7 @@ resource nomad_namespace "nomad_var_test" {
   name = "%s"
 }
 %s
-`, namespace, testResourceVariable_initialConfig(namespace, path))
+`, namespace, testResourceVariable_initialConfig("${nomad_namespace.nomad_var_test.name}", path))
 }
 
 func testResourceVariable_initialCheck(namespace, path string) resource.TestCheckFunc {
