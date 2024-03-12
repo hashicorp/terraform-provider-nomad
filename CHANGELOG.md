@@ -5,6 +5,9 @@ IMPROVEMENTS:
 * provider: update Go to 1.22.1 ([#439](https://github.com/hashicorp/terraform-provider-nomad/pull/439))
 * resource/acl_auth_method: add support for `oidc_disable_userinfo` ([#429](https://github.com/hashicorp/terraform-provider-nomad/pull/429))
 
+BUG FIXES:
+* resource/nomad_acl_auth_method: fixed a bug that caused an unexpected plan difference when the `token_name_format` argument was not defined ([#442](https://github.com/hashicorp/terraform-provider-nomad/pull/442))
+
 ## 2.1.1 (January 30, 2024)
 
 NOTES:
