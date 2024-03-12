@@ -1,4 +1,6 @@
-## 2.1.2 (Unreleased)
+## 2.2.1 (Unreleased)
+
+## 2.2.0 (March 12, 2024)
 
 IMPROVEMENTS:
 * data source/allocations: add support for `namespace` ([#434](https://github.com/hashicorp/terraform-provider-nomad/pull/434))
