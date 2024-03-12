@@ -58,6 +58,7 @@ func resourceACLAuthMethod() *schema.Resource {
 				Description: "Defines the token format for the authenticated users. This can be lightly templated using HIL '${foo}' syntax.",
 				Optional:    true,
 				Type:        schema.TypeString,
+				Default:     "${auth_method_type}-${auth_method_name}",
 			},
 			"default": {
 				Description: "Defines whether this ACL Auth Method is to be set as default.",
