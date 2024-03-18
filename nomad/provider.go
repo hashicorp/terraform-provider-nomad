@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/command/config"
+	"github.com/hashicorp/vault/api/cliconfig"
 )
 
 type ProviderConfig struct {
@@ -188,7 +188,7 @@ func Provider() *schema.Provider {
 
 // Get gets the value of the stored token, if any
 func getToken() (string, error) {
-	helper, err := config.DefaultTokenHelper()
+	helper, err := cliconfig.DefaultTokenHelper()
 	if err != nil {
 		return "", fmt.Errorf("Error getting token helper: %s", err)
 	}
