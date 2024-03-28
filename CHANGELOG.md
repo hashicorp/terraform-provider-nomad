@@ -1,5 +1,8 @@
 ## 2.2.1 (Unreleased)
 
+IMPROVEMENTS:
+* **New Data Source**: `nomad_jwks` to retrieve the public keys used for signing workload identity JWTs ([#447](https://github.com/hashicorp/terraform-provider-nomad/pull/447))
+
 ## 2.2.0 (March 12, 2024)
 
 IMPROVEMENTS:

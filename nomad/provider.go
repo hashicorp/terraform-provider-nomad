@@ -163,6 +163,7 @@ func Provider() *schema.Provider {
 			"nomad_regions":          dataSourceRegions(),
 			"nomad_volumes":          dataSourceVolumes(),
 			"nomad_variable":         dataSourceVariable(),
+			"nomad_jwks":             dataSourceJWKS(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
