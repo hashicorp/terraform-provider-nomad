@@ -38,6 +38,7 @@ func resourceACLAuthMethod() *schema.Resource {
 				Type:        schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
 					api.ACLAuthMethodTypeOIDC,
+					api.ACLAuthMethodTypeJWT,
 				}, false),
 			},
 			"token_locality": {
@@ -80,20 +81,38 @@ func resourceACLAuthMethod() *schema.Resource {
 func resourceACLAuthMethodConfig() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"oidc_discovery_url": {
-				Description: "The OIDC Discovery URL, without any .well-known component (base path).",
+			"jwt_validation_pub_keys": {
+				Description:  "List of PEM-encoded public keys to use to authenticate signatures locally.",
+				Type:         schema.TypeList,
+				Elem:         &schema.Schema{Type: schema.TypeString},
+				Optional:     true,
+				ExactlyOneOf: []string{"config.0.jwks_url", "config.0.oidc_discovery_url"},
+			},
+			"jwks_url": {
+				Description: "JSON Web Key Sets url for authenticating signatures.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+			},
+			"jwks_ca_cert": {
+				Description: "PEM encoded CA cert for use by the TLS client used to talk with the JWKS server.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"oidc_discovery_url": {
+				Description:  "The OIDC Discovery URL, without any .well-known component (base path).",
+				Type:         schema.TypeString,
+				Optional:     true,
+				RequiredWith: []string{"config.0.oidc_client_id", "config.0.oidc_client_secret"},
 			},
 			"oidc_client_id": {
 				Description: "The OAuth Client ID configured with the OIDC provider.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 			"oidc_client_secret": {
 				Description: "The OAuth Client Secret configured with the OIDC provider.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 			},
 			"oidc_disable_userinfo": {
@@ -114,11 +133,17 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 			},
+			"bound_issuer": {
+				Description: "The value against which to match the iss claim in a JWT.",
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+			},
 			"allowed_redirect_uris": {
 				Description: "A list of allowed values that can be used for the redirect URI.",
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Required:    true,
+				Optional:    true,
 			},
 			"discovery_ca_pem": {
 				Description: "PEM encoded CA certs for use by the TLS client used to talk with the OIDC Discovery URL.",
@@ -130,6 +155,24 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Description: "A list of supported signing algorithms.",
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+			},
+			"expiration_leeway": {
+				Description: `Duration of leeway when validating expiration of a JWT in the form of a time duration such as "5m" or "1h".`,
+				Type:        schema.TypeString,
+				Default:     "0s",
+				Optional:    true,
+			},
+			"not_before_leeway": {
+				Description: `Duration of leeway when validating not before values of a token in the form of a time duration such as "5m" or "1h".`,
+				Type:        schema.TypeString,
+				Default:     "0s",
+				Optional:    true,
+			},
+			"clock_skew_leeway": {
+				Description: `Duration of leeway when validating all claims in the form of a time duration such as "5m" or "1h".`,
+				Type:        schema.TypeString,
+				Default:     "0s",
 				Optional:    true,
 			},
 			"claim_mappings": {
@@ -302,6 +345,16 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 
 	for k, v := range configMap {
 		switch k {
+		case "jwt_validation_pub_keys":
+			unpacked, err := unpackStringArray(v, "jwt_validation_pub_keys")
+			if err != nil {
+				return nil, err
+			}
+			authMethodConfig.JWTValidationPubKeys = unpacked
+		case "jwks_url":
+			authMethodConfig.JWKSURL = v.(string)
+		case "jwks_ca_cert":
+			authMethodConfig.JWKSCACert = v.(string)
 		case "oidc_discovery_url":
 			authMethodConfig.OIDCDiscoveryURL = v.(string)
 		case "oidc_client_id":
@@ -322,6 +375,12 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 				return nil, err
 			}
 			authMethodConfig.BoundAudiences = unpacked
+		case "bound_issuer":
+			unpacked, err := unpackStringArray(v, "bound_issuer")
+			if err != nil {
+				return nil, err
+			}
+			authMethodConfig.BoundIssuer = unpacked
 		case "allowed_redirect_uris":
 			unpacked, err := unpackStringArray(v, "allowed_redirect_uris")
 			if err != nil {
@@ -340,6 +399,24 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 				return nil, err
 			}
 			authMethodConfig.SigningAlgs = unpacked
+		case "expiration_leeway":
+			dur, err := parseDuration(v.(string), "expiration_leeway")
+			if err != nil {
+				return nil, err
+			}
+			authMethodConfig.ExpirationLeeway = dur
+		case "not_before_leeway":
+			dur, err := parseDuration(v.(string), "not_before_leeway")
+			if err != nil {
+				return nil, err
+			}
+			authMethodConfig.NotBeforeLeeway = dur
+		case "clock_skew_leeway":
+			dur, err := parseDuration(v.(string), "clock_skew_leeway")
+			if err != nil {
+				return nil, err
+			}
+			authMethodConfig.ClockSkewLeeway = dur
 		case "claim_mappings":
 			unpacked, err := unpackStringMap(v, "claim_mappings")
 			if err != nil {
@@ -363,17 +440,24 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 		return nil
 	}
 	result := map[string]interface{}{
-		"oidc_discovery_url":    cfg.OIDCDiscoveryURL,
-		"oidc_client_id":        cfg.OIDCClientID,
-		"oidc_client_secret":    cfg.OIDCClientSecret,
-		"oidc_scopes":           packStringArray(cfg.OIDCScopes),
-		"oidc_disable_userinfo": cfg.OIDCDisableUserInfo,
-		"bound_audiences":       packStringArray(cfg.BoundAudiences),
-		"allowed_redirect_uris": packStringArray(cfg.AllowedRedirectURIs),
-		"discovery_ca_pem":      packStringArray(cfg.DiscoveryCaPem),
-		"signing_algs":          packStringArray(cfg.SigningAlgs),
-		"claim_mappings":        packStringMap(cfg.ClaimMappings),
-		"list_claim_mappings":   packStringMap(cfg.ListClaimMappings),
+		"jwt_validation_pub_keys": packStringArray(cfg.JWTValidationPubKeys),
+		"jwks_url":                cfg.JWKSURL,
+		"jwks_ca_cert":            cfg.JWKSCACert,
+		"oidc_discovery_url":      cfg.OIDCDiscoveryURL,
+		"oidc_client_id":          cfg.OIDCClientID,
+		"oidc_client_secret":      cfg.OIDCClientSecret,
+		"oidc_scopes":             packStringArray(cfg.OIDCScopes),
+		"oidc_disable_userinfo":   cfg.OIDCDisableUserInfo,
+		"bound_audiences":         packStringArray(cfg.BoundAudiences),
+		"bound_issuer":            packStringArray(cfg.BoundIssuer),
+		"allowed_redirect_uris":   packStringArray(cfg.AllowedRedirectURIs),
+		"discovery_ca_pem":        packStringArray(cfg.DiscoveryCaPem),
+		"signing_algs":            packStringArray(cfg.SigningAlgs),
+		"expiration_leeway":       cfg.ExpirationLeeway.String(),
+		"not_before_leeway":       cfg.NotBeforeLeeway.String(),
+		"clock_skew_leeway":       cfg.ClockSkewLeeway.String(),
+		"claim_mappings":          packStringMap(cfg.ClaimMappings),
+		"list_claim_mappings":     packStringMap(cfg.ListClaimMappings),
 	}
 	return []any{result}
 }
@@ -420,4 +504,15 @@ func packStringMap(stringMap map[string]string) map[string]interface{} {
 		packed[k] = v
 	}
 	return packed
+}
+
+func parseDuration(durStr, name string) (time.Duration, error) {
+	if durStr == "" {
+		return 0, nil
+	}
+	dur, err := time.ParseDuration(durStr)
+	if err != nil {
+		return dur, fmt.Errorf("failed to parse %s duration: %v", name, err)
+	}
+	return dur, nil
 }
