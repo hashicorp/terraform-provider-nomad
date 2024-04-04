@@ -1,5 +1,8 @@
 ## 2.2.1 (Unreleased)
 
+IMPROVEMENTS:
+* resource/acl_auth_method: add support for configuring a JWT auth-method ([#448](https://github.com/hashicorp/terraform-provider-nomad/pull/448))
+
 ## 2.2.0 (March 12, 2024)
 
 IMPROVEMENTS:
