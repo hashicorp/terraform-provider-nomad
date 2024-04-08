@@ -45,8 +45,8 @@ The following arguments are supported:
 
 - `name` `(string: <required>)` - The identifier of the ACL Auth Method.
 
-- `type` `(string: <required>)` - ACL Auth Method SSO workflow type. Currently,
-  the only supported type is `OIDC`.
+- `type` `(string: <required>)` - ACL Auth Method SSO workflow type. Valid values,
+  are `OIDC` and `JWT`.
 
 - `token_locality` `(string: <required>)` - Defines whether the ACL Auth Method
   creates a local or global token when performing SSO login. This field must be
@@ -65,13 +65,22 @@ The following arguments are supported:
 - `config`: `(block: <required>)` - Configuration specific to the auth method
   provider.
 
-  - `oidc_discovery_url`: `(string: <required>)` - The OIDC Discovery URL,
+  - `jwt_validation_pub_keys`: `([]string: <optional>)` - List of PEM-encoded 
+    public keys to use to authenticate signatures locally.
+
+  - `jwks_url`: `(string: <optional>)` - JSON Web Key Sets url for authenticating
+    signatures.
+			
+  - `jwks_ca_cert`: `(string: <optional>)` - PEM encoded CA cert for use by the 
+    TLS client used to talk with the JWKS server.
+
+  - `oidc_discovery_url`: `(string: <optional>)` - The OIDC Discovery URL,
     without any .well-known component (base path).
 
-  - `oidc_client_id`: `(string: <required>)` - The OAuth Client ID configured
+  - `oidc_client_id`: `(string: <optional>)` - The OAuth Client ID configured
     with the OIDC provider.
 
-  - `oidc_client_secret`: `(string: <required>)` - The OAuth Client Secret
+  - `oidc_client_secret`: `(string: <optional>)` - The OAuth Client Secret
     configured with the OIDC provider.
 
   - `oidc_scopes`: `([]string: <optional>)` - List of OIDC scopes.
@@ -84,6 +93,9 @@ The following arguments are supported:
   - `bound_audiences`: `([]string: <optional>)` - List of auth claims that are
     valid for login.
 
+  - `bound_issuer`: `([]string: <optional>)` - The value against which to match
+    the iss claim in a JWT.
+
   - `allowed_redirect_uris`: `([]string: <optional>)` - A list of allowed values
     that can be used for the redirect URI.
 
@@ -92,6 +104,15 @@ The following arguments are supported:
 
   - `signing_algs`: `([]string: <optional>)` - A list of supported signing
     algorithms.
+
+  - `expiration_leeway`: `(string: <optional>)` - Duration of leeway when validating
+    expiration of a JWT in the form of a time duration such as "5m" or "1h".
+
+	- `not_before_leeway`: `(string: <optional>)` - Duration of leeway when validating
+    not before values of a token in the form of a time duration such as "5m" or "1h".
+    
+	- `clock_skew_leeway`: `(string: <optional>)` - Duration of leeway when validating
+    all claims in the form of a time duration such as "5m" or "1h".
 
   - `claim_mappings`: `(map[string]string: <optional>)` - Mappings of claims (key)
     that will be copied to a metadata field (value).
