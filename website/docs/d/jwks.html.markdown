@@ -11,8 +11,7 @@ description: |-
 Retrieve the cluster JWKS public keys.
 
 The keys are returned both as a list of maps (`keys`), and as a list of PEM-encoded strings
-(`pem_keys`), which may be more convenient for use with other providers (eg
-`terraform-provider-vault`).
+(`pem_keys`), which may be more convenient for use.
 
 ## Example Usage
 
