@@ -6,7 +6,6 @@ package nomad
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"crypto/rsa"
 	"crypto/x509"
@@ -155,10 +154,7 @@ func keyToPem(key Key) (string, error) {
 			Bytes: x509Cert,
 		})
 
-	// Vault renders the keys without a trailing newline; strip this out to avoid unneccesary updates
-	// FIXME this might be more appropriate to handle as a `chomp` on the terraform side when
-	// interacting with Vault. If so, document this.
-	return strings.TrimSpace(string(x509CertEncoded)), nil
+	return string(x509CertEncoded), nil
 }
 
 func fromKeys(keys []Key) []interface{} {
