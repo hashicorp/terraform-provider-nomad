@@ -118,8 +118,8 @@ func dataSourceJWKSRead(d *schema.ResourceData, meta any) error {
 
 func keyToPem(key Key) (string, error) {
 
-    // Nomad also supports EdDSA keys, but they are not used for OIDC so only
-    // RSA keys should be listed in this endpoint.
+	// Nomad also supports EdDSA keys, but they are not used for OIDC so only
+	// RSA keys should be listed in this endpoint.
 	if key.KeyType != "RSA" {
 		return "", fmt.Errorf("Key type not supported: %s", key.Algorithm)
 	}
