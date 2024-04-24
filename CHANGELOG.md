@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * **New Data Source**: `nomad_jwks` to retrieve the public keys used for signing workload identity JWTs ([#447](https://github.com/hashicorp/terraform-provider-nomad/pull/447))
+* provider: update Nomad to 1.7.7 ([#454](https://github.com/hashicorp/terraform-provider-nomad/pull/454))
 * resource/acl_auth_method: add support for configuring a JWT auth-method ([#448](https://github.com/hashicorp/terraform-provider-nomad/pull/448))
 
 ## 2.2.0 (March 12, 2024)
