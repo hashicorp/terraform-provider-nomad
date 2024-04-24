@@ -151,6 +151,7 @@ func Provider() *schema.Provider {
 			"nomad_deployments":      dataSourceDeployments(),
 			"nomad_job":              dataSourceJob(),
 			"nomad_job_parser":       dataSourceJobParser(),
+			"nomad_jwks":             dataSourceJWKS(),
 			"nomad_namespace":        dataSourceNamespace(),
 			"nomad_namespaces":       dataSourceNamespaces(),
 			"nomad_node_pool":        dataSourceNodePool(),
