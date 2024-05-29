@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-nomad
 
-go 1.21
+go 1.22
 
 // Set to the version used by Nomad
 // https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
