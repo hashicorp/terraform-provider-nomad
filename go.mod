@@ -6,10 +6,6 @@ go 1.21
 // https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
 replace github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
 
-// Pin Nomad to a commit where jobspec and jobspec2 are lincesed under MPL-2.0.
-// Remove when updating to Nomad 1.7.3+
-replace github.com/hashicorp/nomad => github.com/hashicorp/nomad v0.0.0-20240129172537-56ea3f7cdafd
-
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/go-cmp v0.6.0
@@ -17,8 +13,8 @@ require (
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
-	github.com/hashicorp/nomad v1.7.7
-	github.com/hashicorp/nomad/api v0.0.0-20240416192643-0f34c85ee63f
+	github.com/hashicorp/nomad v1.8.0-rc.1
+	github.com/hashicorp/nomad/api v0.0.0-20240528130403-9fb2b10ab63d
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/shoenig/test v1.8.0
