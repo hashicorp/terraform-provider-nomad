@@ -2,9 +2,15 @@ module github.com/hashicorp/terraform-provider-nomad
 
 go 1.21
 
-// Set to the version used by Nomad
-// https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
-replace github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
+replace (
+	// Set to the version used by Nomad
+	// https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
+	github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
+
+    // Fix error tidying due to Nomad downstream dependencies and the recent
+    // migration of the metrics library.
+	github.com/armon/go-metrics => github.com/hashicorp/go-metrics v0.5.3
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1
@@ -13,8 +19,8 @@ require (
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
-	github.com/hashicorp/nomad v1.8.0-rc.1
-	github.com/hashicorp/nomad/api v0.0.0-20240528130403-9fb2b10ab63d
+	github.com/hashicorp/nomad v1.8.0
+	github.com/hashicorp/nomad/api v0.0.0-20240528173817-28b82e4b2259
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/shoenig/test v1.8.0
