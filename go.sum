@@ -18,8 +18,6 @@ github.com/apparentlymart/go-textseg/v13 v13.0.0 h1:Y+KvPE1NYz0xl601PVImeQfFyEy6
 github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
 github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
-github.com/armon/go-metrics v0.4.1 h1:hR91U9KYmb6bLBYLQjyM+3j+rcd/UhE+G78SFnF8gJA=
-github.com/armon/go-metrics v0.4.1/go.mod h1:E6amYzXo6aW1tqzoZGT755KkbgrJsSdpwZ+3JqfkOG4=
 github.com/bmatcuk/doublestar v1.1.5 h1:2bNwBOmhyFEFcoB3tGvTD5xanq+4kyOZlB8wFYbMjkk=
 github.com/bmatcuk/doublestar v1.1.5/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
@@ -90,6 +88,8 @@ github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB1
 github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
 github.com/hashicorp/go-immutable-radix v1.3.1 h1:DKHmCUm2hRBK510BaiZlwvpD40f8bJFeZnpfm2KLowc=
 github.com/hashicorp/go-immutable-radix v1.3.1/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
+github.com/hashicorp/go-metrics v0.5.3 h1:M5uADWMOGCTUNU1YuC4hfknOeHNaX54LDm4oYSucoNE=
+github.com/hashicorp/go-metrics v0.5.3/go.mod h1:KEjodfebIOuBYSAe/bHTm+HChmKSxAOXPBieMLYozDE=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/hashicorp/go-plugin v1.6.0 h1:wgd4KxHJTVGGqWBq4QPB1i5BZNEx9BR8+OFmHDmTk8A=
@@ -101,8 +101,8 @@ github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/C
 github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKeRZfjY=
 github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
-github.com/hashicorp/golang-lru v0.5.4 h1:YDjusn29QI/Das2iO9M0BHnIbxPeyuCHsjMW+lJfyTc=
-github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
+github.com/hashicorp/golang-lru v1.0.2 h1:dV3g9Z/unq5DpblPpw+Oqcv4dU/1omnb4Ok8iPY6p1c=
+github.com/hashicorp/golang-lru v1.0.2/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/hashicorp/hc-install v0.6.4 h1:QLqlM56/+SIIGvGcfFiwMY3z5WGXT066suo/v9Km8e0=
 github.com/hashicorp/hc-install v0.6.4/go.mod h1:05LWLy8TD842OtgcfBbOT0WMoInBMUSHjmDx10zuBIA=
 github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31RPDgJM=
@@ -111,12 +111,12 @@ github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc h1:32lGaCPq5JPY
 github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc/go.mod h1:odKNpEeZv3COD+++SQcPyACuKOlM5eBoQlzRyN5utIQ=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
-github.com/hashicorp/nomad v0.0.0-20240129172537-56ea3f7cdafd h1:HrO9eleJh0apPsRLNKA/apPXBjFKwcZmicfbmtb9Xy0=
-github.com/hashicorp/nomad v0.0.0-20240129172537-56ea3f7cdafd/go.mod h1:IyUc7EZVCTpavku0fxuz1FNy5FGJNiQFEgZzOzWgNHs=
-github.com/hashicorp/nomad/api v0.0.0-20240416192643-0f34c85ee63f h1:SshaPnwtUVcN9fl2ATeQQ5eOuZrBzJ0Dcj/tsacTbgY=
-github.com/hashicorp/nomad/api v0.0.0-20240416192643-0f34c85ee63f/go.mod h1:ijDwa6o1uG1jFSq6kERiX2PamKGpZzTmo0XOFNeFZgw=
-github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
-github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
+github.com/hashicorp/nomad v1.8.0 h1:c3IcPvq8olXNYevFm3aR3CujFwbU3969oU7HBMrCsSM=
+github.com/hashicorp/nomad v1.8.0/go.mod h1:SAb/TiO6JskCFTxKfWJKeEqZ/iWsvzDzUgRk2X/eI3Y=
+github.com/hashicorp/nomad/api v0.0.0-20240528173817-28b82e4b2259 h1:DBQJPDrlbCviq+zwDwimGXNA5vbb5ngBQf0W1eGVz7I=
+github.com/hashicorp/nomad/api v0.0.0-20240528173817-28b82e4b2259/go.mod h1:svtxn6QnrQ69P23VvIWMR34tg3vmwLz4UdUzm1dSCgE=
+github.com/hashicorp/serf v0.10.2-0.20240320153621-5d32001edfaa h1:UXgK+AZPfeQ1vOXXXfBj7C7mZpWUgRFcMAKpyyYrYgU=
+github.com/hashicorp/serf v0.10.2-0.20240320153621-5d32001edfaa/go.mod h1:RiISHML4PEb0ZN6S6uNW04TO8D6EUtTIOpCzzDnZeGk=
 github.com/hashicorp/terraform-exec v0.21.0 h1:uNkLAe95ey5Uux6KJdua6+cv8asgILFVWkd/RG0D2XQ=
 github.com/hashicorp/terraform-exec v0.21.0/go.mod h1:1PPeMYou+KDUSSeRE9szMZ/oHf4fYUmB923Wzbq1ICg=
 github.com/hashicorp/terraform-json v0.22.1 h1:xft84GZR0QzjPVWs4lRUwvTcPnegqlyS7orfb5Ltvec=

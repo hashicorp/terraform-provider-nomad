@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
@@ -240,6 +239,40 @@ func TestResourceJob_multiregion(t *testing.T) {
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-multiregion"),
+	})
+}
+
+func TestResourceJob_schedule(t *testing.T) {
+	r.Test(t, r.TestCase{
+		ProviderFactories: testAccProviderFactoryInternal(&testProvider),
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "1.8.0-rc.1")
+		},
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJobScheduleBlock,
+				Check:  testResourceJobScheduleCheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-schedule"),
+	})
+}
+
+func TestResourceJob_ui(t *testing.T) {
+	r.Test(t, r.TestCase{
+		ProviderFactories: testAccProviderFactoryInternal(&testProvider),
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "1.8.0-rc.1")
+		},
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJobUIBlock,
+				Check:  testResourceJobUICheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-ui"),
 	})
 }
 
@@ -2197,6 +2230,80 @@ func testResourceJob_multiregionCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJobScheduleCheck(s *terraform.State) error {
+	resourcePath := "nomad_job.schedule"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// Check that job has a schedule stanza.
+	if len(job.TaskGroups) != 1 {
+		return fmt.Errorf("expected one task group, got %v", len(job.TaskGroups))
+	}
+	if len(job.TaskGroups[0].Tasks) != 1 {
+		return fmt.Errorf("expected one task, got %v", len(job.TaskGroups[0].Tasks))
+	}
+	if job.TaskGroups[0].Tasks[0].Schedule == nil {
+		return fmt.Errorf("schedule config not found")
+	}
+
+	return nil
+}
+
+func testResourceJobUICheck(s *terraform.State) error {
+	resourcePath := "nomad_job.ui"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// Check that job has a UI stanza.
+	if job.UI == nil {
+		return fmt.Errorf("UI config not found")
+	}
+
+	return nil
+}
+
 func testResourceJob_checkExistsNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
@@ -3269,6 +3376,64 @@ job "foo-multiregion" {
   }
 }
 	EOT
+}
+`
+
+var testResourceJobScheduleBlock = `
+resource "nomad_job" "schedule" {
+	jobspec = <<EOT
+job "foo-schedule" {
+
+  group "foo" {
+    task "foo" {
+      schedule {
+        cron {
+          start    = "0 12 * * * *"
+          end      = "0 16"
+          timezone = "EST"
+        }
+      }
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
+EOT
+}
+`
+
+var testResourceJobUIBlock = `
+resource "nomad_job" "ui" {
+	jobspec = <<EOT
+job "foo-schedule" {
+  UI {
+    description = "A job that includes a UI block"
+  }
+
+  group "foo" {
+    task "foo" {
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
+EOT
 }
 `
 
