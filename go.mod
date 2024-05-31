@@ -7,8 +7,8 @@ replace (
 	// https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
 	github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
 
-    // Fix error tidying due to Nomad downstream dependencies and the recent
-    // migration of the metrics library.
+	// Fix error tidying due to Nomad downstream dependencies and the recent
+	// migration of the metrics library.
 	github.com/armon/go-metrics => github.com/hashicorp/go-metrics v0.5.3
 )
 

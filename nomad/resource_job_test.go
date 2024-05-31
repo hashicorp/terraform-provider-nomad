@@ -259,6 +259,23 @@ func TestResourceJob_schedule(t *testing.T) {
 	})
 }
 
+func TestResourceJob_ui(t *testing.T) {
+	r.Test(t, r.TestCase{
+		ProviderFactories: testAccProviderFactoryInternal(&testProvider),
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "1.8.0-rc.1")
+		},
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJobUIBlock,
+				Check:  testResourceJobUICheck,
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-ui"),
+	})
+}
+
 func TestResourceJob_csiController(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -2253,6 +2270,40 @@ func testResourceJobScheduleCheck(s *terraform.State) error {
 	return nil
 }
 
+func testResourceJobUICheck(s *terraform.State) error {
+	resourcePath := "nomad_job.ui"
+
+	resourceState := s.Modules[0].Resources[resourcePath]
+	if resourceState == nil {
+		return fmt.Errorf("resource %s not found in state", resourcePath)
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return fmt.Errorf("resource %s has no primary instance", resourcePath)
+	}
+
+	jobID := instanceState.ID
+	providerConfig := testProvider.Meta().(ProviderConfig)
+	client := providerConfig.client
+
+	job, _, err := client.Jobs().Info(jobID, nil)
+	if err != nil {
+		return fmt.Errorf("error reading back job: %s", err)
+	}
+
+	if got, want := *job.ID, jobID; got != want {
+		return fmt.Errorf("jobID is %q; want %q", got, want)
+	}
+
+	// Check that job has a UI stanza.
+	if job.UI == nil {
+		return fmt.Errorf("UI config not found")
+	}
+
+	return nil
+}
+
 func testResourceJob_checkExistsNS(jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		providerConfig := testProvider.Meta().(ProviderConfig)
@@ -3342,6 +3393,33 @@ job "foo-schedule" {
           timezone = "EST"
         }
       }
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
+EOT
+}
+`
+
+var testResourceJobUIBlock = `
+resource "nomad_job" "ui" {
+	jobspec = <<EOT
+job "foo-schedule" {
+  UI {
+    description = "A job that includes a UI block"
+  }
+
+  group "foo" {
+    task "foo" {
       driver = "docker"
 
       config {
