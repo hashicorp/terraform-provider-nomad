@@ -3,13 +3,12 @@ module github.com/hashicorp/terraform-provider-nomad
 go 1.22
 
 replace (
-	// Set to the version used by Nomad
-	// https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
-	github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
-
 	// Fix error tidying due to Nomad downstream dependencies and the recent
 	// migration of the metrics library.
 	github.com/armon/go-metrics => github.com/hashicorp/go-metrics v0.5.3
+	// Set to the version used by Nomad
+	// https://github.com/hashicorp/nomad/blob/v1.6.0-rc.1/go.mod#L74
+	github.com/hashicorp/hcl/v2 => github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc
 )
 
 require (
@@ -23,7 +22,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20240528173817-28b82e4b2259
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/hashicorp/vault/api v1.14.0
-	github.com/shoenig/test v1.8.0
+	github.com/shoenig/test v1.8.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 )
