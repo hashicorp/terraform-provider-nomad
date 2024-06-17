@@ -56,7 +56,7 @@ EOF
     done
 
     # Run hostpath CSI plugin and wait for it to be healthy.
-    nomad job run https://raw.githubusercontent.com/hashicorp/nomad/v1.3.1/demo/csi/hostpath/plugin.nomad 1>&2
+    nomad job run https://raw.githubusercontent.com/hashicorp/nomad/v1.8.0/demo/csi/hostpath/plugin.nomad 1>&2
     echo "Waiting for hostpath CSI plugin to become healthy" 1>&2
     retries=30
     while [ $retries -ge 0 ]; do
