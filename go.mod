@@ -22,7 +22,7 @@ require (
 	github.com/hashicorp/nomad/api v0.0.0-20240528173817-28b82e4b2259
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/hashicorp/vault/api v1.14.0
-	github.com/shoenig/test v1.8.1
+	github.com/shoenig/test v1.8.2
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 )
