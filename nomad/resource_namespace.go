@@ -177,6 +177,11 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 			d.Set("quota", "")
 			err = resourceNamespaceWrite(d, meta)
 		} else {
+			// make sure there are no quota specs associated with that namespace
+			if d.Get("quota") != "" {
+				d.Set("quota", "")
+				err = resourceNamespaceWrite(d, meta)
+			}
 			_, err = client.Namespaces().Delete(name, nil)
 		}
 
