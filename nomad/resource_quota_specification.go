@@ -110,9 +110,28 @@ func resourceQuotaSpecificationDelete(d *schema.ResourceData, meta interface{}) 
 	client := meta.(ProviderConfig).client
 	name := d.Id()
 
+	// check if quota is attached to a namespace
+	nss, _, err := client.Namespaces().List(nil)
+	if err != nil {
+		return err
+	}
+	for _, ns := range nss {
+		if ns.Quota == name {
+			// dissasociate the quota with its ns
+			ns.Quota = ""
+			_, err := client.Namespaces().Register(ns, nil)
+			if err != nil {
+				return fmt.Errorf(
+					"error disassociating quota spec %q with namespace %s: %s",
+					name, ns.Name, err.Error(),
+				)
+			}
+		}
+	}
+
 	// delete the quota spec
 	log.Printf("[DEBUG] Deleting quota specification %q", name)
-	_, err := client.Quotas().Delete(name, nil)
+	_, err = client.Quotas().Delete(name, nil)
 	if err != nil {
 		return fmt.Errorf("error deleting quota specification %q: %s", name, err.Error())
 	}
