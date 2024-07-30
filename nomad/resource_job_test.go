@@ -1498,7 +1498,8 @@ func testResourceJob_volumesCheck(s *terraform.State) error {
 			"Volume": "data",
             "Destination": "/var/lib/data",
             "ReadOnly": true,
-			"PropagationMode": "private"
+			"PropagationMode": "private",
+			"SELinuxLabel": ""
 		}
 	]`), &expVolumeMounts)
 	if diff := cmp.Diff(expVolumeMounts, task.VolumeMounts); diff != "" {
@@ -3414,7 +3415,7 @@ var testResourceJobUIBlock = `
 resource "nomad_job" "ui" {
 	jobspec = <<EOT
 job "foo-schedule" {
-  UI {
+  ui {
     description = "A job that includes a UI block"
   }
 
