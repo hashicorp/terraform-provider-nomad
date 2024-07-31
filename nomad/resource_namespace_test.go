@@ -251,7 +251,9 @@ resource "nomad_namespace" "test" {
   name = "%[1]s"
   description = "A Terraform acctest namespace"
   quota = "%[2]s"
-  depends_on = "test_quota"
+  depends_on = [
+    nomad_quota_specification.test_quota
+  ]
 
   meta = {
     key = "value",
