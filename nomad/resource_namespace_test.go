@@ -131,6 +131,30 @@ func TestResourceNamespace_deleteDefault(t *testing.T) {
 	})
 }
 
+func TestResourceNamespace_deleteNSWithQuota(t *testing.T) {
+	nsName := "nsWithQuota1"
+	quotaName := "quota1"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceNamespace_configWithQuota(nsName, quotaName),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceNamespace_initialCheck(nsName),
+					testResourceNamespaceWithQuota_check(nsName, quotaName),
+				),
+			},
+		},
+
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testResourceNamespace_checkDestroy(nsName),
+			testResourceQuotaSpecification_checkDestroy(quotaName),
+		),
+	})
+}
+
 func TestResourceNamespace_nodePoolConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
@@ -207,6 +231,42 @@ resource "nomad_namespace" "test" {
 `, name)
 }
 
+func testResourceNamespace_configWithQuota(name, quota string) string {
+	return fmt.Sprintf(`
+resource "nomad_quota_specification" "test_quota" {
+  name        = "%[2]s"
+  description = "A Terraform acctest quota spec"
+
+  limits {
+    region = "global"
+
+    region_limit {
+      cpu       = 2400
+      memory_mb = 1200
+    }
+  }
+}
+
+resource "nomad_namespace" "test" {
+  name = "%[1]s"
+  description = "A Terraform acctest namespace"
+  quota = "%[2]s"
+  depends_on = [
+    nomad_quota_specification.test_quota
+  ]
+
+  meta = {
+    key = "value",
+  }
+
+  capabilities {
+    enabled_task_drivers  = ["docker", "exec"]
+    disabled_task_drivers = ["raw_exec"]
+  }
+}
+`, name, quota)
+}
+
 func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		const (
@@ -262,6 +322,21 @@ func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 			return fmt.Errorf("namespace capabilities mismatch (-want +got):\n%s", diff)
 		}
 
+		return nil
+	}
+}
+
+func testResourceNamespaceWithQuota_check(name, quota string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %w", name, err)
+		}
+
+		if namespace.Quota != quota {
+			return fmt.Errorf("expected quota spec to be %q, is %q in API", quota, namespace.Quota)
+		}
 		return nil
 	}
 }
