@@ -322,6 +322,28 @@ func testResourceNamespace_delete(t *testing.T, name string) func() {
 	}
 }
 
+func testResourceNamespaceWithQuota_delete() resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		namespaceWithQuotaSpec := api.Namespace{
+			Name:        api.DefaultNamespace,
+			Description: "Default shared namespace",
+			Quota:       "quota1",
+		}
+		client := testProvider.Meta().(ProviderConfig).client
+		_, err := client.Namespaces().Register(&namespaceWithQuotaSpec, nil)
+		if err != nil {
+			return fmt.Errorf("failed to register namespace %q.", namespaceWithQuotaSpec.Name)
+		}
+
+		_, err = client.Namespaces().Delete(namespaceWithQuotaSpec.Name, nil)
+		if err != nil {
+			return fmt.Errorf("failed to delete namespace %q: %s", namespaceWithQuotaSpec.Name, err.Error())
+		}
+
+		return nil
+	}
+}
+
 func testResourceNamespace_updateConfig(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_namespace" "test" {
