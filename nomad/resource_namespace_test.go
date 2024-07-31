@@ -131,6 +131,24 @@ func TestResourceNamespace_deleteDefault(t *testing.T) {
 	})
 }
 
+func TestResourceNamespace_deleteNSWithQuota(t *testing.T) {
+	nsName := "nsWithQuota1"
+	quotaName := "quota1"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceNamespace_configWithQuota(nsName, quotaName),
+				Check:  testResourceNamespace_initialCheck(nsName),
+			},
+		},
+
+		CheckDestroy: testResourceNamespace_checkDestroy(nsName),
+	})
+}
+
 func TestResourceNamespace_nodePoolConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
@@ -205,6 +223,25 @@ resource "nomad_namespace" "test" {
   }
 }
 `, name)
+}
+
+func testResourceNamespace_configWithQuota(name, quota string) string {
+	return fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+  description = "A Terraform acctest namespace"
+  quota = "%s"
+
+  meta = {
+    key = "value",
+  }
+
+  capabilities {
+    enabled_task_drivers  = ["docker", "exec"]
+    disabled_task_drivers = ["raw_exec"]
+  }
+}
+`, name, quota)
 }
 
 func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
@@ -319,28 +356,6 @@ func testResourceNamespace_delete(t *testing.T, name string) func() {
 		if err != nil {
 			t.Fatalf("error deleting namespace %q: %s", name, err)
 		}
-	}
-}
-
-func testResourceNamespaceWithQuota_delete() resource.TestCheckFunc {
-	return func(*terraform.State) error {
-		namespaceWithQuotaSpec := api.Namespace{
-			Name:        api.DefaultNamespace,
-			Description: "Default shared namespace",
-			Quota:       "quota1",
-		}
-		client := testProvider.Meta().(ProviderConfig).client
-		_, err := client.Namespaces().Register(&namespaceWithQuotaSpec, nil)
-		if err != nil {
-			return fmt.Errorf("failed to register namespace %q.", namespaceWithQuotaSpec.Name)
-		}
-
-		_, err = client.Namespaces().Delete(namespaceWithQuotaSpec.Name, nil)
-		if err != nil {
-			return fmt.Errorf("failed to delete namespace %q: %s", namespaceWithQuotaSpec.Name, err.Error())
-		}
-
-		return nil
 	}
 }
 
