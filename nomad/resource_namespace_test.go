@@ -141,11 +141,17 @@ func TestResourceNamespace_deleteNSWithQuota(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_configWithQuota(nsName, quotaName),
-				Check:  testResourceNamespace_initialCheck(nsName),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceNamespace_initialCheck(nsName),
+					testResourceNamespaceWithQuota_check(nsName, quotaName),
+				),
 			},
 		},
 
-		CheckDestroy: testResourceNamespace_checkDestroy(nsName),
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testResourceNamespace_checkDestroy(nsName),
+			testResourceQuotaSpecification_checkDestroy(quotaName),
+		),
 	})
 }
 
@@ -245,6 +251,7 @@ resource "nomad_namespace" "test" {
   name = "%[1]s"
   description = "A Terraform acctest namespace"
   quota = "%[2]s"
+  depends_on = "test_quota"
 
   meta = {
     key = "value",
@@ -313,6 +320,21 @@ func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 			return fmt.Errorf("namespace capabilities mismatch (-want +got):\n%s", diff)
 		}
 
+		return nil
+	}
+}
+
+func testResourceNamespaceWithQuota_check(name, quota string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %s", name, err)
+		}
+
+		if namespace.Quota != quota {
+			return fmt.Errorf("expected quota spec to be %q, is %q in API", quota, namespace.Quota)
+		}
 		return nil
 	}
 }
