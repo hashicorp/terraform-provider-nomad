@@ -122,8 +122,8 @@ func resourceQuotaSpecificationDelete(d *schema.ResourceData, meta interface{}) 
 			_, err := client.Namespaces().Register(ns, nil)
 			if err != nil {
 				return fmt.Errorf(
-					"error disassociating quota spec %q with namespace %s: %s",
-					name, ns.Name, err.Error(),
+					"error disassociating quota spec %q with namespace %s: %w",
+					name, ns.Name, err,
 				)
 			}
 		}
