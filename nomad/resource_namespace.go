@@ -181,6 +181,9 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 			if d.Get("quota") != "" {
 				d.Set("quota", "")
 				err = resourceNamespaceWrite(d, meta)
+				if err != nil {
+					return err
+				}
 			}
 			_, err = client.Namespaces().Delete(name, nil)
 		}
@@ -188,7 +191,7 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 		if err == nil {
 			break
 		} else if retries < 10 {
-			if strings.Contains(err.Error(), "has non-terminal jobs") {
+			if strings.Contains(err.Error(), "has non-terminal jobs") || strings.Contains(err.Error(), "has non-terminal allocations") {
 				log.Printf("[WARN] could not delete namespace %q because of non-terminal jobs, will pause and retry", name)
 				time.Sleep(5 * time.Second)
 				retries++
