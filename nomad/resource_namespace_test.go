@@ -227,10 +227,24 @@ resource "nomad_namespace" "test" {
 
 func testResourceNamespace_configWithQuota(name, quota string) string {
 	return fmt.Sprintf(`
+resource "nomad_quota_specification" "test_quota" {
+  name        = "%[2]s"
+  description = "A Terraform acctest quota spec"
+
+  limits {
+    region = "global"
+
+    region_limit {
+      cpu       = 2400
+      memory_mb = 1200
+    }
+  }
+}
+
 resource "nomad_namespace" "test" {
-  name = "%s"
+  name = "%[1]s"
   description = "A Terraform acctest namespace"
-  quota = "%s"
+  quota = "%[2]s"
 
   meta = {
     key = "value",
