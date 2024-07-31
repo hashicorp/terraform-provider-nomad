@@ -331,7 +331,7 @@ func testResourceNamespaceWithQuota_check(name, quota string) resource.TestCheck
 		client := testProvider.Meta().(ProviderConfig).client
 		namespace, _, err := client.Namespaces().Info(name, nil)
 		if err != nil {
-			return fmt.Errorf("error reading back namespace %q: %s", name, err)
+			return fmt.Errorf("error reading back namespace %q: %w", name, err)
 		}
 
 		if namespace.Quota != quota {
