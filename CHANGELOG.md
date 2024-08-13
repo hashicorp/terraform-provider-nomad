@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * provider: update Go to 1.22.4 ([#465](https://github.com/hashicorp/terraform-provider-nomad/pull/465))
+* provider: update Nomad API to 1.8.3 ([#474](https://github.com/hashicorp/terraform-provider-nomad/pull/474))
 
 ## 2.3.0 (June 04, 2024)
 
