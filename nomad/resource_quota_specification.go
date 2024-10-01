@@ -63,6 +63,11 @@ func resourceQuotaSpecificationLimits() *schema.Resource {
 				MaxItems:    1,
 				Elem:        resourceQuotaSpecificationRegionLimits(),
 			},
+			"variables_limit": {
+				Description: "The maximum total size of all variables.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -74,7 +79,156 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"cores": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"device": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationDeviceLimits(),
+			},
+			"disk_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 			"memory_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"memory_max_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"network": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationNetworkLimits(),
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationNetworkLimits() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"cidr": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"device": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"dynamic_port": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationNetworkPortLimits(),
+			},
+			"hostname": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"ip": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"mode": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"reserved_port": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationNetworkPortLimits(),
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationNetworkPortLimits() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"label": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"static": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"to": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"host_network": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationDeviceLimits() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"affinity": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationDeviceAffinity(),
+			},
+			"count": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"constraint": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationDeviceConstraint(),
+			},
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationDeviceConstraint() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"attribute": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"operator": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"value": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationDeviceAffinity() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"attribute": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"operator": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"value": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"weight": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
