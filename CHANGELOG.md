@@ -1,4 +1,6 @@
-## 2.4.0 (Unreleased)
+## 2.4.1 (Unreleased)
+
+## 2.4.0 (October 15, 2024)
 
 BREAKING CHANGES:
 * resource/nomad_job: HCL1 parsing has been removed and is no longer available ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/483))
