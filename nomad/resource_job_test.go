@@ -602,14 +602,6 @@ func TestResourceJob_hcl2(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.0.0") },
 		Steps: []r.TestStep{
 			{
-				Config:      testResourceJob_hcl1_and_json,
-				ExpectError: regexp.MustCompile("json is true and hcl1 is true"),
-			},
-			{
-				Config:      testResourceJob_hcl1_hcl2_spec,
-				ExpectError: regexp.MustCompile("error parsing jobspec"),
-			},
-			{
 				Config:      testResourceJob_hcl2_no_fs,
 				ExpectError: regexp.MustCompile("filesystem function disabled"),
 			},
@@ -2877,9 +2869,7 @@ resource "nomad_job" "test" {
 
 var testResourceJob_consulConnectConfig = `
 resource "nomad_job" "test" {
-    hcl2 {
-        enabled = true
-    }
+    hcl2 {}
 	jobspec = <<EOT
 job "foo-consul-connect" {
 
@@ -3031,9 +3021,7 @@ resource "nomad_job" "test" {
 
 var testResourceJob_consulConnectTerminatingGatewayConfig = `
 resource "nomad_job" "test_consul_terminating_gateway" {
-  hcl2 {
-    enabled = true
-  }
+  hcl2 {}
 
   jobspec = <<EOT
 job "terminating-gateway" {
@@ -3067,9 +3055,7 @@ EOT
 
 var testResourceJob_consulNamespaceConfig = `
 resource "nomad_job" "test_consul_namespace" {
-  hcl2 {
-    enabled = true
-  }
+  hcl2 {}
 
   jobspec = <<EOF
 job "test-consul-namespace" {
@@ -3106,9 +3092,7 @@ EOF
 
 var testResourceJob_cpuCoresPolicyConfig = `
 resource "nomad_job" "test_cpu_cores" {
-  hcl2 {
-    enabled = true
-  }
+  hcl2 {}
 
   jobspec = <<EOT
 job "test-cpu-cores" {
@@ -3441,7 +3425,6 @@ EOT
 var testResourceJob_hcl2 = `
 resource "nomad_job" "hcl2" {
   hcl2 {
-    enabled  = true
     allow_fs = true
     vars = {
       "restart_attempts" = "5",
@@ -3495,9 +3478,7 @@ EOT
 
 var testResourceJob_hcl2_no_fs = `
 resource "nomad_job" "hcl2" {
-	hcl2 {
-	  enabled  = true
-	}
+	hcl2 {}
 
 	jobspec = <<EOT
 variables {
@@ -3519,83 +3500,6 @@ job "foo-hcl2" {
 			config {
 				command = "/bin/sleep"
 				args    = var.args
-			}
-			restart {
-				attempts = 10
-			}
-
-			template {
-			  data        = file("./test-fixtures/hello.txt")
-			  destination = "local/hello.txt"
-			}
-		}
-	}
-}
-EOT
-}
-`
-
-var testResourceJob_hcl1_hcl2_spec = `
-resource "nomad_job" "hcl2" {
-	hcl1 = true
-
-	jobspec = <<EOT
-variables {
-	args = ["10"]
-}
-
-job "foo-hcl2" {
-	datacenters = ["dc1"]
-	group "hcl2" {
-		restart {
-			attempts = 5
-			interval = "10m"
-			delay    = "15s"
-			mode     = "delay"
-		}
-
-		task "sleep" {
-			driver = "raw_exec"
-			config {
-				command = "/bin/sleep"
-				args    = var.args
-			}
-			restart {
-				attempts = 10
-			}
-
-			template {
-			  data        = file("./test-fixtures/hello.txt")
-			  destination = "local/hello.txt"
-			}
-		}
-	}
-}
-EOT
-}
-`
-
-var testResourceJob_hcl1_and_json = `
-resource "nomad_job" "hcl1" {
-	hcl1 = true
-	json = true
-
-	jobspec = <<EOT
-job "foo-hcl1" {
-	datacenters = ["dc1"]
-	group "hcl1" {
-		restart {
-			attempts = 5
-			interval = "10m"
-			delay    = "15s"
-			mode     = "delay"
-		}
-
-		task "sleep" {
-			driver = "raw_exec"
-			config {
-				command = "/bin/sleep"
-				args    = ["10"]
 			}
 			restart {
 				attempts = 10

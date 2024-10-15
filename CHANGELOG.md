@@ -1,7 +1,12 @@
 ## 2.4.0 (Unreleased)
 
+BREAKING CHANGES:
+* resource/nomad_job: HCL1 parsing has been removed and is no longer available ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/483))
+* resource/nomad_job: The previously deprecated `hcl2.enabled` parameter has been removed ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/483))
+
 IMPROVEMENTS:
 * provider: update Go to 1.23.2 ([#482](https://github.com/hashicorp/terraform-provider-nomad/pull/482))
+* provider: update Nomad to 1.9.0 ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/483))
 
 ## 2.3.1 (August 13, 2024)
 
