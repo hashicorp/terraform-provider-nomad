@@ -91,24 +91,6 @@ nomad job run -output my-job.nomad > my-job.json
 Or you can also use the [`/v1/jobs/parse`](https://www.nomadproject.io/api-docs/jobs/#parse-job)
 API endpoint.
 
-## HCL2 jobspec
-
-By default, HCL jobs are parsed using the [HCL2 format](https://www.nomadproject.io/docs/job-specification/hcl2).
-If your job is not compatible with HCL2 you may set the `hcl1` argument to
-`true` to use the previous HCL1 parser.
-
-```hcl
-resource "nomad_job" "app" {
-  jobspec = file("${path.module}/jobspec.hcl")
-
-  hcl1 = true
-}
-```
-
--> **Note:** HCL1 parsing is only provided for backwards compatibility with
-  older jobspecs and may not support newer job features and functionalities, so
-  it should be avoided whenever possible.
-
 ### Variables
 
 ~> **Warning:** mixing Nomad HCL2 variables and Terraform values may result in
@@ -283,13 +265,7 @@ The following arguments are supported:
 - `json` `(boolean: false)` - Set this to `true` if your jobspec is structured with
   JSON instead of the default HCL.
 
-- `hcl1` `(boolean: false)` - Set this to `true` to use the previous HCL1
-  parser. This option is provided for backwards compatibility only and should
-  not be used unless absolutely necessary.
-
 - `hcl2` `(block: optional)` - Options for the HCL2 jobspec parser.
-  - `enabled` `(boolean: false)` - **Deprecated** All HCL jobs are parsed as
-    HCL2 by default.
   - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
     [HCL2 filesystem functions](#filesystem-functions)
 
