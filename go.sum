@@ -103,8 +103,8 @@ github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc h1:32lGaCPq5JPY
 github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc/go.mod h1:odKNpEeZv3COD+++SQcPyACuKOlM5eBoQlzRyN5utIQ=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
-github.com/hashicorp/nomad v1.9.0 h1:lr6faW7veyGqAfgqG41z2R56FDEoHkQ/ebk0jxBPhis=
-github.com/hashicorp/nomad v1.9.0/go.mod h1:wpbfojvKqlpVXYWAm72zY9OhLJX89CN1crP8acptCdM=
+github.com/hashicorp/nomad v1.9.1 h1:Lxkqsq4wy5NMIj6HEjidZu8orYzw7YxrmH+ffWg5yco=
+github.com/hashicorp/nomad v1.9.1/go.mod h1:wpbfojvKqlpVXYWAm72zY9OhLJX89CN1crP8acptCdM=
 github.com/hashicorp/nomad/api v0.0.0-20241010071343-7ad36851ec02 h1:F8HtCIEvLRK6Y1bTASTKsJ2gG1w3uwY2bmjq18RknXE=
 github.com/hashicorp/nomad/api v0.0.0-20241010071343-7ad36851ec02/go.mod h1:svtxn6QnrQ69P23VvIWMR34tg3vmwLz4UdUzm1dSCgE=
 github.com/hashicorp/terraform-exec v0.21.0 h1:uNkLAe95ey5Uux6KJdua6+cv8asgILFVWkd/RG0D2XQ=
