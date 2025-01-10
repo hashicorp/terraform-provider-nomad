@@ -57,6 +57,7 @@ func init() {
 }
 
 func testAccPreCheck(t *testing.T) {
+	t.Helper()
 	if v := os.Getenv("NOMAD_ADDR"); v == "" {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
@@ -68,6 +69,7 @@ func testAccPreCheck(t *testing.T) {
 }
 
 func testEntFeatures(t *testing.T, requiredFeatures ...string) {
+	t.Helper()
 	testCheckEnt(t)
 	client := testProvider.Meta().(ProviderConfig).client
 	resp, _, err := client.Operator().LicenseGet(nil)
@@ -88,35 +90,46 @@ func testEntFeatures(t *testing.T, requiredFeatures ...string) {
 }
 
 func testCheckEnt(t *testing.T) {
-	testCheckVersion(t, func(v version.Version) bool { return v.Metadata() == "ent" })
+	t.Helper()
+	v := testGetVersion(t)
+	if v.Metadata() != "ent" {
+		t.Skipf("node version %q is not an enterprise build", v.String())
+	}
 }
 
-func testCheckVersion(t *testing.T, versionCheck func(version.Version) bool) {
+func testGetVersion(t *testing.T) *version.Version {
+	t.Helper()
 	client := testProvider.Meta().(ProviderConfig).client
 	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
 		if version, err := version.NewVersion(nodes[0].Version); err != nil {
 			t.Skip("could not parse node version: ", err)
 		} else {
-			if !versionCheck(*version) {
-				t.Skipf("node version '%v' not appropriate for test", version.String())
-			}
+			version = version.Core()
+			return version
 		}
 	} else {
 		t.Skip("error listing nodes: ", err)
 	}
+	return nil
 }
 
-func testCheckMinVersion(t *testing.T, v string) {
-	minVersion, err := version.NewVersion(v)
+func testCheckMinVersion(t *testing.T, min string) {
+	t.Helper()
+	minVersion, err := version.NewVersion(min)
 	if err != nil {
 		t.Skipf("failed to check min version: %s", err)
 		return
 	}
 
-	testCheckVersion(t, func(v version.Version) bool { return v.Compare(minVersion) >= 0 })
+	v := testGetVersion(t).Core()
+	if !v.GreaterThanOrEqual(minVersion) {
+		t.Skipf("node version %q is older than minimum for test %q",
+			v.String(), minVersion.String())
+	}
 }
 
 func testCheckVaultEnabled(t *testing.T) {
+	t.Helper()
 	client := testProvider.Meta().(ProviderConfig).client
 	vaultEnabled := false
 	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
@@ -132,6 +145,7 @@ func testCheckVaultEnabled(t *testing.T) {
 }
 
 func testCheckConsulEnabled(t *testing.T) {
+	t.Helper()
 	client := testProvider.Meta().(ProviderConfig).client
 	consulEnabled := false
 	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
@@ -147,6 +161,7 @@ func testCheckConsulEnabled(t *testing.T) {
 }
 
 func testCheckCSIPluginAvailable(t *testing.T, pluginID string) {
+	t.Helper()
 	client := testProvider.Meta().(ProviderConfig).client
 	plugins, _, err := client.CSIPlugins().List(nil)
 	if err != nil {

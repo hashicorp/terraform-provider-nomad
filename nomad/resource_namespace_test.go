@@ -137,7 +137,7 @@ func TestResourceNamespace_deleteNSWithQuota(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceNamespace_configWithQuota(nsName, quotaName),

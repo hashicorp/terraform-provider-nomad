@@ -60,7 +60,7 @@ func TestResourceJob_service(t *testing.T) {
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespace,
@@ -248,6 +248,7 @@ func TestResourceJob_schedule(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			testCheckMinVersion(t, "1.8.0-rc.1")
+			testCheckEnt(t)
 		},
 		Steps: []r.TestStep{
 			{
@@ -491,7 +492,7 @@ func TestResourceJob_rename(t *testing.T) {
 func TestResourceJob_change_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testResourceJob_initialConfigNamespace,
