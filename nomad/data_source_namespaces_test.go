@@ -15,7 +15,7 @@ import (
 func TestDataSourceNamespaces(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceNamespaces_config,
