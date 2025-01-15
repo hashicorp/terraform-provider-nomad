@@ -136,7 +136,7 @@ func testResourceQuotaSpecification_initialCheck(name string) resource.TestCheck
 		limits := []*api.QuotaLimit{
 			{
 				Region: "global",
-				RegionLimit: &api.Resources{
+				RegionLimit: &api.QuotaResources{
 					CPU: &cpu,
 				},
 			},
@@ -282,7 +282,7 @@ func testResourceQuotaSpecification_updateCheck(name string) resource.TestCheckF
 		limits := []*api.QuotaLimit{
 			{
 				Region: "global",
-				RegionLimit: &api.Resources{
+				RegionLimit: &api.QuotaResources{
 					CPU:      &cpu,
 					MemoryMB: &mem,
 				},

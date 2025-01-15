@@ -199,7 +199,7 @@ func flattenQuotaLimits(limits []*api.QuotaLimit) *schema.Set {
 	return schema.NewSet(schema.HashResource(resourceQuotaSpecificationLimits()), results)
 }
 
-func flattenQuotaRegionLimit(limit *api.Resources) *schema.Set {
+func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 	if limit == nil {
 		return nil
 	}
@@ -240,7 +240,7 @@ func expandQuotaLimits(d *schema.ResourceData) ([]*api.QuotaLimit, error) {
 	return results, nil
 }
 
-func expandRegionLimit(limit interface{}) (*api.Resources, error) {
+func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 	regLimits := limit.(*schema.Set).List()
 	if len(regLimits) < 1 {
 		return nil, nil
@@ -249,7 +249,7 @@ func expandRegionLimit(limit interface{}) (*api.Resources, error) {
 	if !ok {
 		return nil, fmt.Errorf("expected map[string]interface{} for region limit, got %T", regLimits[0])
 	}
-	var res api.Resources
+	var res api.QuotaResources
 	if cpu, ok := regLimit["cpu"]; ok {
 		c, ok := cpu.(int)
 		if !ok {
