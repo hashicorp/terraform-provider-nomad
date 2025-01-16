@@ -128,6 +128,7 @@ can be referenced:
 - `nodes_expected`: `(integer)`
 - `schedulable`: `(boolean)`
 - `topologies`: `(List of topologies)`
+- `context`: `(map[string]string)`
 
 ### Timeouts
 

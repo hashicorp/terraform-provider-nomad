@@ -340,6 +340,11 @@ func resourceCSIVolume() *schema.Resource {
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
+			"context": {
+				Description: "The volume context provided by the storage provider",
+				Computed:    true,
+				Type:        schema.TypeMap,
+			},
 		},
 	}
 }
@@ -402,6 +407,7 @@ func resourceCSIVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("capability", flattenCSIVolumeCapabilities(volume.RequestedCapabilities))
 	d.Set("topologies", flattenCSIVolumeTopologies(volume.Topologies))
 	d.Set("topology_request", flattenCSIVolumeTopologyRequests(volume.RequestedTopologies))
+	d.Set("context", volume.Context)
 	// The Nomad API redacts `mount_options` and `secrets`, so we don't update them
 	// with the response payload; they will remain as is.
 
@@ -451,6 +457,7 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		RequestedTopologies:   topologyRequest,
 		Secrets:               helper.ToMapStringString(d.Get("secrets")),
 		Parameters:            helper.ToMapStringString(d.Get("parameters")),
+		Context:               helper.ToMapStringString(d.Get("context")),
 	}
 
 	// Unpack the mount_options if we have any and configure the volume struct.
