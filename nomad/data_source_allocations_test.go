@@ -4,14 +4,18 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/shoenig/test/must"
+	"github.com/shoenig/test/wait"
 )
 
 func TestDataSourceAllocations_basic(t *testing.T) {
@@ -21,8 +25,14 @@ func TestDataSourceAllocations_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
+				Config: testDataSourceAllocations_basicConfig_jobOnly(name),
+			},
+			{
 				Config: testDataSourceAllocations_basicConfig(name),
 				Check: resource.ComposeTestCheckFunc(
+
+					testDataSourceAllocations_waitForAllocs(t, 3),
+
 					resource.TestCheckResourceAttrSet("data.nomad_allocations.all", "allocations.#"),
 					resource.TestCheckResourceAttr("data.nomad_allocations.by_job", "allocations.#", "3"),
 					func(s *terraform.State) error {
@@ -63,7 +73,7 @@ func TestDataSourceAllocations_basic(t *testing.T) {
 	})
 }
 
-func testDataSourceAllocations_basicConfig(prefix string) string {
+func testDataSourceAllocations_basicConfig_jobOnly(prefix string) string {
 	return fmt.Sprintf(`
 resource "nomad_job" "test" {
   jobspec = <<EOT
@@ -93,6 +103,12 @@ resource "nomad_job" "test" {
     }
 EOT
 }
+`, prefix)
+}
+
+func testDataSourceAllocations_basicConfig(prefix string) string {
+	return fmt.Sprintf(`
+%s
 
 data "nomad_allocations" "all" {
   depends_on = [nomad_job.test]
@@ -101,5 +117,47 @@ data "nomad_allocations" "all" {
 data "nomad_allocations" "by_job" {
   filter = "JobID == \"${nomad_job.test.id}\""
 }
-`, prefix)
+`, testDataSourceAllocations_basicConfig_jobOnly(prefix))
+}
+
+func testDataSourceAllocations_waitForAllocs(t *testing.T, expected int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		resourceState := s.Modules[0].Resources["nomad_job.test"]
+		if resourceState == nil {
+			return errors.New("job resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("job resource has no primary instance")
+		}
+
+		jobID := instanceState.ID
+
+		ns, ok := instanceState.Attributes["namespace"]
+		if !ok {
+			return errors.New("resource does not have expected namespace")
+		}
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		must.Wait(t, wait.InitialSuccess(
+			wait.ErrorFunc(func() error {
+				allocs, _, err := client.Jobs().Allocations(
+					jobID, true, &api.QueryOptions{Namespace: ns})
+				must.NoError(t, err)
+				if len(allocs) != expected {
+					return fmt.Errorf("expected %d allocs, got %d", expected, len(allocs))
+				}
+				t.Logf("got 3 allocs")
+				return nil
+			}),
+			wait.Timeout(10*time.Second),
+			wait.Gap(100*time.Millisecond),
+		))
+
+		return nil
+	}
 }
