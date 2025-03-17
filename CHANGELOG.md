@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * provider: update Go to 1.24.0 ([#512](https://github.com/hashicorp/terraform-provider-nomad/pull/512))
+* provider: update Nomad to 1.9.7 ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/515))
 
 ## 2.4.0 (October 15, 2024)
 
