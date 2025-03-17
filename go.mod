@@ -1,8 +1,6 @@
 module github.com/hashicorp/terraform-provider-nomad
 
-go 1.23.7
-
-toolchain go1.24.1
+go 1.24
 
 replace (
 	// Fix error tidying due to Nomad downstream dependencies and the recent
