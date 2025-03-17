@@ -1,8 +1,6 @@
 module github.com/hashicorp/terraform-provider-nomad
 
-go 1.23.6
-
-toolchain go1.24.1
+go 1.24
 
 replace (
 	// Fix error tidying due to Nomad downstream dependencies and the recent
@@ -26,7 +24,7 @@ require (
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/shoenig/test v1.12.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 )
 
 require (
@@ -81,8 +79,8 @@ require (
 	github.com/zclconf/go-cty v1.16.2 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

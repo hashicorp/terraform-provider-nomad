@@ -40,7 +40,6 @@ func TestAccDataSourceNomadJWKS_Basic(t *testing.T) {
 }
 
 func validateKeyPEM(keyPEM string) error {
-	fmt.Printf(keyPEM)
 	block, _ := pem.Decode([]byte(keyPEM))
 	if block == nil {
 		return fmt.Errorf("failed to parse key PEM")
