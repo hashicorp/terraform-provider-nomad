@@ -15,7 +15,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
-	github.com/hashicorp/go-cty v1.4.1
+	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/nomad v1.9.7
