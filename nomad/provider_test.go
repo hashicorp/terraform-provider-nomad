@@ -128,38 +128,6 @@ func testCheckMinVersion(t *testing.T, min string) {
 	}
 }
 
-func testCheckVaultEnabled(t *testing.T) {
-	t.Helper()
-	client := testProvider.Meta().(ProviderConfig).client
-	vaultEnabled := false
-	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
-		if node, _, err := client.Nodes().Info(nodes[0].ID, nil); err == nil {
-			if va := node.Attributes["vault.accessible"]; va == "true" {
-				vaultEnabled = true
-			}
-		}
-	}
-	if !vaultEnabled {
-		t.Skip("vault not detected as accessible")
-	}
-}
-
-func testCheckConsulEnabled(t *testing.T) {
-	t.Helper()
-	client := testProvider.Meta().(ProviderConfig).client
-	consulEnabled := false
-	if nodes, _, err := client.Nodes().List(nil); err == nil && len(nodes) > 0 {
-		if node, _, err := client.Nodes().Info(nodes[0].ID, nil); err == nil {
-			if _, ok := node.Attributes["consul.version"]; ok {
-				consulEnabled = true
-			}
-		}
-	}
-	if !consulEnabled {
-		t.Skip("consul not detected as accessible")
-	}
-}
-
 func testCheckCSIPluginAvailable(t *testing.T, pluginID string) {
 	t.Helper()
 	client := testProvider.Meta().(ProviderConfig).client
@@ -555,48 +523,6 @@ resource "nomad_namespace" "test" {
   name  = "headers-crash-test-${count.index}"
 }
 `
-
-func TestAccNomadProvider_ConsulToken(t *testing.T) {
-	var provider *schema.Provider
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactoryInternal(&provider),
-		CheckDestroy:      nil,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccNomadProviderConfigConsulToken,
-				Check:  testAccCheckNomadProviderConfigConsulToken(provider),
-			},
-		},
-	})
-}
-
-var testAccNomadProviderConfigConsulToken = `
-provider "nomad" {
-  consul_token = "a5ab0aea-3fff-4f51-ad41-cd184c766854"
-}
-
-// necessary to initialize the provider
-data "nomad_namespaces" "test" {}
-`
-
-func testAccCheckNomadProviderConfigConsulToken(provider *schema.Provider) resource.TestCheckFunc {
-	return func(_ *terraform.State) error {
-		if provider == nil || provider.Meta() == nil {
-			return fmt.Errorf("provider was not initialized")
-		}
-		consulToken := provider.Meta().(ProviderConfig).consulToken
-		if consulToken == nil {
-			return fmt.Errorf("consul token was nil")
-		}
-		expectedToken := "a5ab0aea-3fff-4f51-ad41-cd184c766854"
-		if expectedToken != *consulToken {
-			return fmt.Errorf("expected consul token %q, got: %q", expectedToken, *consulToken)
-		}
-		return nil
-	}
-}
 
 // testAccProviderFactoryInternal creates ProviderFactories for provider configuration testing
 //

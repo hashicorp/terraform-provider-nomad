@@ -66,22 +66,12 @@ The following arguments are supported:
 - `key_pem` `(string: "")` - PEM-encoded private key. This is required if
   `cert_file` or `cert_pem` is specified.
 
-- `skip_verify` `(boolean: false)` - Set this to true if you want to skip TLS verification on the client side. 
+- `skip_verify` `(boolean: false)` - Set this to true if you want to skip TLS verification on the client side.
   This can also be specified via the `NOMAD_SKIP_VERIFY` environment variable.
 
 - `headers` - (Optional) A configuration block, described below, that provides headers
   to be sent along with all requests to Nomad.  This block can be specified
   multiple times.
-
-- `vault_token` `(string: "")` - A Vault token used when [submitting the job](https://www.nomadproject.io/docs/job-specification/job#vault_token).
-  This can also be specified as the `VAULT_TOKEN` environment variable or using a
-  Vault token helper (see [Vault's documentation](https://www.vaultproject.io/docs/commands/token-helper.html)
-  for more details). See [below](#configuring-multiple-tokens) for strategies when
-  multiple Vault tokens are required.
-
-- `consul_token` `(string: "")` - A Consul token used when [submitting the job](https://www.nomadproject.io/docs/job-specification/job#consul_token).
-  This can also be specified as the `CONSUL_HTTP_TOKEN` environment variable.
-  See [below](#configuring-multiple-tokens) for strategies when multiple Consul tokens are required.
 
 - `secret_id` `(string: "")` - The Secret ID of an ACL token to make requests with,
   for ACL-enabled clusters. This can also be specified via the `NOMAD_TOKEN`
@@ -151,92 +141,3 @@ resource "nomad_job" "nomad_eu" {
   jobspec  = file("${path.module}/jobspec-eu.nomad")
 }
 ```
-
-## Configuring Multiple Tokens
-
-Nomad supports passing a Vault or Consul token during job registration; this token is used
-only to verify that the submitter has permissions to access the Vault or Consul SI policies
-used in the Nomad job. When running the Nomad CLI, this token can be provided in
-a number of ways:
-
-For Vault:
-- in the job spec using the [`vault_token`](https://www.nomadproject.io/docs/job-specification/job#vault_token) parameter
-- using the [`-vault-token`](https://www.nomadproject.io/docs/commands/job/run#vault-token) command line flag
-- setting the `VAULT_TOKEN` environment variable.
-
-For Consul:
-- in the job spec using the [`consul_token`](https://www.nomadproject.io/docs/job-specification/job#consul_token) parameter
-- using the [`-consul-token`](https://www.nomadproject.io/docs/commands/job/run#consul-token) command line flag
-- setting the `CONSUL_HTTP_TOKEN` environment variable
-
-When using the Nomad Provider to register Nomad jobs, the options are similar:
-- the tokens can be placed in the job spec in the [`nomad_job`](./resources/job) resource
-- the tokens can be [configured](#argument-reference) on the Nomad Provider.
-- the tokens can be set in the environment variables when running `terraform apply`
-
-There are two problems that arise. The first is that we likely want to avoid putting
-these tokens into Terraform files where they may be inadvertently distributed. The second
-is that different Nomad jobs might require different tokens, each with access to a
-different set of policies. In this case, there are a few different strategies for
-managing the tokens and ensuring that the correct token is used for a particular
-job.
-
-One approach is to use provider aliases, creating a Nomad Provider for each token:
-```hcl
-provider "nomad" {
-  alias = "a"
-  vault_token = var.vault_token_a
-  consul_token = var.consul_token_a
-}
-
-provider "nomad" {
-  alias = "b"
-  vault_token = var.vault_token_b
-  consul_token = var.consul_token_b
-}
-
-resource "nomad_job" "job_a" {
-  provider = nomad.a
-  jobspec = file("${path.module}/job_a.hcl")
-}
-
-resource "nomad_job" "job_b" {
-  provider = nomad.b
-  jobspec = file("${path.module}/job_b.hcl")
-}
-```
-
-The tokens can be passed from the command lines as variables:
-```bash
-$ terraform apply  -var vault_token_a=s.lraLq3axH9mkbdVRkWS6H06Q  \
-                   -var vault_token_b=s.koqvVqdAkG8yt7irxDdmIQiC  \
-                   -var consul_token_a=fc0ff975-e845-4140-804c-c348e9414ff8 \
-                   -var consul_token_b=aed18d86-dd9d-4029-8a7a-906f6bba640a
-```
-
-The downside here is that it requires creating multiple Nomad provider aliases
-and specifying the desired alias for every job resource. Another approach is to inject
-the tokens into the jobspec using `templatefile`:
-```hcl
-resource "nomad_job" "job_a" {
-  jobspec = templatefile(
-    "${path.module}/job_a.hcl.tmpl",
-    {
-      vault_token = "s.lraLq3axH9mkbdVRkWS6H06Q"
-      consul_token = "fc0ff975-e845-4140-804c-c348e9414ff8"
-    }
-  )
-}
-
-resource "nomad_job" "job_b" {
-  jobspec = templatefile(
-    "${path.module}/job_b.hcl.tmpl",
-    {
-      vault_token = "s.koqvVqdAkG8yt7irxDdmIQiC"
-      consul_token = "aed18d86-dd9d-4029-8a7a-906f6bba640a"
-    }
-  )
-}
-```
-
-This approach has the benefit that only jobs requiring a token need to be modified.

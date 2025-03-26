@@ -5,22 +5,6 @@
 set -e
 
 export NOMAD_TOKEN=00000000-0000-0000-0000-000000000000
-export VAULT_TEST_TOKEN=terraform-provider-nomad-token
-export VAULT_ADDR=http://localhost:8200
-
-if [ ! -e /tmp/vault-test.pid ]; then
-    vault server -dev -dev-root-token-id=$VAULT_TEST_TOKEN > /tmp/vault.log 2>&1 &
-
-    VAULT_PID=$!
-    echo $VAULT_PID > /tmp/vault-test.pid
-fi
-
-if [ ! -e /tmp/consul-test.pid ]; then
-    consul agent -dev > /tmp/consul.log 2>&1 &
-
-    CONSUL_PID=$!
-    echo $CONSUL_PID > /tmp/consul-test.pid
-fi
 
 if [ ! -e /tmp/nomad-test.pid ]; then
     cat <<EOF > /tmp/nomad-config.hcl
@@ -36,10 +20,6 @@ EOF
     sudo -Eb bash -c 'nomad agent -dev -acl-enabled \
       -data-dir=/tmp/nomad/data \
       -config=/tmp/nomad-config.hcl \
-      -vault-address=$VAULT_ADDR \
-      -vault-token=$VAULT_TEST_TOKEN \
-      -vault-enabled \
-      -vault-allow-unauthenticated=false & \
       echo $! > /tmp/nomad-test.pid'
 
     # Give some time for the process to initialize
