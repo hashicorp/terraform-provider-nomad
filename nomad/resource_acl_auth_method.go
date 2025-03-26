@@ -187,6 +187,12 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 			},
+			"verbose_logging": {
+				Description: "Enables verbose logging",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+			},
 		},
 	}
 }
@@ -429,6 +435,8 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 				return nil, err
 			}
 			authMethodConfig.ListClaimMappings = unpacked
+		case "verbose_logging":
+			authMethodConfig.VerboseLogging = v.(bool)
 		}
 	}
 
@@ -458,6 +466,7 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 		"clock_skew_leeway":       cfg.ClockSkewLeeway.String(),
 		"claim_mappings":          packStringMap(cfg.ClaimMappings),
 		"list_claim_mappings":     packStringMap(cfg.ListClaimMappings),
+		"verbose_logging":         cfg.VerboseLogging,
 	}
 	return []any{result}
 }
