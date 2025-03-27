@@ -1,8 +1,12 @@
-## 2.4.1 (Unreleased)
+## 2.5.0 (Unreleased)
+
+BREAKING CHANGES:
+* provider: The deprecated `consul_token` and `vault_token` fields have been removed ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
+* resource/nomad_job: The deprecated `consul_token` and `vault_token` fields have been removed ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
 
 IMPROVEMENTS:
 * provider: update Go to 1.24.0 ([#512](https://github.com/hashicorp/terraform-provider-nomad/pull/512))
-* provider: update Nomad to 1.9.7 ([#483](https://github.com/hashicorp/terraform-provider-nomad/pull/515))
+* provider: update Nomad to 1.10.0 ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
 
 ## 2.4.0 (October 15, 2024)
 

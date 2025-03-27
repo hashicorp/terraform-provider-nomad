@@ -14,14 +14,11 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api/cliconfig"
 )
 
 type ProviderConfig struct {
-	client      *api.Client
-	vaultToken  *string
-	consulToken *string
-	config      *api.Config
+	client *api.Client
+	config *api.Config
 }
 
 func Provider() *schema.Provider {
@@ -82,20 +79,6 @@ func Provider() *schema.Provider {
 				Optional:      true,
 				Description:   "PEM-encoded private key, required if cert_file or cert_pem is specified.",
 				ConflictsWith: []string{"key_file"},
-			},
-			"consul_token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("CONSUL_HTTP_TOKEN", ""),
-				Description: "Consul token to validate Consul Connect Service Identity policies specified in the job file.",
-			},
-			"vault_token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
-				Description: "Vault token if policies are specified in the job file.",
 			},
 			"secret_id": {
 				Type:        schema.TypeString,
@@ -187,19 +170,6 @@ func Provider() *schema.Provider {
 	}
 }
 
-// Get gets the value of the stored token, if any
-func getToken() (string, error) {
-	helper, err := cliconfig.DefaultTokenHelper()
-	if err != nil {
-		return "", fmt.Errorf("Error getting token helper: %s", err)
-	}
-	token, err := helper.Get()
-	if err != nil {
-		return "", fmt.Errorf("Error getting token: %s", err)
-	}
-	return token, nil
-}
-
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	ignoreEnvVars := d.Get("ignore_env_vars").(map[string]interface{})
 	if len(ignoreEnvVars) == 0 {
@@ -275,29 +245,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 	conf.Headers = parsedHeaders
 
-	// Get the vault token from the conf, VAULT_TOKEN
-	// or ~/.vault-token (in that order)
-	var err error
-	vaultToken := d.Get("vault_token").(string)
-	if vaultToken == "" {
-		vaultToken, err = getToken()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	consulToken := d.Get("consul_token").(string)
-
 	client, err := api.NewClient(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
 	}
 
 	res := ProviderConfig{
-		config:      conf,
-		client:      client,
-		vaultToken:  &vaultToken,
-		consulToken: &consulToken,
+		config: conf,
+		client: client,
 	}
 
 	return res, nil
