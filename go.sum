@@ -103,16 +103,12 @@ github.com/hashicorp/go-version v1.7.0 h1:5tqGy27NaOTB8yJKUZELlFAS/LTKJkrmONwQKe
 github.com/hashicorp/go-version v1.7.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/hc-install v0.9.1 h1:gkqTfE3vVbafGQo6VZXcy2v5yoz2bE0+nhZXruCuODQ=
 github.com/hashicorp/hc-install v0.9.1/go.mod h1:pWWvN/IrfeBK4XPeXXYkL6EjMufHkCK5DvwxeLKuBf0=
-github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31RPDgJM=
-github.com/hashicorp/hcl v1.0.1-vault-5/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
 github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc h1:32lGaCPq5JPYNgFFTjl/cTIar9UWWxCbimCs5G2hMHg=
 github.com/hashicorp/hcl/v2 v2.9.2-0.20220525143345-ab3cae0737bc/go.mod h1:odKNpEeZv3COD+++SQcPyACuKOlM5eBoQlzRyN5utIQ=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
 github.com/hashicorp/nomad v1.9.7 h1:5lyW7M3EZ4gsyGacMQRbkjJ1G8LygHWB87zqVods4zc=
 github.com/hashicorp/nomad v1.9.7/go.mod h1:OPFyh3sqLboiWHQzIns1BGYpBXOweSYd9Nw856pK8BY=
-github.com/hashicorp/nomad/api v0.0.0-20250113210525-87f1427d9e00 h1:FYCTsq2TzQLofxmApgi8vTY6nuY5gnoqrF9XWUVouNg=
-github.com/hashicorp/nomad/api v0.0.0-20250113210525-87f1427d9e00/go.mod h1:svtxn6QnrQ69P23VvIWMR34tg3vmwLz4UdUzm1dSCgE=
 github.com/hashicorp/nomad/api v0.0.0-20250326180820-f0e0215d5666 h1:yWSrE6A8sxONUECEA5w4WDqzYpBz2+Xkt7HUpA5SSCw=
 github.com/hashicorp/nomad/api v0.0.0-20250326180820-f0e0215d5666/go.mod h1:ke9JNxf926l1gzdv+hldAgk72SgvmrjSos1rRqDJLq8=
 github.com/hashicorp/terraform-exec v0.22.0 h1:G5+4Sz6jYZfRYUCg6eQgDsqTzkNXV+fP8l+uRmZHj64=
@@ -129,8 +125,6 @@ github.com/hashicorp/terraform-registry-address v0.2.4 h1:JXu/zHB2Ymg/TGVCRu10Xq
 github.com/hashicorp/terraform-registry-address v0.2.4/go.mod h1:tUNYTVyCtU4OIGXXMDp7WNcJ+0W1B4nmstVDgHMjfAU=
 github.com/hashicorp/terraform-svchost v0.1.1 h1:EZZimZ1GxdqFRinZ1tpJwVxxt49xc/S52uzrw4x0jKQ=
 github.com/hashicorp/terraform-svchost v0.1.1/go.mod h1:mNsjQfZyf/Jhz35v6/0LWcv26+X7JPS+buii2c9/ctc=
-github.com/hashicorp/vault/api v1.16.0 h1:nbEYGJiAPGzT9U4oWgaaB0g+Rj8E59QuHKyA5LhwQN4=
-github.com/hashicorp/vault/api v1.16.0/go.mod h1:KhuUhzOD8lDSk29AtzNjgAu2kxRA9jL9NAbkFlqvkBA=
 github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8=
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
@@ -171,8 +165,6 @@ github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyua
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zxSIeXaQ=
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
-github.com/natefinch/atomic v1.0.1 h1:ZPYKxkqQOx3KZ+RsbnP/YsgvxWQPGxjC0oBt2AhwV0A=
-github.com/natefinch/atomic v1.0.1/go.mod h1:N/D/ELrljoqDyT3rZrsUmtsuzvHkeB/wWjHV22AZRbM=
 github.com/oklog/run v1.1.0 h1:GEenZ1cK0+q0+wsJew9qUg/DyD8k3JzYsZAi5gYi2mA=
 github.com/oklog/run v1.1.0/go.mod h1:sVPdnTZT1zYwAJeCMu2Th4T21pA3FPOQRfWjQlk7DVU=
 github.com/pjbgf/sha1cd v0.3.0 h1:4D5XXmUUBUl/xQ6IjCkEAbqXskkq/4O7LmGn0AqMDs4=
