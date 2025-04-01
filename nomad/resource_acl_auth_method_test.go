@@ -84,7 +84,7 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			expectedOIDCDiscoveryURL    = "https://uk.auth0.com/"
 			expectedOIDCClientID        = "someclientid"
 			expectedOIDCDisableUserInfo = true
-			expectedOIDCClientSecret    = "someclientsecret-t"
+			expectedOIDCClientSecret    = "redacted"
 		)
 		var (
 			expectedBoundAudiences      = []string{"someclientid"}
@@ -190,7 +190,7 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 		}
 		if authMethod.Config.OIDCClientSecret != expectedOIDCClientSecret {
 			return fmt.Errorf(`expected OIDC client secret to be %q, is %q in API`,
-				expectedOIDCClientSecret, authMethod.Config.OIDCDiscoveryURL)
+				expectedOIDCClientSecret, authMethod.Config.OIDCClientSecret)
 		}
 		if !slices.Equal(authMethod.Config.BoundAudiences, expectedBoundAudiences) {
 			return fmt.Errorf(`expected bound audiences to be %q, is %q in API`,
