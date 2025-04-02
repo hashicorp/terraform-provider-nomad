@@ -195,21 +195,28 @@ func resourceACLAuthMethodCreate(d *schema.ResourceData, meta interface{}) error
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	aclAuthMethod, err := generateNomadACLAuthMethod(d)
+	origAuthMethod, err := generateNomadACLAuthMethod(d)
 	if err != nil {
 		return err
 	}
 
 	// Create our ACL auth method.
 	log.Print("[DEBUG] Creating ACL Auth Method")
-	aclBindingRuleCreateResp, _, err := client.ACLAuthMethods().Create(aclAuthMethod, nil)
+	resp, _, err := client.ACLAuthMethods().Create(origAuthMethod, nil)
 	if err != nil {
 		return fmt.Errorf("error creating ACL Auth Method: %s", err.Error())
 	}
-	log.Printf("[DEBUG] Created ACL Auth Method %q", aclBindingRuleCreateResp.Name)
-	d.SetId(aclBindingRuleCreateResp.Name)
+	log.Printf("[DEBUG] Created ACL Auth Method %q", resp.Name)
+	d.SetId(resp.Name)
 
-	return resourceACLAuthMethodRead(d, meta)
+	authMethod, err := fetchACLAuthMethodResource(client, resp.Name)
+	if err != nil {
+		return err
+	}
+
+	unredactACLAuthMethodResource(d, authMethod, origAuthMethod)
+	setStateFromACLAuthMethodResource(d, authMethod)
+	return nil
 }
 
 func resourceACLAuthMethodDelete(d *schema.ResourceData, meta interface{}) error {
@@ -235,23 +242,31 @@ func resourceACLAuthMethodUpdate(d *schema.ResourceData, meta interface{}) error
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
-	aclBindingRule, err := generateNomadACLAuthMethod(d)
+	origAuthMethod, err := generateNomadACLAuthMethod(d)
 	if err != nil {
 		return err
 	}
 
 	// Perform the in-place update of the ACL auth method.
-	log.Printf("[DEBUG] Updating ACL Auth Method %q", aclBindingRule.Name)
-	_, _, err = client.ACLAuthMethods().Update(aclBindingRule, nil)
+	log.Printf("[DEBUG] Updating ACL Auth Method %q", origAuthMethod.Name)
+	_, _, err = client.ACLAuthMethods().Update(origAuthMethod, nil)
 	if err != nil {
-		return fmt.Errorf("error updating ACL Auth Method %q: %s", aclBindingRule.Name, err.Error())
+		return fmt.Errorf("error updating ACL Auth Method %q: %s", origAuthMethod.Name, err.Error())
 	}
-	log.Printf("[DEBUG] Updated ACL Auth Method %q", aclBindingRule.Name)
+	log.Printf("[DEBUG] Updated ACL Auth Method %q", origAuthMethod.Name)
 
-	return resourceACLAuthMethodRead(d, meta)
+	authMethodName := d.Id()
+	authMethod, err := fetchACLAuthMethodResource(client, authMethodName)
+	if err != nil {
+		return err
+	}
+
+	unredactACLAuthMethodResource(d, authMethod, origAuthMethod)
+	setStateFromACLAuthMethodResource(d, authMethod)
+	return nil
 }
 
-func resourceACLAuthMethodRead(d *schema.ResourceData, meta interface{}) error {
+func resourceACLAuthMethodRead(d *schema.ResourceData, meta any) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -264,12 +279,47 @@ func resourceACLAuthMethodRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading ACL Auth Method %q", authMethodName)
-	authMethod, _, err := client.ACLAuthMethods().Get(authMethodName, nil)
+	authMethod, err := fetchACLAuthMethodResource(client, authMethodName)
 	if err != nil {
 		return fmt.Errorf("error reading ACL Auth Method %q: %s", authMethodName, err.Error())
 	}
 	log.Printf("[DEBUG] Read ACL Auth Method %q", authMethod.Name)
 
+	unredactACLAuthMethodResource(d, authMethod, nil)
+	setStateFromACLAuthMethodResource(d, authMethod)
+	return nil
+}
+
+func fetchACLAuthMethodResource(client *api.Client, name string) (*api.ACLAuthMethod, error) {
+	log.Printf("[DEBUG] Reading ACL Auth Method %q", name)
+	authMethod, _, err := client.ACLAuthMethods().Get(name, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error reading ACL Auth Method %q: %w", name, err)
+	}
+	log.Printf("[DEBUG] Read ACL Auth Method %q", name)
+	return authMethod, nil
+}
+
+func unredactACLAuthMethodResource(d *schema.ResourceData, fetchedAuthMethod, originalAuthMethod *api.ACLAuthMethod) {
+	if originalAuthMethod != nil &&
+		originalAuthMethod.Config != nil &&
+		originalAuthMethod.Config.OIDCClientSecret != "" {
+		if fetchedAuthMethod.Config != nil {
+			fetchedAuthMethod.Config.OIDCClientSecret = originalAuthMethod.Config.OIDCClientSecret
+			return
+		}
+	}
+
+	if d != nil {
+		stored := d.Get("config.0.oidc_client_secret")
+		if stored != nil {
+			fetchedAuthMethod.Config.OIDCClientSecret = stored.(string)
+		}
+	}
+	return
+}
+
+func setStateFromACLAuthMethodResource(d *schema.ResourceData, authMethod *api.ACLAuthMethod) {
 	_ = d.Set("name", authMethod.Name)
 	_ = d.Set("type", authMethod.Type)
 	_ = d.Set("token_locality", authMethod.TokenLocality)
@@ -277,8 +327,6 @@ func resourceACLAuthMethodRead(d *schema.ResourceData, meta interface{}) error {
 	_ = d.Set("token_name_format", authMethod.TokenNameFormat)
 	_ = d.Set("default", authMethod.Default)
 	_ = d.Set("config", flattenACLAuthMethodConfig(authMethod.Config))
-
-	return nil
 }
 
 func resourceACLAuthMethodExists(d *schema.ResourceData, meta interface{}) (bool, error) {
@@ -439,7 +487,7 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 	if cfg == nil {
 		return nil
 	}
-	result := map[string]interface{}{
+	result := map[string]any{
 		"jwt_validation_pub_keys": packStringArray(cfg.JWTValidationPubKeys),
 		"jwks_url":                cfg.JWKSURL,
 		"jwks_ca_cert":            cfg.JWKSCACert,
