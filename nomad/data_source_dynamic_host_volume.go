@@ -195,7 +195,7 @@ func dynamicHostVolumeRead(d *schema.ResourceData, meta any) error {
 // getDynamicHostVolumeNamespacedID returns the namespace and ID for a dynamic
 // host volume from the resource data
 func getDynamicHostVolumeNamespacedID(d *schema.ResourceData) (string, string) {
-	id := d.Id()
+	id := d.Get("id").(string)
 	ns := d.Get("namespace").(string)
 	if ns == "" {
 		ns = "default"

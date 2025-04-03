@@ -111,7 +111,7 @@ resource "nomad_dynamic_host_volume" "test" {
   }
 
   parameters = {
-    some_key = "some_value"
+    mode = "0700"
   }
 
 }
@@ -133,8 +133,7 @@ resource "nomad_dynamic_host_volume" "test" {
   }
 
   parameters = {
-    some_key     = "some_other_value"
-    some_new_key = "some_new_value"
+    mode = "0711"
   }
 
   constraint {
@@ -163,7 +162,7 @@ func testResourceDynamicHostVolume_check(resourceName, name string) resource.Tes
 		if vol.Name != name {
 			return fmt.Errorf("wrong name: %s", name)
 		}
-		if vol.Parameters["some_key"] != "some_value" {
+		if vol.Parameters["mode"] != "0700" {
 			return fmt.Errorf("parameters not set: %#v", vol.Parameters)
 		}
 		if len(vol.Constraints) != 1 || vol.Constraints[0].LTarget != "${attr.kernel.name}" {
@@ -198,7 +197,7 @@ func testResourceDynamicHostVolume_update_check(resourceName, name string) resou
 		if vol.Name != name {
 			return fmt.Errorf("wrong name: %s", name)
 		}
-		if vol.Parameters["some_key"] != "some_other_value" {
+		if vol.Parameters["mode"] != "0711" {
 			return fmt.Errorf("parameters not updated: %#v", vol.Parameters)
 		}
 		if len(vol.RequestedCapabilities) != 1 ||

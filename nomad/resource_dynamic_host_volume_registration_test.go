@@ -16,11 +16,12 @@ const testResourceNameDynamicHostVolumeRegister = "nomad_dynamic_host_volume_reg
 
 func TestResourceDynamicHostVolumeRegistration_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
+	testAccPreCheck(t) // required to configure provider to get node ID for test config
 	nodeID := testResourceDynamicHostVolume_getNodeID(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, minVersionDHV) },
+		PreCheck:  func() { testCheckMinVersion(t, minVersionDHV) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceDynamicHostVolumeRegistration_config(name, nodeID),
@@ -40,11 +41,12 @@ func TestResourceDynamicHostVolumeRegistration_import(t *testing.T) {
 
 func TestResourceDynamicHostVolumeRegistration_refresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
+	testAccPreCheck(t) // required to configure provider to get node ID for test config
 	nodeID := testResourceDynamicHostVolume_getNodeID(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, minVersionDHV) },
+		PreCheck:  func() { testCheckMinVersion(t, minVersionDHV) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceDynamicHostVolumeRegistration_config(name, nodeID),
@@ -64,11 +66,12 @@ func TestResourceDynamicHostVolumeRegistration_refresh(t *testing.T) {
 
 func TestResourceDynamicHostVolumeRegistration_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
+	testAccPreCheck(t) // required to configure provider to get node ID for test config
 	nodeID := testResourceDynamicHostVolume_getNodeID(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, minVersionDHV) },
+		PreCheck:  func() { testCheckMinVersion(t, minVersionDHV) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceDynamicHostVolumeRegistration_config(name, nodeID),

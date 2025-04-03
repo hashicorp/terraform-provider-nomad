@@ -163,9 +163,14 @@ func resourceDynamicHostVolumeRegistrationWrite(d *schema.ResourceData, meta any
 		parameters[name] = value.(string)
 	}
 
-	capacity, err := humanize.ParseBytes(d.Get("capacity").(string))
-	if err != nil {
-		return fmt.Errorf("could not parse capacity value as bytes: %w", err)
+	var capacity uint64
+	var err error
+	capacityStr := d.Get("capacity").(string)
+	if capacityStr != "" {
+		capacity, err = humanize.ParseBytes(capacityStr)
+		if err != nil {
+			return fmt.Errorf("could not parse capacity value as bytes: %w", err)
+		}
 	}
 
 	caps, err := expandDynamicHostVolumeCapabilities(d)
