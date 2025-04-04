@@ -5,6 +5,8 @@ BREAKING CHANGES:
 * resource/nomad_job: The deprecated `consul_token` and `vault_token` fields have been removed ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
 
 IMPROVEMENTS:
+* **New Resources**: `nomad_dynamic_host_volume` and `nomad_dynamic_host_volume_registration` to create and register dynamic host volumes ([#498](https://github.com/hashicorp/terraform-provider-nomad/pull/498))
+* **New Data Source**: `nomad_dynamic_host_volume`to read dynamic host volumes ([#498](https://github.com/hashicorp/terraform-provider-nomad/pull/498))
 * provider: update Go to 1.24.0 ([#512](https://github.com/hashicorp/terraform-provider-nomad/pull/512))
 * provider: update Nomad to 1.10.0 ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
 
