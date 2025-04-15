@@ -54,6 +54,12 @@ func resourceACLAuthMethod() *schema.Resource {
 				Description: "Defines the maximum life of a token created by this method.",
 				Required:    true,
 				Type:        schema.TypeString,
+				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+					// errors don't really matter here; on error, the returned duration is 0
+					o, _ := time.ParseDuration(oldValue)
+					n, _ := time.ParseDuration(newValue)
+					return o == n
+				},
 			},
 			"token_name_format": {
 				Description: "Defines the token format for the authenticated users. This can be lightly templated using HIL '${foo}' syntax.",

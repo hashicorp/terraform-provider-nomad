@@ -48,7 +48,7 @@ resource "nomad_acl_auth_method" "test" {
   type           	= "OIDC"
   token_locality 	= "global"
   token_name_format	= "$${auth_method_type}-$${auth_method_name}-$${value.user}"
-  max_token_ttl  	= "10m0s"
+  max_token_ttl  	= "10m"
   default        	= %v
 
   config {
