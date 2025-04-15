@@ -72,7 +72,17 @@ resource "nomad_acl_auth_method" "test" {
     }
   }
 }
-`, name, defaultVal, uiCallback)
+
+resource "nomad_acl_auth_method" "test-jwt" {
+  name = "%s-jwt"
+  type = "JWT"
+  config {
+    jwks_url = "https://somewhere/.well-known/jwks.json"
+  }
+  token_locality = "global"
+  max_token_ttl  = "10m"
+}
+`, name, defaultVal, uiCallback, name)
 }
 
 func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resource.TestCheckFunc {

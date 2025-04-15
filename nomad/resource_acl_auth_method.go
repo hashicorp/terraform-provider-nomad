@@ -82,11 +82,17 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"jwt_validation_pub_keys": {
-				Description:  "List of PEM-encoded public keys to use to authenticate signatures locally.",
-				Type:         schema.TypeList,
-				Elem:         &schema.Schema{Type: schema.TypeString},
-				Optional:     true,
-				ExactlyOneOf: []string{"config.0.jwks_url", "config.0.oidc_discovery_url"},
+				Description: "List of PEM-encoded public keys to use to authenticate signatures locally.",
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				ExactlyOneOf: []string{
+					// type = "JWT" options
+					"config.0.jwt_validation_pub_keys",
+					"config.0.jwks_url",
+					// type = "OIDC"
+					"config.0.oidc_discovery_url",
+				},
 			},
 			"jwks_url": {
 				Description: "JSON Web Key Sets url for authenticating signatures.",
@@ -99,10 +105,13 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Optional:    true,
 			},
 			"oidc_discovery_url": {
-				Description:  "The OIDC Discovery URL, without any .well-known component (base path).",
-				Type:         schema.TypeString,
-				Optional:     true,
-				RequiredWith: []string{"config.0.oidc_client_id", "config.0.oidc_client_secret"},
+				Description: "The OIDC Discovery URL, without any .well-known component (base path).",
+				Type:        schema.TypeString,
+				Optional:    true,
+				RequiredWith: []string{
+					"config.0.oidc_discovery_url", // if this is set,
+					"config.0.oidc_client_id",     // client id must also be set
+				},
 			},
 			"oidc_client_id": {
 				Description: "The OAuth Client ID configured with the OIDC provider.",
