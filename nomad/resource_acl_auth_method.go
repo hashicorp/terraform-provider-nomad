@@ -435,19 +435,22 @@ func fetchACLAuthMethodResource(client *api.Client, name string) (*api.ACLAuthMe
 func unredactACLAuthMethodResource(d *schema.ResourceData, fetchedAuthMethod, originalAuthMethod *api.ACLAuthMethod) {
 	// fetchedAuthMethod is what we retrieved from Nomad during a refresh, or after create/update.
 	// we will overwrite values on it, then that will be saved to TF state.
+	// if there is none, then nothing to do.
 	if fetchedAuthMethod == nil || fetchedAuthMethod.Config == nil {
 		return
 	}
 
-	// originalAuthMethod is what we just sent to Nomad, during resourceACLAuthMethod(Create|Update)
-	if originalAuthMethod != nil && originalAuthMethod.Config != nil {
-		if originalAuthMethod.Config.OIDCClientSecret != "" {
-			fetchedAuthMethod.Config.OIDCClientSecret = originalAuthMethod.Config.OIDCClientSecret
+	// these help avoid nil pointers
+	orig := &aclAuthMethodSecrets{am: originalAuthMethod}
+	unredacted := &aclAuthMethodSecrets{am: fetchedAuthMethod}
+
+	// orig is what we just sent to Nomad, during resourceACLAuthMethod(Create|Update)
+	if orig.hasConfig() {
+		if secret := orig.getClientSecret(); secret != "" {
+			unredacted.setClientSecret(secret)
 		}
-		if originalAuthMethod.Config.OIDCClientAssertion != nil &&
-			originalAuthMethod.Config.OIDCClientAssertion.PrivateKey != nil &&
-			originalAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey != "" {
-			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey = originalAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey
+		if key := orig.getClientAssertionPrivateKey(); key != "" {
+			unredacted.setClientAssertionPrivateKey(key)
 		}
 		// what we told Nomad to use is authoritative, so no need to continue
 		return
@@ -455,17 +458,11 @@ func unredactACLAuthMethodResource(d *schema.ResourceData, fetchedAuthMethod, or
 
 	// we care about d (ResourceData) in TF state during resourceACLAuthMethodRead
 	if d != nil {
-		// client secret
-		stored := d.Get("config.0.oidc_client_secret")
-		if stored != nil {
-			fetchedAuthMethod.Config.OIDCClientSecret = stored.(string)
+		if secret := d.Get("config.0.oidc_client_secret"); secret != nil {
+			unredacted.setClientSecret(secret.(string))
 		}
-		// client assertion private key
-		stored = d.Get("config.0.oidc_client_assertion.0.private_key.0.pem_key")
-		if stored != nil &&
-			fetchedAuthMethod.Config.OIDCClientAssertion != nil &&
-			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey != nil {
-			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey = stored.(string)
+		if key := d.Get("config.0.oidc_client_assertion.0.private_key.0.pem_key"); key != nil {
+			unredacted.setClientAssertionPrivateKey(key.(string))
 		}
 	}
 	return
@@ -810,4 +807,45 @@ func parseDuration(durStr, name string) (time.Duration, error) {
 		return dur, fmt.Errorf("failed to parse %s duration: %v", name, err)
 	}
 	return dur, nil
+}
+
+// aclAuthMethodSecrets provides safe getter/setter for sensitive values
+type aclAuthMethodSecrets struct {
+	am *api.ACLAuthMethod
+}
+
+func (a *aclAuthMethodSecrets) hasConfig() bool {
+	return a.am != nil && a.am.Config != nil
+}
+
+func (a *aclAuthMethodSecrets) getClientSecret() string {
+	if !a.hasConfig() {
+		return ""
+	}
+	return a.am.Config.OIDCClientSecret
+}
+
+func (a *aclAuthMethodSecrets) setClientSecret(s string) {
+	if !a.hasConfig() {
+		return
+	}
+	a.am.Config.OIDCClientSecret = s
+}
+
+func (a *aclAuthMethodSecrets) hasPrivateKey() bool {
+	return a.hasConfig() && a.am.Config.OIDCClientAssertion != nil && a.am.Config.OIDCClientAssertion.PrivateKey != nil
+}
+
+func (a *aclAuthMethodSecrets) getClientAssertionPrivateKey() string {
+	if !a.hasPrivateKey() {
+		return ""
+	}
+	return a.am.Config.OIDCClientAssertion.PrivateKey.PemKey
+}
+
+func (a *aclAuthMethodSecrets) setClientAssertionPrivateKey(s string) {
+	if !a.hasPrivateKey() {
+		return
+	}
+	a.am.Config.OIDCClientAssertion.PrivateKey.PemKey = s
 }
