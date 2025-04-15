@@ -113,7 +113,29 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Description: "The OAuth Client Secret configured with the OIDC provider.",
 				Type:        schema.TypeString,
 				Optional:    true,
-				Sensitive:   true,
+				RequiredWith: []string{
+					"config.0.oidc_client_secret",
+					"config.0.oidc_client_id",
+				},
+				Sensitive: true,
+			},
+			"oidc_client_assertion": {
+				Description: "Configuration for OIDC client assertion / private key JWT.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				MinItems:    1,
+				Elem:        resourceACLAuthMethodClientAssertionConfig(),
+				RequiredWith: []string{
+					"config.0.oidc_client_assertion",
+					"config.0.oidc_client_id",
+				},
+			},
+			"oidc_enable_pkce": {
+				Description: "Nomad include PKCE challenge in OIDC auth requests.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
 			},
 			"oidc_disable_userinfo": {
 				Description: "Nomad will not make a request to the identity provider to get OIDC UserInfo.",
@@ -186,6 +208,98 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
+			},
+		},
+	}
+}
+
+func resourceACLAuthMethodClientAssertionConfig() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"audience": {
+				Description: "List of audiences to accept the JWT.",
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Computed:    true, // API defaults to: [oidc_discovery_url]
+			},
+			"extra_headers": {
+				Description: "Additional headers to include on the JWT.",
+				Type:        schema.TypeMap,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+			},
+			"key_algorithm": {
+				Description: "Algorithm of the key used to sign the JWT.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true, // API default depends on key_source
+				ValidateDiagFunc: validation.ToDiagFunc(
+					// these are supported by Nomad via the "cap" library:
+					// https://github.com/hashicorp/cap/blob/main/oidc/clientassertion/algorithms.go
+					validation.StringInSlice([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512"}, false),
+				),
+			},
+			"key_source": {
+				Description: "The source of the key Nomad will use to sign the JWT.",
+				Type:        schema.TypeString,
+				Required:    true,
+				ValidateDiagFunc: validation.ToDiagFunc(
+					validation.StringInSlice([]string{"client_secret", "nomad", "private_key"}, false),
+				),
+			},
+			"private_key": {
+				Description: "Configuration for a custom private key to sign the JWT.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				MinItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"pem_key": {
+							Description: "RSA private key PEM to use to sign the JWT.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Sensitive:   true,
+							ConflictsWith: []string{
+								"config.0.oidc_client_assertion.0.private_key.0.pem_key_file",
+							},
+						},
+						"pem_key_file": {
+							Description: "Path to an RSA private key PEM on Nomad servers to use to sign the JWT.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"pem_cert": {
+							Description: "An x509 certificate PEM to derive a key ID header.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							ConflictsWith: []string{
+								"config.0.oidc_client_assertion.0.private_key.0.pem_cert_file",
+								"config.0.oidc_client_assertion.0.private_key.0.key_id",
+							},
+						},
+						"pem_cert_file": {
+							Description: "Path to an x509 certificate PEM on Nomad servers to derive a key ID header.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"key_id_header": {
+							Description: "Name of the header the IDP will use to find the cert to verify the JWT signature.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "x5t#S256",
+							ValidateDiagFunc: validation.ToDiagFunc(
+								validation.StringInSlice([]string{"x5t#S256", "x5t"}, false),
+							),
+						},
+						"key_id": {
+							Description: "Specific 'kid' header to set on the JWT.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -300,20 +414,43 @@ func fetchACLAuthMethodResource(client *api.Client, name string) (*api.ACLAuthMe
 	return authMethod, nil
 }
 
+// unredactACLAuthMethodResource mutates fetchedAuthMethod with real secrets,
+// so the full secret gets stored in TF state for diff checking, despite being
+// redacted in Nomad API responses.
 func unredactACLAuthMethodResource(d *schema.ResourceData, fetchedAuthMethod, originalAuthMethod *api.ACLAuthMethod) {
-	if originalAuthMethod != nil &&
-		originalAuthMethod.Config != nil &&
-		originalAuthMethod.Config.OIDCClientSecret != "" {
-		if fetchedAuthMethod.Config != nil {
-			fetchedAuthMethod.Config.OIDCClientSecret = originalAuthMethod.Config.OIDCClientSecret
-			return
-		}
+	// fetchedAuthMethod is what we retrieved from Nomad during a refresh, or after create/update.
+	// we will overwrite values on it, then that will be saved to TF state.
+	if fetchedAuthMethod == nil || fetchedAuthMethod.Config == nil {
+		return
 	}
 
+	// originalAuthMethod is what we just sent to Nomad, during resourceACLAuthMethod(Create|Update)
+	if originalAuthMethod != nil && originalAuthMethod.Config != nil {
+		if originalAuthMethod.Config.OIDCClientSecret != "" {
+			fetchedAuthMethod.Config.OIDCClientSecret = originalAuthMethod.Config.OIDCClientSecret
+		}
+		if originalAuthMethod.Config.OIDCClientAssertion != nil &&
+			originalAuthMethod.Config.OIDCClientAssertion.PrivateKey != nil &&
+			originalAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey != "" {
+			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey = originalAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey
+		}
+		// what we told Nomad to use is authoritative, so no need to continue
+		return
+	}
+
+	// we care about d (ResourceData) in TF state during resourceACLAuthMethodRead
 	if d != nil {
+		// client secret
 		stored := d.Get("config.0.oidc_client_secret")
 		if stored != nil {
 			fetchedAuthMethod.Config.OIDCClientSecret = stored.(string)
+		}
+		// client assertion private key
+		stored = d.Get("config.0.oidc_client_assertion.0.private_key.0.pem_key")
+		if stored != nil &&
+			fetchedAuthMethod.Config.OIDCClientAssertion != nil &&
+			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey != nil {
+			fetchedAuthMethod.Config.OIDCClientAssertion.PrivateKey.PemKey = stored.(string)
 		}
 	}
 	return
@@ -382,6 +519,72 @@ func generateNomadACLAuthMethod(d *schema.ResourceData) (*api.ACLAuthMethod, err
 	return &aclAuthMethod, nil
 }
 
+func generateNomadACLAuthMethodClientAssertion(intf any) (*api.OIDCClientAssertion, error) {
+	configList, ok := intf.([]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for client assertion config, expected []any", intf)
+	}
+
+	if len(configList) < 1 {
+		// nothing to do
+		return nil, nil // :grimace:
+	} else if len(configList) > 1 {
+		// TF should prevent this, but just in case
+		return nil, fmt.Errorf("there must be only one oidc_client_assertion, got %d", len(configList))
+	}
+
+	configMap, ok := configList[0].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for client assertion config, expected map[string]any", intf)
+	}
+
+	cAss := &api.OIDCClientAssertion{}
+	var err error
+	for k, v := range configMap {
+		switch k {
+		case "audience":
+			cAss.Audience, err = unpackStringArray(v, "audience")
+			if err != nil {
+				return nil, err
+			}
+		case "extra_headers":
+			cAss.ExtraHeaders, err = unpackStringMap(v, "extra_headers")
+			if err != nil {
+				return nil, err
+			}
+		case "key_algorithm":
+			cAss.KeyAlgorithm = v.(string)
+		case "key_source":
+			cAss.KeySource = api.OIDCClientAssertionKeySource(v.(string))
+		case "private_key":
+			key := &api.OIDCClientAssertionKey{}
+			pKeys := v.([]any)
+			if len(pKeys) < 1 {
+				break
+			}
+			pMap := pKeys[0].(map[string]any)
+			for pk, pv := range pMap {
+				switch pk {
+				case "pem_key":
+					key.PemKey = pv.(string)
+				case "pem_key_file":
+					key.PemKeyFile = pv.(string)
+				case "pem_cert":
+					key.PemCert = pv.(string)
+				case "pem_cert_file":
+					key.PemCertFile = pv.(string)
+				case "key_id_header":
+					key.KeyIDHeader = api.OIDCClientAssertionKeyIDHeader(pv.(string))
+				case "key_id":
+					key.KeyID = pv.(string)
+				}
+			}
+			cAss.PrivateKey = key
+		}
+	}
+	return cAss, nil
+}
+
 func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfig, error) {
 
 	configMap, ok := intf.(map[string]interface{})
@@ -390,6 +593,7 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 	}
 
 	var authMethodConfig api.ACLAuthMethodConfig
+	var err error
 
 	for k, v := range configMap {
 		switch k {
@@ -409,6 +613,13 @@ func generateNomadACLAuthMethodConfig(intf interface{}) (*api.ACLAuthMethodConfi
 			authMethodConfig.OIDCClientID = v.(string)
 		case "oidc_client_secret":
 			authMethodConfig.OIDCClientSecret = v.(string)
+		case "oidc_client_assertion":
+			authMethodConfig.OIDCClientAssertion, err = generateNomadACLAuthMethodClientAssertion(v)
+			if err != nil {
+				return nil, err
+			}
+		case "oidc_enable_pkce":
+			authMethodConfig.OIDCEnablePKCE = v.(bool)
 		case "oidc_disable_userinfo":
 			authMethodConfig.OIDCDisableUserInfo = v.(bool)
 		case "oidc_scopes":
@@ -494,6 +705,7 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 		"oidc_discovery_url":      cfg.OIDCDiscoveryURL,
 		"oidc_client_id":          cfg.OIDCClientID,
 		"oidc_client_secret":      cfg.OIDCClientSecret,
+		"oidc_enable_pkce":        cfg.OIDCEnablePKCE,
 		"oidc_scopes":             packStringArray(cfg.OIDCScopes),
 		"oidc_disable_userinfo":   cfg.OIDCDisableUserInfo,
 		"bound_audiences":         packStringArray(cfg.BoundAudiences),
@@ -506,6 +718,26 @@ func flattenACLAuthMethodConfig(cfg *api.ACLAuthMethodConfig) []any {
 		"clock_skew_leeway":       cfg.ClockSkewLeeway.String(),
 		"claim_mappings":          packStringMap(cfg.ClaimMappings),
 		"list_claim_mappings":     packStringMap(cfg.ListClaimMappings),
+	}
+	if cfg.OIDCClientAssertion != nil {
+		cAss := map[string]any{
+			"audience":      cfg.OIDCClientAssertion.Audience,
+			"key_algorithm": cfg.OIDCClientAssertion.KeyAlgorithm,
+			"key_source":    cfg.OIDCClientAssertion.KeySource,
+			"extra_headers": cfg.OIDCClientAssertion.ExtraHeaders,
+		}
+		if cfg.OIDCClientAssertion.PrivateKey != nil {
+			privateKey := map[string]any{
+				"pem_key":       cfg.OIDCClientAssertion.PrivateKey.PemKey,
+				"pem_key_file":  cfg.OIDCClientAssertion.PrivateKey.PemKeyFile,
+				"pem_cert":      cfg.OIDCClientAssertion.PrivateKey.PemCert,
+				"pem_cert_file": cfg.OIDCClientAssertion.PrivateKey.PemCertFile,
+				"key_id":        cfg.OIDCClientAssertion.PrivateKey.KeyID,
+				"key_id_header": cfg.OIDCClientAssertion.PrivateKey.KeyIDHeader,
+			}
+			cAss["private_key"] = []any{privateKey}
+		}
+		result["oidc_client_assertion"] = []any{cAss}
 	}
 	return []any{result}
 }
