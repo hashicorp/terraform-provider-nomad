@@ -10,7 +10,7 @@ IMPROVEMENTS:
 * **New Resources**: `nomad_dynamic_host_volume` and `nomad_dynamic_host_volume_registration` to create and register dynamic host volumes ([#498](https://github.com/hashicorp/terraform-provider-nomad/pull/498))
 * **New Data Source**: `nomad_dynamic_host_volume`to read dynamic host volumes ([#498](https://github.com/hashicorp/terraform-provider-nomad/pull/498))
 * resource/nomad_acl_auth_method: new `oidc_enable_pkce` option turns on OIDC Proof Key for Code Exchange (PKCE) ([#523](https://github.com/hashicorp/terraform-provider-nomad/pull/523))
-* resource/nomad_acl_auth_method: new `oidc_client_asertion` option provides a more secure alternative to OIDC client secrets ([#523](https://github.com/hashicorp/terraform-provider-nomad/pull/523))
+* resource/nomad_acl_auth_method: new `oidc_client_assertion` option provides a more secure alternative to OIDC client secrets ([#523](https://github.com/hashicorp/terraform-provider-nomad/pull/523))
 * resource/nomad_acl_auth_method: new `verbose_logging` option enables server-side logging of OIDC information ([#524](https://github.com/hashicorp/terraform-provider-nomad/pull/524))
 * provider: update Go to 1.24.0 ([#512](https://github.com/hashicorp/terraform-provider-nomad/pull/512))
 * provider: update Nomad to 1.10.0 ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
