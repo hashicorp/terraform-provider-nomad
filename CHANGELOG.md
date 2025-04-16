@@ -1,4 +1,6 @@
-## 2.5.0 (Unreleased)
+## 2.5.1 (Unreleased)
+
+## 2.5.0 (April 16, 2025)
 
 BREAKING CHANGES:
 * provider: The deprecated `consul_token` and `vault_token` fields have been removed ([#518](https://github.com/hashicorp/terraform-provider-nomad/pull/518)
