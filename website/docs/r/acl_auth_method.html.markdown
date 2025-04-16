@@ -181,6 +181,11 @@ The following arguments are supported:
   - `list_claim_mappings`: `(map[string]string: <optional>)` - Mappings of list
     claims (key) that will be copied to a metadata field (value).
 
+  - `verbose_logging` `(bool: false)` - When set to `true`, Nomad will log token
+    claims, information related to binding-rule and role/policy evaluations,
+    and client assertion JWTs, if applicable. Not recommended in production,
+    since sensitive information may be present.
+
 [private key jwt]: https://oauth.net/private-key-jwt/
 [concepts-assertions]: /nomad/docs/concepts/acl/auth-methods/oidc#client-assertions
 [x5t]: https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.7

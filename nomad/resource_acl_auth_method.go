@@ -225,7 +225,7 @@ func resourceACLAuthMethodConfig() *schema.Resource {
 				Optional:    true,
 			},
 			"verbose_logging": {
-				Description: "Enables verbose logging",
+				Description: "Enable OIDC verbose logging on the Nomad server.",
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,

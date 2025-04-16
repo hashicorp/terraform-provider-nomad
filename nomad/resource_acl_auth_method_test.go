@@ -70,6 +70,7 @@ resource "nomad_acl_auth_method" "test" {
     list_claim_mappings = {
       "http://nomad.internal/roles": "roles"
     }
+    verbose_logging = true
   }
 }
 
@@ -153,6 +154,7 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			"config.0.claim_mappings.http://nomad.internal/name":       "name",
 			"config.0.list_claim_mappings.%":                           "1",
 			"config.0.list_claim_mappings.http://nomad.internal/roles": "roles",
+			"config.0.verbose_logging":                                 "true",
 		}
 
 		for testKey, testValue := range configExpectedEntries {
@@ -218,6 +220,9 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 		if !reflect.DeepEqual(authMethod.Config.ListClaimMappings, expectedListClaimMappings) {
 			return fmt.Errorf(`expected list claim mappings to be %q, is %q in API`,
 				expectedListClaimMappings, authMethod.Config.ListClaimMappings)
+		}
+		if !authMethod.Config.VerboseLogging {
+			return fmt.Errorf("expected VerboseLogging to be true, is %v in API", authMethod.Config.VerboseLogging)
 		}
 
 		return nil
