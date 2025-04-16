@@ -110,7 +110,6 @@ func testGetVersion(t *testing.T) *version.Version {
 		if version, err := version.NewVersion(nodes[0].Version); err != nil {
 			t.Skip("could not parse node version: ", err)
 		} else {
-			version = version.Core()
 			return version
 		}
 	} else {
