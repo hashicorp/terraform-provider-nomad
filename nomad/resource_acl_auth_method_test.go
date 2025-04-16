@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -47,7 +48,7 @@ resource "nomad_acl_auth_method" "test" {
   type           	= "OIDC"
   token_locality 	= "global"
   token_name_format	= "$${auth_method_type}-$${auth_method_name}-$${value.user}"
-  max_token_ttl  	= "10m0s"
+  max_token_ttl  	= "10m"
   default        	= %v
 
   config {
@@ -71,7 +72,17 @@ resource "nomad_acl_auth_method" "test" {
     }
   }
 }
-`, name, defaultVal, uiCallback)
+
+resource "nomad_acl_auth_method" "test-jwt" {
+  name = "%s-jwt"
+  type = "JWT"
+  config {
+    jwks_url = "https://somewhere/.well-known/jwks.json"
+  }
+  token_locality = "global"
+  max_token_ttl  = "10m"
+}
+`, name, defaultVal, uiCallback, name)
 }
 
 func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resource.TestCheckFunc {
@@ -125,6 +136,7 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			"config.0.oidc_discovery_url":                              "https://uk.auth0.com/",
 			"config.0.oidc_client_id":                                  "someclientid",
 			"config.0.oidc_client_secret":                              "someclientsecret-t",
+			"config.0.oidc_enable_pkce":                                "false",
 			"config.0.bound_audiences.#":                               "1",
 			"config.0.bound_audiences.0":                               "someclientid",
 			"config.0.allowed_redirect_uris.#":                         "2",
@@ -184,6 +196,9 @@ func testResourceACLAuthMethodCheck(name, uiCallback, defaultVal string) resourc
 			return fmt.Errorf(`expected OIDC client ID to be %q, is %q" in API`,
 				expectedOIDCClientID, authMethod.Config.OIDCClientID)
 		}
+		if authMethod.Config.OIDCEnablePKCE {
+			return fmt.Errorf("expected PKCE default to be false, is %v in API", authMethod.Config.OIDCEnablePKCE)
+		}
 		if authMethod.Config.OIDCDisableUserInfo != expectedOIDCDisableUserInfo {
 			return fmt.Errorf(`expected OIDC disable userinfo to be %t, is %t" in API`,
 				expectedOIDCDisableUserInfo, authMethod.Config.OIDCDisableUserInfo)
@@ -219,3 +234,173 @@ func testResourceACLAuthMethodCheckDestroy(name string) resource.TestCheckFunc {
 		return fmt.Errorf("Auth Method %q has not been deleted", name)
 	}
 }
+
+// client assertion permutations are complex, so test them separately
+func TestResourceACLAuthMethod_OIDCClientAssertion(t *testing.T) {
+	methodName := acctest.RandomWithPrefix("tf-nomad-test")
+	resourceName := "nomad_acl_auth_method.client_assertion_test"
+	attrPrefix := "config.0.oidc_client_assertion.0."
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: testProviderFactories,
+		PreCheck:          func() { testAccPreCheck(t); testCheckMinVersion(t, "1.10.0") },
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"tls":   {VersionConstraint: ">= 4.0.0", Source: "hashicorp/tls"},
+			"local": {VersionConstraint: ">= 2.5.0", Source: "hashicorp/local"},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: clientAssertionResourcesHCL(methodName, clientAssertionNomad, false),
+				Check: resource.ComposeTestCheckFunc(
+					// audience and algorithm are optional and computed
+					// nomad server defaults audience = [oidc_discovery_url]
+					// and alg = RS256 for the nomad key_source
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"audience.0", "http://discovery.url"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_algorithm", "RS256"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_source", "nomad"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"extra_headers.dome", "noggin"),
+				),
+			},
+			{
+				Config: clientAssertionResourcesHCL(methodName, clientAssertionPrivateKey, true),
+				Check: resource.ComposeTestCheckFunc(
+					// aud and algo set explicitly
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"audience.0", "some-other-audience"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_algorithm", "RS512"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_source", "private_key"),
+					resource.TestMatchResourceAttr(resourceName, attrPrefix+"private_key.0.pem_key",
+						regexp.MustCompile("RSA PRIVATE KEY-----")),
+					resource.TestMatchResourceAttr(resourceName, attrPrefix+"private_key.0.pem_cert",
+						regexp.MustCompile("CERTIFICATE-----")),
+					// headers should be removed
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"extra_headers.%", "0"),
+				),
+			},
+			{
+				Config: clientAssertionResourcesHCL(methodName, clientAssertionPrivateKeyFile, true),
+				Check: resource.ComposeTestCheckFunc(
+					// aud and algo implicitly remain, due to being optional and computed
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"audience.0", "some-other-audience"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_algorithm", "RS512"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_source", "private_key"),
+					resource.TestMatchResourceAttr(resourceName, attrPrefix+"private_key.0.pem_key_file",
+						regexp.MustCompile("/key.pem")),
+					resource.TestMatchResourceAttr(resourceName, attrPrefix+"private_key.0.pem_cert_file",
+						regexp.MustCompile("/cert.pem")),
+				),
+			},
+			{
+				Config: clientAssertionResourcesHCL(methodName, clientAssertionClientSecret, false),
+				Check: resource.ComposeTestCheckFunc(
+					// aud and algo can still be changed explicitly
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"audience.0", "yet-another-aud"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_algorithm", "HS256"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"key_source", "client_secret"),
+					resource.TestCheckResourceAttr(resourceName, "config.0.oidc_client_secret", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+					resource.TestCheckResourceAttr(resourceName, attrPrefix+"private_key.%", "0"),
+				),
+			},
+		},
+		CheckDestroy: testResourceACLAuthMethodCheckDestroy(methodName),
+	})
+}
+
+func clientAssertionResourcesHCL(authMethodName string, block clientAssertionBlock, withTLS bool) string {
+	conf := fmt.Sprintf(clientAssertionHCLFormat, authMethodName, block)
+	if withTLS {
+		conf += tlsResourcesHCL
+	}
+	return conf
+}
+
+type clientAssertionBlock string
+
+const (
+	clientAssertionHCLFormat = `
+resource "nomad_acl_auth_method" "client_assertion_test" {
+  name           = "%s"
+  type           = "OIDC"
+  token_locality = "global"
+  max_token_ttl  = "10m0s"
+  default        = true
+
+  config {
+    # required
+    oidc_discovery_url = "http://discovery.url"
+    oidc_client_id     = "someclientid"
+
+    # really ought to be required
+    allowed_redirect_uris = [
+      "http://localhost:4649/oidc/callback",
+    ]
+
+# CLIENT ASSERTION BLOCK GOES HERE
+%s
+
+  }
+}
+`
+	clientAssertionClientSecret clientAssertionBlock = `
+    oidc_client_secret = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" # 32 bytes
+    oidc_client_assertion {
+      audience      = ["yet-another-aud"]
+      key_algorithm = "HS256"
+      key_source    = "client_secret"
+    }
+`
+	clientAssertionNomad clientAssertionBlock = `
+    oidc_client_assertion {
+      key_source = "nomad"
+      extra_headers = {
+        dome = "noggin"
+      }
+    }
+`
+	clientAssertionPrivateKey clientAssertionBlock = `
+    oidc_client_assertion {
+      audience      = ["some-other-audience"]
+      key_source    = "private_key"
+      key_algorithm = "RS512"
+      private_key {
+        pem_key  = tls_private_key.test.private_key_pem
+        pem_cert = tls_self_signed_cert.test.cert_pem
+      }
+    }
+`
+	clientAssertionPrivateKeyFile clientAssertionBlock = `
+    oidc_client_assertion {
+      key_source = "private_key"
+      private_key {
+        pem_key_file  = abspath(local_sensitive_file.key.filename)
+        pem_cert_file = abspath(local_file.cert.filename)
+      }
+    }
+`
+	tlsResourcesHCL = `
+resource "tls_private_key" "test" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+resource "tls_self_signed_cert" "test" {
+  private_key_pem = tls_private_key.test.private_key_pem
+  subject {
+    common_name  = "nomadproject.io"
+    organization = "HashiCorp"
+  }
+  validity_period_hours = 1
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth", # TODO: ?
+  ]
+}
+resource "local_sensitive_file" "key" {
+  content  = tls_private_key.test.private_key_pem
+  filename = "${path.module}/key.pem"
+}
+resource "local_file" "cert" {
+  content  = tls_self_signed_cert.test.cert_pem
+  filename = "${path.module}/cert.pem"
+}
+`
+)

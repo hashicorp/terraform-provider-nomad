@@ -48,11 +48,17 @@ func TestProvider_impl(t *testing.T) {
 
 var testProvider *schema.Provider
 var testProviders map[string]*schema.Provider
+var testProviderFactories map[string]func() (*schema.Provider, error)
 
 func init() {
 	testProvider = Provider()
 	testProviders = map[string]*schema.Provider{
 		"nomad": testProvider,
+	}
+	testProviderFactories = map[string]func() (*schema.Provider, error){
+		"nomad": func() (*schema.Provider, error) {
+			return testProvider, nil
+		},
 	}
 }
 

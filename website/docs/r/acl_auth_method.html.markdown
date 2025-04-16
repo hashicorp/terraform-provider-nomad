@@ -83,6 +83,67 @@ The following arguments are supported:
   - `oidc_client_secret`: `(string: <optional>)` - The OAuth Client Secret
     configured with the OIDC provider.
 
+  - `oidc_client_assertion` `(OIDCClientAssertion: <optional>)` - Optionally
+    send a signed JWT ("[private key jwt][]") as a client assertion to the OIDC
+    provider. Browse to the [OIDC concepts][concepts-assertions] page to learn
+    more.
+
+    - `audience` `([]string: optional)` - Who processes the assertion.
+      Defaults to the auth method's `oidc_discovery_url`.
+
+    - `key_source` `(string: <required>)` - Specifies where to get the private
+      key to sign the JWT.
+      Available sources:
+      - "nomad": Use current active key in Nomad's keyring
+      - "private_key": Use key material in the `private_key` field
+      - "client_secret": Use the `oidc_client_secret` as an HMAC key
+
+    - `key_algorithm` `(string: <optional>)` is the key's algorithm.
+      Its default values are based on the `key_source`:
+      - "nomad": "RS256"; this is from Nomad's keyring and must not be changed
+      - "private_key": "RS256"; must be RS256, RS384, or RS512
+      - "client_secret": "HS256"; must be HS256, HS384, or HS512
+
+    - `private_key` `(OIDCClientAssertionKey: <optional>)` - External key
+      to sign the JWT. `key_source` must be "private_key" to enable this.
+
+      - `pem_key` `(string: <optional>)` - An RSA private key, in pem format.
+        It is used to sign the JWT. Mutually exclusive with `pem_key`.
+
+      - `pem_key_file` `(string: optional)` - An absolute path to a private key
+        on Nomad servers' disk, in pem format. It is used to sign the JWT.
+        Mutually exclusive with `pem_key_file`.
+
+      - `key_id_header` `(string: optional)` - Which header the provider uses
+        to find the public key to verify the signed JWT.
+        The default and allowed values depend on whether you set `key_id`,
+        `pem_cert`, or `pem_cert_file`. You must set exactly one of those
+        options, so refer to them for their requirements.
+
+      - `key_id` `(string: optional)` - Becomes the JWT's "kid" header.
+        Mutually exclusive with `pem_cert` and `pem_cert_file`.
+        Allowed `key_id_header` values: "kid" (the default)
+
+      - `pem_cert` `(string: optional)` - An x509 certificate, signed by the
+        private key or a CA, in pem format. Nomad uses this certificate to
+        derive an [x5t#S256][] (or [x5t][]) key_id.
+        Mutually exclusive with `pem_cert_file` and `key_id`.
+        Allowed `key_id_header` values: "x5t", "x5t#S256" (default "x5t#S256")
+
+      - `pem_cert_file` `(string: optional)` - An absolute path to an x509
+        certificate on Nomad servers' disk, signed by the private key or a CA,
+        in pem format.
+        Nomad uses this certificate to derive an [x5t#S256][] (or [x5t][])
+        header. Mutually exclusive with `pem_cert` and key_id.
+        Allowed `key_id_header` values: "x5t", "x5t#S256" (default "x5t#S256")
+
+    - `extra_headers` `(map[string]string: optional)` - Add to the JWT headers,
+      alongside "kid" and "type". Setting the "kid" header here is not allowed;
+      use `private_key.key_id`.
+
+  - `oidc_enable_pkce` `(bool: false)` - When set to `true`, Nomad will include
+    [PKCE][] verification in the auth flow. Even with PKCE enabled in Nomad,
+    you may still need to enable it in your OIDC provider.
   - `oidc_scopes`: `([]string: <optional>)` - List of OIDC scopes.
 
   - `oidc_disable_userinfo`: `(bool: false)` - When set to `true`, Nomad will
@@ -119,3 +180,9 @@ The following arguments are supported:
 
   - `list_claim_mappings`: `(map[string]string: <optional>)` - Mappings of list
     claims (key) that will be copied to a metadata field (value).
+
+[private key jwt]: https://oauth.net/private-key-jwt/
+[concepts-assertions]: /nomad/docs/concepts/acl/auth-methods/oidc#client-assertions
+[x5t]: https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.7
+[x5t#S256]: https://datatracker.ietf.org/doc/html/rfc7515#section-4.1.8
+[pkce]: https://oauth.net/2/pkce/
