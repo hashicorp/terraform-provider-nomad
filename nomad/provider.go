@@ -106,6 +106,26 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
+			"auth_jwt": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Authenticates to Consul using a JWT authentication method.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"auth_method": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the auth method to use for login.",
+						},
+						"login_token": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The externally issued authentication token to be exchanged for a Nomad ACL Token.",
+						},
+					},
+				},
+			},
 			"ignore_env_vars": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -251,6 +271,23 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client, err := api.NewClient(conf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Nomad API: %s", err)
+	}
+
+	authJWT := d.Get("auth_jwt").([]interface{})
+	if len(authJWT) > 0 {
+		authConfig := authJWT[0].(map[string]interface{})
+		authMethod := authConfig["auth_method"].(string)
+		loginToken := authConfig["login_token"].(string)
+
+		aclToken, _, err := client.ACLAuth().Login(&api.ACLLoginRequest{
+			AuthMethodName: authMethod,
+			LoginToken:     loginToken,
+		}, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to login using JWT auth method %q: %v", authMethod, err)
+		}
+		conf.SecretID = aclToken.SecretID
+		client.SetSecretID(conf.SecretID)
 	}
 
 	res := ProviderConfig{
