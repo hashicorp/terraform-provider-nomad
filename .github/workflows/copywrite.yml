@@ -1,7 +1,8 @@
 name: Check Copywrite Headers
 
 on:
-  push: {}
+  push:
+  pull_request:
 
 jobs:
   copywrite:
