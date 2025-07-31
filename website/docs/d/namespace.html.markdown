@@ -32,3 +32,5 @@ The following attributes are exported:
 * `capabilities` `(block)` - Capabilities of the namespace
   * `enabled_task_drivers` `([]string)` - Task drivers enabled for the namespace.
   * `disabled_task_drivers` `([]string)` - Task drivers disabled for the namespace.
+  * `enabled_network_modes` `([]string)` - Network modes enabled for the namespace.
+  * `disabled_network_modes` `([]string)` - Network modes disabled for the namespace.
