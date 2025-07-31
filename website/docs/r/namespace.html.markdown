@@ -75,6 +75,8 @@ the following arguments:
 
 - `enabled_task_drivers` `([]string: <optional>)` - Task drivers enabled for the namespace.
 - `disabled_task_drivers` `([]string: <optional>)` - Task drivers disabled for the namespace.
+- `enabled_network_modes` `([]string: <optional>)` - Network modes enabled for the namespace.
+- `disabled_network_modes` `([]string: <optional>)` - Network modes disabled for the namespace.
 
 ### `node_pool_config` blocks
 
