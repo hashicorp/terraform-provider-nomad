@@ -110,7 +110,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
-				Description: "Authenticates to Consul using a JWT authentication method.",
+				Description: "Authenticates to Nomad using a JWT authentication method.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"auth_method": {
@@ -288,6 +288,20 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 		conf.SecretID = aclToken.SecretID
 		client.SetSecretID(conf.SecretID)
+
+		// Retry with exponential backoff starting at 200ms, max 2s
+		delay := 200 * time.Millisecond
+		maxDelay := 2 * time.Second
+		for range 20 {
+			if _, _, err = client.ACLTokens().Self(&api.QueryOptions{}); err == nil {
+				break
+			}
+			time.Sleep(delay)
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+		}
 	}
 
 	res := ProviderConfig{

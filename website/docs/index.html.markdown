@@ -89,6 +89,9 @@ The following arguments are supported:
     ```.
   Set these values to `false` if you need to load these environment variables.
 
+- `auth_jwt` `(block)` - Authenticates to Nomad using a JWT authentication method, described below.
+  This block can only be specified one time.
+
 The `headers` configuration block accepts the following arguments:
 * `name` - (Required) The name of the header.
 * `value` - (Required) The value of the header.
@@ -108,6 +111,20 @@ provider "nomad" {
   headers {
     name = "test-header-2"
     value = "c"
+  }
+}
+```
+
+The `auth_jwt` configuration block accepts the following arguments:
+* `auth_method` - (Required) The name of the auth method.
+* `login_token` - (Required) The value of the jwt token.
+
+An example using the `auth_jwt` configuration block :
+```hcl
+provider "nomad" {
+  auth_jwt {
+    auth_method = "ci"
+    login_token = var.jwt_token
   }
 }
 ```
