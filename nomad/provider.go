@@ -292,9 +292,15 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		// Retry with exponential backoff starting at 200ms, max 2s
 		delay := 200 * time.Millisecond
 		maxDelay := 2 * time.Second
-		for range 20 {
+		timer := time.NewTimer(time.Minute)
+		for {
 			if _, _, err = client.ACLTokens().Self(&api.QueryOptions{}); err == nil {
 				break
+			}
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("timed out waiting for ACL token")
+			default:
 			}
 			time.Sleep(delay)
 			delay *= 2
