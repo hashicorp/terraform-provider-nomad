@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * resource/nomad_namespace: add `enabled_network_modes` and `disabled_network_modes` attributes ([#542](https://github.com/hashicorp/terraform-provider-nomad/pull/542))
+* provider: add `auth_jwt` configuration option to use a jwt to perform authentication against an auth method ([#536](https://github.com/hashicorp/terraform-provider-nomad/pull/536))
 
 ## 2.5.0 (April 16, 2025)
 
