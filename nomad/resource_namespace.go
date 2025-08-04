@@ -91,6 +91,18 @@ func resourceNamespaceCapabilities() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
+			"enabled_network_modes": {
+				Description: "Enabled network modes for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			"disabled_network_modes": {
+				Description: "Disabled network modes for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	}
 }
@@ -279,6 +291,20 @@ func flattenNamespaceCapabilities(capabilities *api.NamespaceCapabilities) []any
 		}
 		rawCapabilities["disabled_task_drivers"] = disabledI
 	}
+	if capabilities.EnabledNetworkModes != nil {
+		enabledI := make([]interface{}, len(capabilities.EnabledNetworkModes))
+		for i, v := range capabilities.EnabledNetworkModes {
+			enabledI[i] = v
+		}
+		rawCapabilities["enabled_network_modes"] = enabledI
+	}
+	if capabilities.DisabledNetworkModes != nil {
+		disabledI := make([]interface{}, len(capabilities.DisabledNetworkModes))
+		for i, v := range capabilities.DisabledNetworkModes {
+			disabledI[i] = v
+		}
+		rawCapabilities["disabled_network_modes"] = disabledI
+	}
 
 	return []any{rawCapabilities}
 }
@@ -314,6 +340,30 @@ func expandNamespaceCapabilities(d *schema.ResourceData) (*api.NamespaceCapabili
 		for index, value := range disS {
 			if val, ok := value.(string); ok {
 				res.DisabledTaskDrivers[index] = val
+			}
+		}
+	}
+	if enaI, ok := capabilities["enabled_network_modes"]; ok {
+		enaS, ok := enaI.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected enabled_network_modes to be []string, got %T", enaS)
+		}
+		res.EnabledNetworkModes = make([]string, len(enaS))
+		for index, value := range enaS {
+			if val, ok := value.(string); ok {
+				res.EnabledNetworkModes[index] = val
+			}
+		}
+	}
+	if disI, ok := capabilities["disabled_network_modes"]; ok {
+		disS, ok := disI.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("expected disabled_network_modes to be []string, got %T", disS)
+		}
+		res.DisabledNetworkModes = make([]string, len(disS))
+		for index, value := range disS {
+			if val, ok := value.(string); ok {
+				res.DisabledNetworkModes[index] = val
 			}
 		}
 	}

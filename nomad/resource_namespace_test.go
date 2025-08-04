@@ -226,6 +226,8 @@ resource "nomad_namespace" "test" {
   capabilities {
     enabled_task_drivers  = ["docker", "exec"]
     disabled_task_drivers = ["raw_exec"]
+    enabled_network_modes = ["bridge", "none"]
+    disabled_network_modes = ["host"]
   }
 }
 `, name)
@@ -262,6 +264,8 @@ resource "nomad_namespace" "test" {
   capabilities {
     enabled_task_drivers  = ["docker", "exec"]
     disabled_task_drivers = ["raw_exec"]
+    enabled_network_modes = ["bridge", "none"]
+    disabled_network_modes = ["host"]
   }
 }
 `, name, quota)
@@ -315,8 +319,10 @@ func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 		}
 
 		expectedCapabilities := &api.NamespaceCapabilities{
-			EnabledTaskDrivers:  []string{"docker", "exec"},
-			DisabledTaskDrivers: []string{"raw_exec"},
+			EnabledTaskDrivers:   []string{"docker", "exec"},
+			DisabledTaskDrivers:  []string{"raw_exec"},
+			EnabledNetworkModes:  []string{"bridge", "none"},
+			DisabledNetworkModes: []string{"host"},
 		}
 		if diff := cmp.Diff(namespace.Capabilities, expectedCapabilities); diff != "" {
 			return fmt.Errorf("namespace capabilities mismatch (-want +got):\n%s", diff)
