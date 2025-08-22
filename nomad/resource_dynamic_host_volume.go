@@ -56,6 +56,8 @@ func resourceDynamicHostVolume() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{
 								string(api.HostVolumeAccessModeSingleNodeReader),
 								string(api.HostVolumeAccessModeSingleNodeWriter),
+								string(api.HostVolumeAccessModeSingleNodeSingleWriter),
+								string(api.HostVolumeAccessModeSingleNodeMultiWriter),
 							}, false),
 						},
 

@@ -101,7 +101,7 @@ resource "nomad_dynamic_host_volume" "test" {
   }
 
   capability {
-    access_mode     = "single-node-reader-only"
+    access_mode     = "single-node-multi-writer"
     attachment_mode = "file-system"
   }
 
@@ -169,7 +169,8 @@ func testResourceDynamicHostVolume_check(resourceName, name string) resource.Tes
 			return fmt.Errorf("constraint not set: %#v", vol.Constraints)
 		}
 		if len(vol.RequestedCapabilities) != 2 ||
-			vol.RequestedCapabilities[0].AccessMode != "single-node-writer" {
+			vol.RequestedCapabilities[0].AccessMode != "single-node-writer" ||
+			vol.RequestedCapabilities[1].AccessMode != "single-node-multi-writer" {
 			return fmt.Errorf("capabilities not set: %#v", vol.RequestedCapabilities)
 		}
 		if vol.RequestedCapacityMaxBytes != 12884901888 {
