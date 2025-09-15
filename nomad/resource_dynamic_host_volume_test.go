@@ -35,6 +35,11 @@ func TestResourceDynamicHostVolume_import(t *testing.T) {
 				ResourceName:      testResourceNameDynamicHostVolume,
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: func(state *terraform.State) (string, error) {
+					id, err := testResourceDynamicHostVolume_getStateID(state,
+						"nomad_dynamic_host_volume.test")
+					return id, err
+				},
 			},
 		},
 		CheckDestroy: testResourceDynamicHostVolume_checkDestroy(
@@ -216,6 +221,21 @@ func testResourceDynamicHostVolume_update_check(resourceName, name string) resou
 
 		return nil
 	}
+}
+
+func testResourceDynamicHostVolume_getStateID(s *terraform.State, resourceName string) (string, error) {
+	resourceState := s.Modules[0].Resources[resourceName]
+	if resourceState == nil {
+		return "", errors.New("resource not found in state")
+	}
+
+	instanceState := resourceState.Primary
+	if instanceState == nil {
+		return "", errors.New("resource has no primary instance")
+	}
+	ns := instanceState.Attributes["namespace"]
+
+	return instanceState.ID + "@" + ns, nil
 }
 
 func testResourceDynamicHostVolume_getID(s *terraform.State, resourceName string) (string, error) {

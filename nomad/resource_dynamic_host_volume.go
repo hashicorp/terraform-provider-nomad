@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
 func resourceDynamicHostVolume() *schema.Resource {
@@ -23,7 +24,7 @@ func resourceDynamicHostVolume() *schema.Resource {
 		Exists: resourceDynamicHostVolumeExists,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: helper.NamespacedImporterContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -226,6 +227,10 @@ func resourceDynamicHostVolumeWrite(d *schema.ResourceData, meta any) error {
 		return fmt.Errorf("error upserting node pool %q: %w", req.Volume.Name, err)
 	}
 	log.Printf("[DEBUG] Upserted dynamic host volume %q", resp.Volume.ID)
+
+	// note: this should be ID@namespace but by the time we realized that we'd
+	// already shipped it and there'll be backwards compatibility concerns with
+	// existing state
 	d.SetId(resp.Volume.ID)
 	d.Set("namespace", resp.Volume.Namespace)
 

@@ -47,6 +47,23 @@ The following arguments are supported:
   passed directly to the plugin to configure the volume. The details of these
   parameters are specific to the plugin.
 
+## Importing Dynamic Host Volumes
+
+Dynamic host volumes are imported using the pattern `<volume ID>@<namespace>` .
+
+```console
+$ terraform import nomad_dynamic_host_volume_registration.mysql mysql@my-namespace
+nomad_dynamic_host_volume_registration.mysql: Importing from ID "mysql@my-namespace"...
+nomad_dynamic_host_volume_registration.mysql: Import prepared!
+  Prepared nomad_dynamic_host_volume_registration for import
+nomad_dynamic_host_volume_registration.mysql: Refreshing state... [id=mysql@my-namespace]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
 
 [`access_mode`]: /nomad/docs/other-specifications/volume/capability#access_mode
 [`attachment_mode`]: /nomad/docs/other-specifications/volume/capability#attachment_mode

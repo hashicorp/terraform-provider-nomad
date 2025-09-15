@@ -4,6 +4,10 @@ IMPROVEMENTS:
 * resource/nomad_namespace: add `enabled_network_modes` and `disabled_network_modes` attributes ([#542](https://github.com/hashicorp/terraform-provider-nomad/pull/542))
 * provider: add `auth_jwt` configuration option to use a jwt to perform authentication against an auth method ([#536](https://github.com/hashicorp/terraform-provider-nomad/pull/536))
 
+BUGS:
+* resource/nomad_dynamic_host_volume: Fixed a bug where volumes in the non-default namespace could not be imported. ([#554](https://github.com/hashicorp/terraform-provider-nomad/pull/554))
+* resource/nomad_dynamic_host_volume_registration: Fixed a bug where volumes in the non-default namespace could not be imported. ([#554](https://github.com/hashicorp/terraform-provider-nomad/pull/554))
+
 ## 2.5.0 (April 16, 2025)
 
 BREAKING CHANGES:
