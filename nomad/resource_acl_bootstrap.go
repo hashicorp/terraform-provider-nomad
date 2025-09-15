@@ -47,7 +47,7 @@ func resourceACLBootstrapCreate(d *schema.ResourceData, meta interface{}) error 
 	log.Println("[DEBUG] Creating ACL Bootstrap token")
 	resp, _, err := client.ACLTokens().BootstrapOpts(token.BootstrapSecret, nil)
 	if err != nil {
-		return fmt.Errorf("error bootstrapping the cluster: %s", err.Error())
+		return fmt.Errorf("error bootstrapping the cluster: %w", err)
 	}
 	log.Printf("[DEBUG] Created ACL token AccessorID %q", resp.AccessorID)
 	d.SetId(resp.AccessorID)
