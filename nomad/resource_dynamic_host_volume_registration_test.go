@@ -32,6 +32,11 @@ func TestResourceDynamicHostVolumeRegistration_import(t *testing.T) {
 				ResourceName:      testResourceNameDynamicHostVolumeRegister,
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: func(state *terraform.State) (string, error) {
+					id, err := testResourceDynamicHostVolume_getStateID(state,
+						"nomad_dynamic_host_volume_registration.test")
+					return id, err
+				},
 			},
 		},
 		CheckDestroy: testResourceDynamicHostVolume_checkDestroy(

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
 
 func resourceDynamicHostVolumeRegistration() *schema.Resource {
@@ -22,7 +23,7 @@ func resourceDynamicHostVolumeRegistration() *schema.Resource {
 		Exists: resourceDynamicHostVolumeExists,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: helper.NamespacedImporterContext,
 		},
 
 		Schema: map[string]*schema.Schema{

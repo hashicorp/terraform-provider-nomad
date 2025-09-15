@@ -123,6 +123,23 @@ Creates and registers a dynamic host volume in Nomad.
   [`prevent_destroy`][tf_docs_prevent_destroy] directive to avoid accidental
   deletions.
 
+## Importing Dynamic Host Volumes
+
+Dynamic host volumes are imported using the pattern `<volume ID>@<namespace>` .
+
+```console
+$ terraform import nomad_dynamic_host_volume.mysql mysql@my-namespace
+nomad_dynamic_host_volume.mysql: Importing from ID "mysql@my-namespace"...
+nomad_dynamic_host_volume.mysql: Import prepared!
+  Prepared nomad_dynamic_host_volume for import
+nomad_dynamic_host_volume.mysql: Refreshing state... [id=mysql@my-namespace]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
 
 
 [tf_docs_prevent_destroy]: https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle#prevent_destroy
