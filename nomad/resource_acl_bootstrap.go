@@ -1,21 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package nomad
 
 import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceACLBootStrap() *schema.Resource {
+func resourceACLBootstrap() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceACLBootStrapCreate,
-		Delete: resourceACLBootStrapDelete,
-		Read:   resourceACLBootStrapRead,
-		Exists: resourceACLBootStrapExists,
+		Create: resourceACLBootstrapCreate,
+		Delete: resourceACLBootstrapDelete,
+		Read:   resourceACLBootstrapRead,
+		Exists: resourceACLBootstrapExists,
 
 		Schema: map[string]*schema.Schema{
 			"accessor_id": {
@@ -34,7 +36,7 @@ func resourceACLBootStrap() *schema.Resource {
 	}
 }
 
-func resourceACLBootStrapCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceACLBootstrapCreate(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -50,15 +52,15 @@ func resourceACLBootStrapCreate(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Created ACL token AccessorID %q", resp.AccessorID)
 	d.SetId(resp.AccessorID)
 
-	return resourceACLBootStrapRead(d, meta)
+	return resourceACLBootstrapRead(d, meta)
 }
 
 // not implemented as a cluster bootstrap can't be reverted
-func resourceACLBootStrapDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceACLBootstrapDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceACLBootStrapRead(d *schema.ResourceData, meta interface{}) error {
+func resourceACLBootstrapRead(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 	accessor := d.Id()
@@ -72,23 +74,13 @@ func resourceACLBootStrapRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Read ACL bootstrap token %q", accessor)
 
-	var expirationTime string
-	if token.ExpirationTime != nil {
-		expirationTime = token.ExpirationTime.Format(time.RFC3339)
-	}
-	token.SecretID = "00000000-0000-0000-0000-000000000000"
-
 	d.Set("accessor_id", token.AccessorID)
-	d.Set("secret_id", token.SecretID)
-	log.Printf("[DEBUG] TOKENID", token.SecretID)
-	d.Set("create_time", token.CreateTime.UTC().String())
-	d.Set("expiration_tll", token.ExpirationTTL.String())
-	d.Set("expiration_time", expirationTime)
+	d.Set("bootstrap_token", token.SecretID)
 
 	return nil
 }
 
-func resourceACLBootStrapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceACLBootstrapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
