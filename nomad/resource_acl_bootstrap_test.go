@@ -5,6 +5,7 @@ package nomad
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -17,8 +18,9 @@ func TestResourceACLBootstrap_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceACLBootstrap_initialConfig(),
-				Check:  testResourceACLBootstrap_initialCheck(),
+				Config:      testResourceACLBootstrap_initialConfig(),
+				Check:       testResourceACLBootstrap_initialCheck(),
+				ExpectError: regexp.MustCompile("(connection refused|ACL bootstrap has already been performed)"),
 			},
 		},
 		// Note: We don't include CheckDestroy because bootstrap cannot be reverted

@@ -47,6 +47,10 @@ func resourceACLBootstrapCreate(d *schema.ResourceData, meta interface{}) error 
 	log.Println("[DEBUG] Creating ACL Bootstrap token")
 	resp, _, err := client.ACLTokens().BootstrapOpts(token.BootstrapSecret, nil)
 	if err != nil {
+		// Check if bootstrap was already done
+		if strings.Contains(err.Error(), "ACL bootstrap already done") {
+			return fmt.Errorf("ACL bootstrap has already been performed on this cluster. Cannot bootstrap again")
+		}
 		return fmt.Errorf("error bootstrapping the cluster: %w", err)
 	}
 	log.Printf("[DEBUG] Created ACL token AccessorID %q", resp.AccessorID)
