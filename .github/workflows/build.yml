@@ -121,6 +121,8 @@ jobs:
             goarch: arm64
           - goos: windows
             goarch: arm
+          - goos: darwin
+            goarch: 386
 
     name: Go ${{ needs.get-go-version.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
