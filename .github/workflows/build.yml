@@ -123,6 +123,8 @@ jobs:
             goarch: arm
           - goos: darwin
             goarch: 386
+          - goos: darwin
+            goarch: arm
 
     name: Go ${{ needs.get-go-version.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
