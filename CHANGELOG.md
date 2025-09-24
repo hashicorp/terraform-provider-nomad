@@ -1,4 +1,5 @@
-## 2.5.1 (Unreleased)
+## UNRELEASED
+## 2.5.1 (Septembre 24, 2025)
 
 IMPROVEMENTS:
 * resource/nomad_namespace: add `enabled_network_modes` and `disabled_network_modes` attributes ([#542](https://github.com/hashicorp/terraform-provider-nomad/pull/542))
