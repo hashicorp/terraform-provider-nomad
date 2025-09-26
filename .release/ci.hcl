@@ -19,6 +19,7 @@ project "terraform-provider-nomad" {
     organization     = "hashicorp"
     repository       = "terraform-provider-nomad" 
     release_branches = ["main", "release/**"]
+  }
 }
 
 event "merge" {
