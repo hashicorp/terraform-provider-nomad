@@ -13,11 +13,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	jsoniter "github.com/json-iterator/go"
 	"golang.org/x/exp/maps"
 
 	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
@@ -869,6 +871,35 @@ func parseJobspec(raw string, config JobParserConfig) (*api.Job, error) {
 	return job, nil
 }
 
+func decodeDuration(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
+	switch iter.WhatIsNext() {
+	case jsoniter.NumberValue:
+		// Handle int64 (nanoseconds)
+		intVal := iter.ReadInt64()
+		*((*time.Duration)(ptr)) = time.Duration(intVal)
+
+	case jsoniter.StringValue:
+		str := iter.ReadString()
+
+		// Try parsing as int64 first
+		if v, err := strconv.ParseInt(str, 10, 64); err == nil {
+			*((*time.Duration)(ptr)) = time.Duration(v)
+			return
+		}
+
+		// Parse as duration string
+		val, err := time.ParseDuration(str)
+		if err != nil {
+			iter.ReportError("decodeDuration", err.Error())
+			return
+		}
+		*((*time.Duration)(ptr)) = val
+
+	default:
+		iter.ReportError("decodeDuration", "expect number or string")
+	}
+}
+
 func parseJSONJobspec(raw string) (*api.Job, error) {
 	// `nomad job run -output` returns a jobspec with a "Job" root, so
 	// partially parse the input JSON to detect if we have this root.
@@ -885,6 +916,8 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 		jobBytes = []byte(raw)
 	}
 
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	jsoniter.RegisterTypeDecoderFunc("time.Duration", decodeDuration)
 	// Parse actual job.
 	var job api.Job
 	err = json.Unmarshal(jobBytes, &job)
