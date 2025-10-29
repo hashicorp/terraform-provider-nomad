@@ -1055,7 +1055,7 @@ resource "nomad_job" "test" {
 	"MinHealthyTime": "20s",
 	"HealthyDeadline": "10000000000000000",
 	"AutoRevert": true,
-	"MaxParallel": 2,
+	"MaxParallel": 2
   }
 }
 EOT
