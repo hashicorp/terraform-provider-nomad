@@ -1053,7 +1053,7 @@ resource "nomad_job" "test" {
   "Update": {
 	"Stagger": 30000000000,
 	"MinHealthyTime": "20s",
-	"HealthyDeadline": "10000000000000000",
+	"HealthyDeadline": "10000000000",
 	"AutoRevert": true,
 	"MaxParallel": 2
   }
