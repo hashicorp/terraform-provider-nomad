@@ -37,6 +37,8 @@ The following attributes are exported:
   - `description` `(string)` - The description of the node pool.
   - `meta` `(map[string]string)` - Arbitrary KV metadata associated with the
     node pool.
+  - `node_identity_ttl` `(string)` - The TTL applied to node identities issued to
+    nodes in this pool.
   - `scheduler_config` `(block)` - Scheduler configuration for the node pool.
     - `scheduler_algorithm` `(string)` - The scheduler algorithm used in the node
       pool. If empty or not defined the global cluster configuration is used.

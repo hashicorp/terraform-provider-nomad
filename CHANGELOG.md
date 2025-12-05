@@ -1,5 +1,9 @@
 ## UNRELEASED
 
+IMPROVEMENTS:
+* data source/nomad_node_pool: Added the `node_identity_ttl` argument ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
+* resource/nomad_node_pool: Added the `node_identity_ttl` argument to configure the node identity TTL for nodes in the pool ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
+
 ## 2.5.2 (November 13, 2025)
 
 IMPROVEMENTS:
