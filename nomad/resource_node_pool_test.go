@@ -130,8 +130,9 @@ resource "nomad_node_pool" "desc_too_long" {
 func testResourceNodePoolConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_node_pool" "test" {
-  name        = "%s"
-  description = "Terraform test node pool"
+  name              = "%s"
+  description       = "Terraform test node pool"
+  node_identity_ttl = "168h0m0s"
 
   meta = {
     test = "true"
@@ -176,6 +177,11 @@ func testResourceNodePoolCheck_basic(name string) resource.TestCheckFunc {
 		}
 		if diff := cmp.Diff(pool.Meta, expectedMeta); diff != "" {
 			return fmt.Errorf("meta mismatch (-want +got):\n%s", diff)
+		}
+
+		expectedTTL := "168h0m0s"
+		if pool.NodeIdentityTTL.String() != expectedTTL {
+			return fmt.Errorf("expected node identity TTL to be %q, got %q", expectedTTL, pool.NodeIdentityTTL.String())
 		}
 
 		return nil

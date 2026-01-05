@@ -34,6 +34,11 @@ func dataSourceNodePool() *schema.Resource {
 				},
 				Computed: true,
 			},
+			"node_identity_ttl": {
+				Description: "The TTL applied to node identities issued to nodes in this pool.",
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 			"scheduler_config": {
 				Description: "Scheduler configuration for the node pool.",
 				Type:        schema.TypeSet,
@@ -79,6 +84,13 @@ func dataSourceNodePoolRead(d *schema.ResourceData, meta any) error {
 	sw.Set("description", pool.Description)
 	sw.Set("meta", pool.Meta)
 	sw.Set("scheduler_config", flattenNodePoolSchedulerConfiguration(pool.SchedulerConfiguration))
+
+	// The identity TTL was introduced in 1.11.0, so only set it if it's
+	// non-zero to ensure this provider does not panic with older servers.
+	if pool.NodeIdentityTTL != 0 {
+		sw.Set("node_identity_ttl", pool.NodeIdentityTTL.String())
+	}
+
 	if err := sw.Error(); err != nil {
 		return err
 	}

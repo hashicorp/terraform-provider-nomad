@@ -36,6 +36,7 @@ func TestDataSourceNodePool(t *testing.T) {
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "description", "Terraform test node pool"),
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "meta.%", "1"),
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "meta.test", "true"),
+					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "node_identity_ttl", "168h0m0s"),
 					resource.TestCheckResourceAttr("data.nomad_node_pool.test", "scheduler_config.#", "0"),
 				),
 			},
@@ -90,8 +91,9 @@ data "nomad_node_pool" "doesnt_exist" {
 func testDataSourceNodePoolConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_node_pool" "test" {
-  name        = "%s"
-  description = "Terraform test node pool"
+  name              = "%s"
+  description       = "Terraform test node pool"
+  node_identity_ttl = "168h0m0s"
 
   meta = {
     test = "true"

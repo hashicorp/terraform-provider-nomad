@@ -59,6 +59,12 @@ func resourceNodePool() *schema.Resource {
 				},
 				Optional: true,
 			},
+			"node_identity_ttl": {
+				Description: "The TTL applied to node identities issued to nodes in this pool.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+			},
 			"scheduler_config": {
 				Description: "Scheduler configuration for the node pool.",
 				Type:        schema.TypeList,
@@ -120,6 +126,12 @@ func resourceNodePoolRead(d *schema.ResourceData, meta any) error {
 	sw.Set("meta", pool.Meta)
 	sw.Set("scheduler_config", flattenNodePoolSchedulerConfiguration(pool.SchedulerConfiguration))
 
+	// The identity TTL was introduced in 1.11.0, so only set it if it's
+	// non-zero to ensure this provider does not panic with older servers.
+	if pool.NodeIdentityTTL != 0 {
+		sw.Set("node_identity_ttl", pool.NodeIdentityTTL.String())
+	}
+
 	return sw.Error()
 }
 
@@ -141,6 +153,16 @@ func resourceNodePoolWrite(d *schema.ResourceData, meta any) error {
 		Description:            d.Get("description").(string),
 		Meta:                   m,
 		SchedulerConfiguration: schedConfig,
+	}
+
+	// Identify and parse the node identity TTL if this has been set by the
+	// user.
+	if ttlString := d.Get("node_identity_ttl").(string); ttlString != "" {
+		ttl, err := time.ParseDuration(ttlString)
+		if err != nil {
+			return fmt.Errorf("failed to parse v: %v", err)
+		}
+		pool.NodeIdentityTTL = ttl
 	}
 
 	log.Printf("[DEBUG] Upserting node pool %q", pool.Name)
