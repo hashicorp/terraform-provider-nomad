@@ -19,7 +19,7 @@ EOF
 
     sudo -Eb bash -c 'nomad agent -dev -acl-enabled \
       -data-dir=/tmp/nomad/data \
-      -config=/tmp/nomad-config.hcl \
+      -config=/tmp/nomad-config.hcl &
       echo $! > /tmp/nomad-test.pid'
 
     # Give some time for the process to initialize
