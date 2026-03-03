@@ -3,6 +3,8 @@
 IMPROVEMENTS:
 * resource/nomad_acl_policy: make `job_id` optional in `job_acl` block to allow policies that apply to all jobs in a namespace ([#580](https://github.com/hashicorp/terraform-provider-nomad/pull/580))
 * resource/nomad_namespace: add `vault_config` and `consul_config` blocks to configure Vault and Consul cluster permissions (Nomad Enterprise only) ([#581](https://github.com/hashicorp/terraform-provider-nomad/pull/581))
+* **New Data Source**: `nomad_node` to look up a single Nomad node by ID ([#579](https://github.com/hashicorp/terraform-provider-nomad/pull/579))
+* **New Data Source**: `nomad_nodes` to list Nomad nodes with optional prefix, filter, os, and resources parameters ([#579](https://github.com/hashicorp/terraform-provider-nomad/pull/579))
 * data source/nomad_node_pool: Added the `node_identity_ttl` argument ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
 * resource/nomad_node_pool: Added the `node_identity_ttl` argument to configure the node identity TTL for nodes in the pool ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
 * resource/nomad_quota_specification: add support for all `QuotaResources` fields including `secrets_mb`, `devices`, `numa`, and `storage` ([#584](https://github.com/hashicorp/terraform-provider-nomad/pull/584))
