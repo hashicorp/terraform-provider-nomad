@@ -59,9 +59,9 @@ func resourceACLPolicy() *schema.Resource {
 							Default:     "default",
 						},
 						"job_id": {
-							Description: "Job",
+							Description: "Job. If empty, the policy applies to all jobs in the namespace.",
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 						},
 						"group": {
 							Description: "Group",
