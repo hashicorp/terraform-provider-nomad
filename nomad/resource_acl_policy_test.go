@@ -111,6 +111,109 @@ func TestResourceACLPolicy_update(t *testing.T) {
 	})
 }
 
+func TestResourceACLPolicy_namespaceOnlyJobACL(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceACLPolicy_namespaceOnlyJobACLConfig(name),
+				Check:  testResourceACLPolicy_namespaceOnlyJobACLCheck(name),
+			},
+		},
+		CheckDestroy: testResourceACLPolicy_checkDestroy(name),
+	})
+}
+
+func testResourceACLPolicy_namespaceOnlyJobACLConfig(name string) string {
+	return fmt.Sprintf(`
+resource "nomad_acl_policy" "test" {
+  name = "%s"
+  description = "A policy that applies to all jobs in a namespace"
+  job_acl {
+    namespace = "default"
+  }
+  rules_hcl = <<EOT
+namespace "default" {
+  policy = "read"
+  capabilities = ["submit-job"]
+}
+EOT
+}
+`, name)
+}
+
+func testResourceACLPolicy_namespaceOnlyJobACLCheck(name string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		const (
+			description = "A policy that applies to all jobs in a namespace"
+			rules_hcl   = `namespace "default" {
+  policy = "read"
+  capabilities = ["submit-job"]
+}
+`
+		)
+		resourceState := s.Modules[0].Resources["nomad_acl_policy.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		if instanceState.ID != name {
+			return fmt.Errorf("expected ID to be %q, got %q", name, instanceState.ID)
+		}
+
+		if instanceState.Attributes["name"] != name {
+			return fmt.Errorf("expected name to be %q, is %q in state", name, instanceState.Attributes["name"])
+		}
+
+		if instanceState.Attributes["description"] != description {
+			return fmt.Errorf("expected description to be %q, is %q in state", description, instanceState.Attributes["description"])
+		}
+
+		if instanceState.Attributes["job_acl.#"] != "1" {
+			return fmt.Errorf("expected job_acl to be populated but it is nil")
+		}
+
+		if instanceState.Attributes["job_acl.0.namespace"] != "default" {
+			return fmt.Errorf("expected job_acl.0.namespace to be %q, is %q in state", "default", instanceState.Attributes["job_acl.0.namespace"])
+		}
+
+		if instanceState.Attributes["job_acl.0.job_id"] != "" {
+			return fmt.Errorf("expected job_acl.0.job_id to be empty, is %q in state", instanceState.Attributes["job_acl.0.job_id"])
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		policy, _, err := client.ACLPolicies().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back policy %q: %s", name, err)
+		}
+
+		if policy.Name != name {
+			return fmt.Errorf("expected name to be %q, is %q in API", name, policy.Name)
+		}
+		if policy.Description != description {
+			return fmt.Errorf("expected description to be %q, is %q in API", description, policy.Description)
+		}
+		if policy.JobACL == nil {
+			return fmt.Errorf("expected JobACL to be set, but it is nil")
+		}
+		if policy.JobACL.Namespace != "default" {
+			return fmt.Errorf("expected JobACL.Namespace to be %q, is %q in API", "default", policy.JobACL.Namespace)
+		}
+		if policy.JobACL.JobID != "" {
+			return fmt.Errorf("expected JobACL.JobID to be empty, is %q in API", policy.JobACL.JobID)
+		}
+
+		return nil
+	}
+}
+
 func testResourceACLPolicy_initialConfig(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_acl_policy" "test" {
