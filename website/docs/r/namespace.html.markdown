@@ -66,6 +66,8 @@ The following arguments are supported:
 - `capabilities` `(block: <optional>)` - A block of capabilities for the namespace. Can't
   be repeated. See below for the structure of this block.
 - `node_pool_config` `(block: <optional>)` - A block with node pool configuration for the namespace (Nomad Enterprise only).
+- `vault_config` `(block: <optional>)` - A block with Vault configuration for the namespace (Nomad Enterprise only).
+- `consul_config` `(block: <optional>)` - A block with Consul configuration for the namespace (Nomad Enterprise only).
 
 
 ### `capabilities` blocks
@@ -86,3 +88,19 @@ namespace.
 - `default` `(string: <optional>)` - The default node pool for jobs that don't define one.
 - `allowed` `([]string: <optional>)` - The list of node pools that are allowed to be used in this namespace.
 - `denied` `([]string: <optional>)` - The list of node pools that are not allowed to be used in this namespace.
+
+### `vault_config` blocks
+
+The `vault_config` block describes the Vault configuration for the namespace.
+
+- `default` `(string: <optional>)` - The Vault cluster to use when none is specified in the job.
+- `allowed` `([]string: <optional>)` - The list of Vault clusters allowed to be used in this namespace. Cannot be used with `denied`.
+- `denied` `([]string: <optional>)` - The list of Vault clusters not allowed to be used in this namespace. Cannot be used with `allowed`.
+
+### `consul_config` blocks
+
+The `consul_config` block describes the Consul configuration for the namespace.
+
+- `default` `(string: <optional>)` - The Consul cluster to use when none is specified in the job.
+- `allowed` `([]string: <optional>)` - The list of Consul clusters allowed to be used in this namespace. Cannot be used with `denied`.
+- `denied` `([]string: <optional>)` - The list of Consul clusters not allowed to be used in this namespace. Cannot be used with `allowed`.

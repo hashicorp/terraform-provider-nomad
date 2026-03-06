@@ -34,3 +34,15 @@ The following attributes are exported:
   * `disabled_task_drivers` `([]string)` - Task drivers disabled for the namespace.
   * `enabled_network_modes` `([]string)` - Network modes enabled for the namespace.
   * `disabled_network_modes` `([]string)` - Network modes disabled for the namespace.
+* `node_pool_config` `(block)` - Node pool configuration for the namespace.
+  * `default` `(string)` - The default node pool for jobs that don't define one.
+  * `allowed` `([]string)` - The list of node pools allowed to be used in this namespace.
+  * `denied` `([]string)` - The list of node pools not allowed to be used in this namespace.
+* `vault_config` `(block)` - Vault configuration for the namespace.
+  * `default` `(string)` - The Vault cluster to use when none is specified in the job.
+  * `allowed` `([]string)` - The list of Vault clusters allowed to be used in this namespace.
+  * `denied` `([]string)` - The list of Vault clusters not allowed to be used in this namespace.
+* `consul_config` `(block)` - Consul configuration for the namespace.
+  * `default` `(string)` - The Consul cluster to use when none is specified in the job.
+  * `allowed` `([]string)` - The list of Consul clusters allowed to be used in this namespace.
+  * `denied` `([]string)` - The list of Consul clusters not allowed to be used in this namespace.
