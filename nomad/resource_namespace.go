@@ -78,6 +78,10 @@ func resourceNamespace() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem:        resourceNamespaceVaultConfig(),
 				MaxItems:    1,
+
+				// Set as computed because in Nomad Enterprise the default vault
+				// cluster is set to `default` if not set.
+				Computed: true,
 			},
 			"consul_config": {
 				Description: "Consul configuration for the namespace.",
@@ -85,6 +89,10 @@ func resourceNamespace() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem:        resourceNamespaceConsulConfig(),
 				MaxItems:    1,
+
+				// Set as computed because in Nomad Enterprise the default consul
+				// cluster is set to `default` if not set.
+				Computed: true,
 			},
 		},
 	}
