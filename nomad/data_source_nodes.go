@@ -109,12 +109,36 @@ func dataSourceNodes() *schema.Resource {
 							Computed: true,
 						},
 						"drivers": {
-							Description: "A map of driver name to whether it is detected.",
-							Type:        schema.TypeMap,
-							Elem: &schema.Schema{
-								Type: schema.TypeBool,
+							Description: "A list of driver information for the node.",
+							Type:        schema.TypeList,
+							Computed:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Description: "The driver name.",
+										Type:        schema.TypeString,
+										Computed:    true,
+									},
+									"detected": {
+										Description: "Whether the driver is detected.",
+										Type:        schema.TypeBool,
+										Computed:    true,
+									},
+									"healthy": {
+										Description: "Whether the driver is healthy.",
+										Type:        schema.TypeBool,
+										Computed:    true,
+									},
+									"attributes": {
+										Description: "Driver-specific attributes.",
+										Type:        schema.TypeMap,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Computed: true,
+									},
+								},
 							},
-							Computed: true,
 						},
 						"node_resources": {
 							Description: "Resources available on the node. Only populated when resources parameter is true.",
@@ -348,11 +372,16 @@ func dataSourceNodesRead(d *schema.ResourceData, meta any) error {
 
 	nodes := make([]map[string]any, len(resp))
 	for i, node := range resp {
-		// Flatten drivers to a simple map of driver name -> detected (bool)
-		drivers := make(map[string]bool)
+		// Flatten drivers to a list with name, detected, healthy, health_description, and attributes
+		drivers := make([]map[string]any, 0, len(node.Drivers))
 		for name, info := range node.Drivers {
 			if info != nil {
-				drivers[name] = info.Detected
+				drivers = append(drivers, map[string]any{
+					"name":       name,
+					"detected":   info.Detected,
+					"healthy":    info.Healthy,
+					"attributes": info.Attributes,
+				})
 			}
 		}
 
