@@ -49,8 +49,16 @@ The following attributes are exported:
 - `attributes` `(map of string)` - A map of attributes for the node, including
   OS and hardware fingerprint information.
 - `meta` `(map of string)` - A map of metadata for the node.
-- `drivers` `(map of bool)` - A map of driver name to whether it is detected.
-- `host_volumes` `(map of string)` - A map of host volume name to its path.
+- `drivers` `(list)` - A list of driver information for the node.
+  - `name` `(string)` - The driver name.
+  - `detected` `(bool)` - Whether the driver is detected.
+  - `healthy` `(bool)` - Whether the driver is healthy.
+  - `attributes` `(map of string)` - Driver-specific attributes.
+- `host_volumes` `(list)` - A list of host volumes on the node.
+  - `name` `(string)` - The name of the host volume.
+  - `path` `(string)` - The path of the host volume.
+  - `read_only` `(bool)` - Whether the host volume is read-only.
+  - `id` `(string)` - The ID of the host volume (set for dynamic host volumes only).
 - `node_resources` `(list)` - Resources available on the node.
   - `cpu` `(list)` - CPU resources on the node.
     - `cpu_shares` `(int)` - Total CPU shares available.
