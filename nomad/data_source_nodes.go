@@ -101,7 +101,7 @@ func dataSourceNodes() *schema.Resource {
 							Computed:    true,
 						},
 						"attributes": {
-							Description: "A map of attributes for the node.",
+							Description: "A map of attributes for the node. OS-related attributes are only included when the os parameter is set to true.",
 							Type:        schema.TypeMap,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
