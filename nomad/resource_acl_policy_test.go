@@ -176,6 +176,10 @@ func testResourceACLPolicy_namespaceOnlyJobACLCheck(name string) resource.TestCh
 			return fmt.Errorf("expected description to be %q, is %q in state", description, instanceState.Attributes["description"])
 		}
 
+		if instanceState.Attributes["rules_hcl"] != rules_hcl {
+			return fmt.Errorf("expected rules_hcl to be %q, is %q in state", rules_hcl, instanceState.Attributes["rules_hcl"])
+		}
+
 		if instanceState.Attributes["job_acl.#"] != "1" {
 			return fmt.Errorf("expected job_acl to be populated but it is nil")
 		}
@@ -199,6 +203,9 @@ func testResourceACLPolicy_namespaceOnlyJobACLCheck(name string) resource.TestCh
 		}
 		if policy.Description != description {
 			return fmt.Errorf("expected description to be %q, is %q in API", description, policy.Description)
+		}
+		if policy.Rules != rules_hcl {
+			return fmt.Errorf("expected rules_hcl to be %q, is %q in API", rules_hcl, policy.Rules)
 		}
 		if policy.JobACL == nil {
 			return fmt.Errorf("expected JobACL to be set, but it is nil")
