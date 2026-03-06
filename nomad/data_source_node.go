@@ -86,20 +86,65 @@ func dataSourceNode() *schema.Resource {
 			},
 
 			"drivers": {
-				Description: "A map of driver information for the node.",
-				Type:        schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeBool,
+				Description: "A list of driver information for the node.",
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Description: "The driver name.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"detected": {
+							Description: "Whether the driver is detected.",
+							Type:        schema.TypeBool,
+							Computed:    true,
+						},
+						"healthy": {
+							Description: "Whether the driver is healthy.",
+							Type:        schema.TypeBool,
+							Computed:    true,
+						},
+						"attributes": {
+							Description: "Driver-specific attributes.",
+							Type:        schema.TypeMap,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Computed: true,
+						},
+					},
 				},
-				Computed: true,
 			},
 			"host_volumes": {
-				Description: "A map of host volumes on the node.",
-				Type:        schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Description: "A list of host volumes on the node.",
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Description: "The name of the host volume.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"path": {
+							Description: "The path of the host volume.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"read_only": {
+							Description: "Whether the host volume is read-only.",
+							Type:        schema.TypeBool,
+							Computed:    true,
+						},
+						"id": {
+							Description: "The ID of the host volume (set for dynamic host volumes only).",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+					},
 				},
-				Computed: true,
 			},
 			"node_resources": {
 				Description: "Resources available on the node.",
@@ -324,20 +369,30 @@ func dataSourceNodeRead(d *schema.ResourceData, meta any) error {
 	sw.Set("attributes", node.Attributes)
 	sw.Set("meta", node.Meta)
 
-	// Flatten drivers to a simple map of driver name -> detected (bool)
-	drivers := make(map[string]bool)
+	// Flatten drivers to a list with name, detected, healthy, and attributes
+	drivers := make([]map[string]any, 0, len(node.Drivers))
 	for name, info := range node.Drivers {
 		if info != nil {
-			drivers[name] = info.Detected
+			drivers = append(drivers, map[string]any{
+				"name":       name,
+				"detected":   info.Detected,
+				"healthy":    info.Healthy,
+				"attributes": info.Attributes,
+			})
 		}
 	}
 	sw.Set("drivers", drivers)
 
-	// Flatten host volumes to a simple map of volume name -> path
-	hostVolumes := make(map[string]string)
+	// Flatten host volumes to a list with name, path, read_only, and id
+	hostVolumes := make([]map[string]any, 0, len(node.HostVolumes))
 	for name, info := range node.HostVolumes {
 		if info != nil {
-			hostVolumes[name] = info.Path
+			hostVolumes = append(hostVolumes, map[string]any{
+				"name":      name,
+				"path":      info.Path,
+				"read_only": info.ReadOnly,
+				"id":        info.ID,
+			})
 		}
 	}
 	sw.Set("host_volumes", hostVolumes)
