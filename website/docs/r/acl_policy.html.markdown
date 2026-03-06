@@ -58,7 +58,8 @@ information. The following arguments are supported.
 - `job_id` `(string: <optional>)` - Attach the policy to this job. If empty, the
   policy applies to all jobs in the namespace.
 - `group` `(string: <optional>)` - Attach the policy to this group in the
-  job. Required if `task` is set.
+  job. Requires `job_id` to be set.
 - `task` `(string: <optional>)` - Attach the policy to this task in the job.
+  Requires `group` to be set.
 
 [nomad_docs_wi]: https://www.nomadproject.io/docs/concepts/workload-identity#workload-associated-acl-policies
