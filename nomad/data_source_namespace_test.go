@@ -114,6 +114,120 @@ data "nomad_namespace" "test" {
 	})
 }
 
+func TestDataSourceNamespace_vaultConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  vault_config {
+    default = "prod-vault"
+    allowed = ["prod", "staging"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.0.default", "prod-vault"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.0.allowed.#", "2"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  vault_config {
+    default = "prod-vault"
+    denied  = ["dev", "test"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.0.default", "prod-vault"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.0.denied.#", "2"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "vault_config.0.allowed.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestDataSourceNamespace_consulConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  consul_config {
+    default = "prod-consul"
+    allowed = ["prod", "staging"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.0.default", "prod-consul"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.0.allowed.#", "2"),
+				),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  consul_config {
+    default = "prod-consul"
+    denied  = ["dev", "test"]
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "name", name),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.#", "1"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.0.default", "prod-consul"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.0.denied.#", "2"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "consul_config.0.allowed.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 const testDataSourceDefaultNamespaceConfig = `
 data "nomad_namespace" "test" {
 	name = "default"
