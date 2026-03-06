@@ -508,3 +508,227 @@ func testResourceNamespace_nodePoolConfigCheck(name string, expected *api.Namesp
 		return nil
 	}
 }
+
+func TestResourceNamespace_vaultConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  vault_config {
+    default = "default"
+    allowed = ["prod"]
+    denied  = ["dev"]
+  }
+}
+`, name),
+				ExpectError: regexp.MustCompile(".+allowed.+conflicts with.+denied"),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  vault_config {
+    default = "default"
+    allowed = ["prod", "staging"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_vaultConfigCheck(name, &api.NamespaceVaultConfiguration{
+					Default: "default",
+					Allowed: []string{"prod", "staging"},
+					Denied:  nil,
+				}),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  vault_config {
+    default = "default"
+    denied  = ["dev", "test"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_vaultConfigCheck(name, &api.NamespaceVaultConfiguration{
+					Default: "default",
+					Denied:  []string{"dev", "test"},
+					Allowed: nil,
+				}),
+			},
+		},
+		CheckDestroy: testResourceNamespace_checkDestroy(name),
+	})
+}
+
+func TestResourceNamespace_consulConfig(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  consul_config {
+    default = "default"
+    allowed = ["prod"]
+    denied  = ["dev"]
+  }
+}
+`, name),
+				ExpectError: regexp.MustCompile(".+allowed.+conflicts with.+denied"),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  consul_config {
+    default = "default"
+    allowed = ["prod", "staging"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_consulConfigCheck(name, &api.NamespaceConsulConfiguration{
+					Default: "default",
+					Allowed: []string{"prod", "staging"},
+					Denied:  nil,
+				}),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  consul_config {
+    default = "default"
+    denied  = ["dev", "test"]
+  }
+}
+`, name),
+				Check: testResourceNamespace_consulConfigCheck(name, &api.NamespaceConsulConfiguration{
+					Default: "default",
+					Denied:  []string{"dev", "test"},
+					Allowed: nil,
+				}),
+			},
+		},
+		CheckDestroy: testResourceNamespace_checkDestroy(name),
+	})
+}
+
+func testResourceNamespace_vaultConfigCheck(name string, expected *api.NamespaceVaultConfiguration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_namespace.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		if instanceState.ID != name {
+			return fmt.Errorf("expected ID to be %q, got %q", name, instanceState.ID)
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %s", name, err)
+		}
+
+		if namespace.Name != name {
+			return fmt.Errorf("expected name to be %q, is %q in API", name, namespace.Name)
+		}
+
+		vaultConfig := namespace.VaultConfiguration
+		if vaultConfig == nil {
+			return errors.New("expected vault configuration to exist")
+		}
+
+		sortVaultConfigSets := cmp.Transformer(
+			"Sort",
+			func(vaultConfig *api.NamespaceVaultConfiguration) *api.NamespaceVaultConfiguration {
+				allowed := append([]string(nil), vaultConfig.Allowed...)
+				denied := append([]string(nil), vaultConfig.Denied...)
+				sort.Strings(allowed)
+				sort.Strings(denied)
+				return &api.NamespaceVaultConfiguration{
+					Default: vaultConfig.Default,
+					Allowed: allowed,
+					Denied:  denied,
+				}
+			},
+		)
+		if diff := cmp.Diff(vaultConfig, expected, sortVaultConfigSets); diff != "" {
+			return fmt.Errorf("vault configuration mismatch (-want +got):\n%s", diff)
+		}
+
+		return nil
+	}
+}
+
+func testResourceNamespace_consulConfigCheck(name string, expected *api.NamespaceConsulConfiguration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_namespace.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		if instanceState.ID != name {
+			return fmt.Errorf("expected ID to be %q, got %q", name, instanceState.ID)
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %s", name, err)
+		}
+
+		if namespace.Name != name {
+			return fmt.Errorf("expected name to be %q, is %q in API", name, namespace.Name)
+		}
+
+		consulConfig := namespace.ConsulConfiguration
+		if consulConfig == nil {
+			return errors.New("expected consul configuration to exist")
+		}
+
+		sortConsulConfigSets := cmp.Transformer(
+			"Sort",
+			func(consulConfig *api.NamespaceConsulConfiguration) *api.NamespaceConsulConfiguration {
+				allowed := append([]string(nil), consulConfig.Allowed...)
+				denied := append([]string(nil), consulConfig.Denied...)
+				sort.Strings(allowed)
+				sort.Strings(denied)
+				return &api.NamespaceConsulConfiguration{
+					Default: consulConfig.Default,
+					Allowed: allowed,
+					Denied:  denied,
+				}
+			},
+		)
+		if diff := cmp.Diff(consulConfig, expected, sortConsulConfigSets); diff != "" {
+			return fmt.Errorf("consul configuration mismatch (-want +got):\n%s", diff)
+		}
+
+		return nil
+	}
+}
