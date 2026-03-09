@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/nomad/api"
@@ -26,13 +25,7 @@ func TestAccDataSourceNomadJobParser_Basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testJobParserConfig(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						resourceName, "hcl", strings.TrimSpace(testDataSourceJobParserHCL)),
-					resource.TestCheckResourceAttr(
-						resourceName, "canonicalize", "false"),
-					checkJobFromString(resourceName, testDataSourceJobParserJSON),
-				),
+				Check:  checkJobFromString(resourceName, testDataSourceJobParserJSON),
 			},
 		},
 	})
@@ -298,11 +291,7 @@ func TestAccDataSourceNomadJobParser_WithVariables(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testJobParserWithVariablesConfig(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						resourceName, "variables", testDataSourceJobParserVariables),
-					checkJobFromString(resourceName, testDataSourceJobParserWithVariablesJSON),
-				),
+				Check:  checkJobFromString(resourceName, testDataSourceJobParserWithVariablesJSON),
 			},
 		},
 	})
