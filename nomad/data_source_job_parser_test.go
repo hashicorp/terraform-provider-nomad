@@ -349,7 +349,8 @@ job "example" {
 }`
 
 const testDataSourceJobParserVariables = `datacenter = "dc1"
-image = "redis:7.0"`
+image = "redis:7.0"
+`
 
 const testDataSourceJobParserWithVariablesJSON = `{
   "Stop": null,
