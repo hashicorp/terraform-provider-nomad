@@ -73,9 +73,6 @@ func dataSourceJobParserRead(d *schema.ResourceData, meta interface{}) error {
 	jobJSONString := string(jobJSON)
 
 	d.SetId(*job.ID)
-	d.Set("hcl", strings.TrimSpace(hcl))
-	d.Set("canonicalize", canonicalize)
-	d.Set("variables", variables)
 	d.Set("json", strings.TrimSpace(jobJSONString))
 
 	return nil
