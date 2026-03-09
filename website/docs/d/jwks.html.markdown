@@ -25,9 +25,11 @@ The following attributes are exported:
 * `keys`: `list of maps` a list of JWK keys in structured format: see [RFC7517](https://datatracker.ietf.org/doc/html/rfc7517) for the
 JWK field meanings.
   * `key_use` `(string)` - JWK field `use`
-  * `key_type` `(string)` - JWK field `kty`
+  * `key_type` `(string)` - JWK field `kty` (e.g. `RSA`, `OKP`)
   * `key_id` `(string)` - JWK field `kid`
-  * `algorithm` `(string)` - JWK field `alg`
-  * `modulus` `(string)` - JWK field `n`
-  * `exponent` `(string)` - JWK field `e`
+  * `algorithm` `(string)` - JWK field `alg` (e.g. `RS256`, `EdDSA`)
+  * `modulus` `(string)` - JWK field `n` (RSA only)
+  * `exponent` `(string)` - JWK field `e` (RSA only)
+  * `curve` `(string)` - JWK field `crv` (EdDSA only, e.g. `Ed25519`)
+  * `x` `(string)` - JWK field `x` (EdDSA only, the public key)
 * `pem_keys`: `list of strings` a list JWK keys rendered as PEM-encoded X.509 keys
