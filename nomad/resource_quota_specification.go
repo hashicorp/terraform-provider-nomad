@@ -331,7 +331,7 @@ func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 		result["secrets_mb"] = *limit.SecretsMB
 	}
 	if len(limit.Devices) > 0 {
-		result["device"] = flattenQuotaDevices(limit.Devices)
+		result["devices"] = flattenQuotaDevices(limit.Devices)
 	}
 	if limit.NUMA != nil {
 		numa := map[string]interface{}{
@@ -469,7 +469,7 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 		}
 		res.SecretsMB = &s
 	}
-	if devices, ok := regLimit["device"]; ok {
+	if devices, ok := regLimit["devices"]; ok {
 		devList := devices.([]interface{})
 		for _, d := range devList {
 			dev := d.(map[string]interface{})
@@ -480,24 +480,24 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 				c := uint64(count.(int))
 				rd.Count = &c
 			}
-			if constraints, ok := dev["constraint"]; ok {
+			if constraints, ok := dev["constraints"]; ok {
 				for _, c := range constraints.([]interface{}) {
 					cm := c.(map[string]interface{})
 					rd.Constraints = append(rd.Constraints, &api.Constraint{
-						LTarget: cm["attribute"].(string),
-						RTarget: cm["value"].(string),
-						Operand: cm["operator"].(string),
+						LTarget: cm["ltarget"].(string),
+						RTarget: cm["rtarget"].(string),
+						Operand: cm["operand"].(string),
 					})
 				}
 			}
-			if affinities, ok := dev["affinity"]; ok {
+			if affinities, ok := dev["affinities"]; ok {
 				for _, a := range affinities.([]interface{}) {
 					am := a.(map[string]interface{})
 					w := int8(am["weight"].(int))
 					rd.Affinities = append(rd.Affinities, &api.Affinity{
-						LTarget: am["attribute"].(string),
-						RTarget: am["value"].(string),
-						Operand: am["operator"].(string),
+						LTarget: am["ltarget"].(string),
+						RTarget: am["rtarget"].(string),
+						Operand: am["operand"].(string),
 						Weight:  &w,
 					})
 				}
