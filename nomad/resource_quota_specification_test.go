@@ -411,13 +411,13 @@ resource "nomad_quota_specification" "test" {
         count = 2
 
         constraints {
-          ltarget = "${device.attr.driver_version}"
+          ltarget = "$${device.attr.driver_version}"
           rtarget = "450.0"
           operand = ">="
         }
 
         affinities {
-          ltarget = "${device.attr.memory}"
+          ltarget = "$${device.attr.memory}"
           rtarget = "8GB"
           operand = ">="
           weight  = 80
