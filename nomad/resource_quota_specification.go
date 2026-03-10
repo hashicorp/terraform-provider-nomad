@@ -74,9 +74,120 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"cores": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 			"memory_mb": {
 				Type:     schema.TypeInt,
 				Optional: true,
+			},
+			"memory_max_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"secrets_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"devices": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationDevices(),
+			},
+			"numa": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"affinity": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"devices": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+					},
+				},
+			},
+			"storage": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"variables_mb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"host_volumes_mb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationDevices() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"count": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"constraints": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ltarget": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"rtarget": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"operand": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"affinities": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ltarget": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"rtarget": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"operand": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"weight": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -207,11 +318,84 @@ func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 	if limit.CPU != nil {
 		result["cpu"] = *limit.CPU
 	}
+	if limit.Cores != nil {
+		result["cores"] = *limit.Cores
+	}
 	if limit.MemoryMB != nil {
 		result["memory_mb"] = *limit.MemoryMB
 	}
+	if limit.MemoryMaxMB != nil {
+		result["memory_max_mb"] = *limit.MemoryMaxMB
+	}
+	if limit.SecretsMB != nil {
+		result["secrets_mb"] = *limit.SecretsMB
+	}
+	if len(limit.Devices) > 0 {
+		result["device"] = flattenQuotaDevices(limit.Devices)
+	}
+	if limit.NUMA != nil {
+		numa := map[string]interface{}{
+			"affinity": limit.NUMA.Affinity,
+		}
+		if len(limit.NUMA.Devices) > 0 {
+			devs := make([]interface{}, 0, len(limit.NUMA.Devices))
+			for _, d := range limit.NUMA.Devices {
+				devs = append(devs, d)
+			}
+			numa["devices"] = devs
+		}
+		result["numa"] = []interface{}{numa}
+	}
+	if limit.Storage != nil {
+		result["storage"] = []interface{}{
+			map[string]interface{}{
+				"variables_mb":    limit.Storage.VariablesMB,
+				"host_volumes_mb": limit.Storage.HostVolumesMB,
+			},
+		}
+	}
 	return schema.NewSet(schema.HashResource(resourceQuotaSpecificationRegionLimits()),
 		[]interface{}{result})
+}
+
+func flattenQuotaDevices(devices []*api.RequestedDevice) []any {
+	result := make([]any, 0, len(devices))
+	for _, d := range devices {
+		dev := map[string]interface{}{
+			"name": d.Name,
+		}
+		if d.Count != nil {
+			dev["count"] = int(*d.Count)
+		}
+		if len(d.Constraints) > 0 {
+			constraints := make([]interface{}, 0, len(d.Constraints))
+			for _, c := range d.Constraints {
+				constraints = append(constraints, map[string]interface{}{
+					"ltarget": c.LTarget,
+					"rtarget": c.RTarget,
+					"operand": c.Operand,
+				})
+			}
+			dev["constraints"] = constraints
+		}
+		if len(d.Affinities) > 0 {
+			affinities := make([]interface{}, 0, len(d.Affinities))
+			for _, a := range d.Affinities {
+				aff := map[string]interface{}{
+					"ltarget": a.LTarget,
+					"rtarget": a.RTarget,
+					"operand": a.Operand,
+				}
+				if a.Weight != nil {
+					aff["weight"] = int(*a.Weight)
+				}
+				affinities = append(affinities, aff)
+			}
+			dev["affinities"] = affinities
+		}
+		result = append(result, dev)
+	}
+	return result
 }
 
 func expandQuotaLimits(d *schema.ResourceData) ([]*api.QuotaLimit, error) {
@@ -257,12 +441,93 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 		}
 		res.CPU = &c
 	}
+	if cores, ok := regLimit["cores"]; ok {
+		c, ok := cores.(int)
+		if !ok {
+			return nil, fmt.Errorf("expected cores to be int, got %T", cores)
+		}
+		res.Cores = &c
+	}
 	if mem, ok := regLimit["memory_mb"]; ok {
 		m, ok := mem.(int)
 		if !ok {
 			return nil, fmt.Errorf("expected memory to be int, got %T", mem)
 		}
 		res.MemoryMB = &m
+	}
+	if memMax, ok := regLimit["memory_max_mb"]; ok {
+		m, ok := memMax.(int)
+		if !ok {
+			return nil, fmt.Errorf("expected memory_max to be int, got %T", memMax)
+		}
+		res.MemoryMaxMB = &m
+	}
+	if secrets, ok := regLimit["secrets_mb"]; ok {
+		s, ok := secrets.(int)
+		if !ok {
+			return nil, fmt.Errorf("expected secrets_mb to be int, got %T", secrets)
+		}
+		res.SecretsMB = &s
+	}
+	if devices, ok := regLimit["device"]; ok {
+		devList := devices.([]interface{})
+		for _, d := range devList {
+			dev := d.(map[string]interface{})
+			rd := &api.RequestedDevice{
+				Name: dev["name"].(string),
+			}
+			if count, ok := dev["count"]; ok {
+				c := uint64(count.(int))
+				rd.Count = &c
+			}
+			if constraints, ok := dev["constraint"]; ok {
+				for _, c := range constraints.([]interface{}) {
+					cm := c.(map[string]interface{})
+					rd.Constraints = append(rd.Constraints, &api.Constraint{
+						LTarget: cm["attribute"].(string),
+						RTarget: cm["value"].(string),
+						Operand: cm["operator"].(string),
+					})
+				}
+			}
+			if affinities, ok := dev["affinity"]; ok {
+				for _, a := range affinities.([]interface{}) {
+					am := a.(map[string]interface{})
+					w := int8(am["weight"].(int))
+					rd.Affinities = append(rd.Affinities, &api.Affinity{
+						LTarget: am["attribute"].(string),
+						RTarget: am["value"].(string),
+						Operand: am["operator"].(string),
+						Weight:  &w,
+					})
+				}
+			}
+			res.Devices = append(res.Devices, rd)
+		}
+	}
+	if numa, ok := regLimit["numa"]; ok {
+		numaList := numa.([]interface{})
+		if len(numaList) > 0 && numaList[0] != nil {
+			numaMap := numaList[0].(map[string]interface{})
+			res.NUMA = &api.NUMAResource{
+				Affinity: numaMap["affinity"].(string),
+			}
+			if devs, ok := numaMap["devices"]; ok {
+				for _, d := range devs.([]interface{}) {
+					res.NUMA.Devices = append(res.NUMA.Devices, d.(string))
+				}
+			}
+		}
+	}
+	if storage, ok := regLimit["storage"]; ok {
+		storageList := storage.([]interface{})
+		if len(storageList) > 0 && storageList[0] != nil {
+			storageMap := storageList[0].(map[string]interface{})
+			res.Storage = &api.QuotaStorageResources{
+				VariablesMB:   storageMap["variables_mb"].(int),
+				HostVolumesMB: storageMap["host_volumes_mb"].(int),
+			}
+		}
 	}
 	return &res, nil
 }
