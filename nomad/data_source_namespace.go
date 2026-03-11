@@ -64,6 +64,60 @@ func dataSourceNamespace() *schema.Resource {
 					},
 				},
 			},
+			"vault_config": {
+				Description: "Vault configuration for the namespace.",
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"default": {
+							Computed: true,
+							Type:     schema.TypeString,
+						},
+						"allowed": {
+							Computed: true,
+							Type:     schema.TypeSet,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"denied": {
+							Computed: true,
+							Type:     schema.TypeSet,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"consul_config": {
+				Description: "Consul configuration for the namespace.",
+				Type:        schema.TypeList,
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"default": {
+							Computed: true,
+							Type:     schema.TypeString,
+						},
+						"allowed": {
+							Computed: true,
+							Type:     schema.TypeSet,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"denied": {
+							Computed: true,
+							Type:     schema.TypeSet,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -91,6 +145,12 @@ func namespaceDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if err = d.Set("node_pool_config", flattenNamespaceNodePoolConfig(ns.NodePoolConfiguration)); err != nil {
 		return fmt.Errorf("Failed to set 'node_pool_config': %v", err)
+	}
+	if err = d.Set("vault_config", flattenNamespaceVaultConfig(ns.VaultConfiguration)); err != nil {
+		return fmt.Errorf("Failed to set 'vault_config': %v", err)
+	}
+	if err = d.Set("consul_config", flattenNamespaceConsulConfig(ns.ConsulConfiguration)); err != nil {
+		return fmt.Errorf("Failed to set 'consul_config': %v", err)
 	}
 
 	d.SetId(client.Address() + "/namespace/" + name)

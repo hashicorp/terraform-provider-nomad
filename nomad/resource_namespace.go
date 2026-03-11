@@ -72,6 +72,28 @@ func resourceNamespace() *schema.Resource {
 				// pool is set to `default` if not set.
 				Computed: true,
 			},
+			"vault_config": {
+				Description: "Vault configuration for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        resourceNamespaceVaultConfig(),
+				MaxItems:    1,
+
+				// Set as computed because in Nomad Enterprise the default vault
+				// cluster is set to `default` if not set.
+				Computed: true,
+			},
+			"consul_config": {
+				Description: "Consul configuration for the namespace.",
+				Optional:    true,
+				Type:        schema.TypeList,
+				Elem:        resourceNamespaceConsulConfig(),
+				MaxItems:    1,
+
+				// Set as computed because in Nomad Enterprise the default consul
+				// cluster is set to `default` if not set.
+				Computed: true,
+			},
 		},
 	}
 }
@@ -138,6 +160,66 @@ func resourceNamespaceNodePoolConfig() *schema.Resource {
 	}
 }
 
+func resourceNamespaceVaultConfig() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"default": {
+				Description: "The Vault cluster to use when none is specified in the job.",
+				Optional:    true,
+				Type:        schema.TypeString,
+			},
+			"allowed": {
+				Description: "The list of Vault clusters allowed to be used in this namespace. Cannot be used with denied.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"vault_config.0.denied"},
+			},
+			"denied": {
+				Description: "The list of Vault clusters not allowed to be used in this namespace. Cannot be used with allowed.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"vault_config.0.allowed"},
+			},
+		},
+	}
+}
+
+func resourceNamespaceConsulConfig() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"default": {
+				Description: "The Consul cluster to use when none is specified in the job.",
+				Optional:    true,
+				Type:        schema.TypeString,
+			},
+			"allowed": {
+				Description: "The list of Consul clusters allowed to be used in this namespace. Cannot be used with denied.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"consul_config.0.denied"},
+			},
+			"denied": {
+				Description: "The list of Consul clusters not allowed to be used in this namespace. Cannot be used with allowed.",
+				Optional:    true,
+				Type:        schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"consul_config.0.allowed"},
+			},
+		},
+	}
+}
+
 func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
@@ -156,6 +238,16 @@ func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	vaultConfig, err := expandNamespaceVaultConfig(d)
+	if err != nil {
+		return err
+	}
+
+	consulConfig, err := expandNamespaceConsulConfig(d)
+	if err != nil {
+		return err
+	}
+
 	namespace := api.Namespace{
 		Name:                  d.Get("name").(string),
 		Description:           d.Get("description").(string),
@@ -163,6 +255,8 @@ func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 		Meta:                  m,
 		Capabilities:          capabilities,
 		NodePoolConfiguration: npConfig,
+		VaultConfiguration:    vaultConfig,
+		ConsulConfiguration:   consulConfig,
 	}
 
 	log.Printf("[DEBUG] Upserting namespace %q", namespace.Name)
@@ -242,6 +336,8 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("meta", namespace.Meta)
 	d.Set("capabilities", flattenNamespaceCapabilities(namespace.Capabilities))
 	d.Set("node_pool_config", flattenNamespaceNodePoolConfig(namespace.NodePoolConfiguration))
+	d.Set("vault_config", flattenNamespaceVaultConfig(namespace.VaultConfiguration))
+	d.Set("consul_config", flattenNamespaceConsulConfig(namespace.ConsulConfiguration))
 
 	return nil
 }
@@ -446,4 +542,160 @@ func flattenNamespaceNodePoolConfig(npConfig *api.NamespaceNodePoolConfiguration
 	}
 
 	return []any{rawNpConfig}
+}
+
+func expandNamespaceVaultConfig(d *schema.ResourceData) (*api.NamespaceVaultConfiguration, error) {
+	vaultConfigI := d.Get("vault_config").([]any)
+	if len(vaultConfigI) < 1 {
+		return nil, nil
+	}
+
+	vaultConfig, ok := vaultConfigI[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for namespace vault configuration, got %T", vaultConfigI[0])
+	}
+
+	var res api.NamespaceVaultConfiguration
+
+	if defaultI, ok := vaultConfig["default"]; ok {
+		defaultStr, ok := defaultI.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected default to be a string, got %T", defaultI)
+		}
+		res.Default = defaultStr
+	}
+
+	if allowedI, ok := vaultConfig["allowed"]; ok {
+		allowedSet, ok := allowedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected allowed to be a *schema.Set, got %T", allowedI)
+		}
+		if allowedSet.Len() > 0 {
+			res.Allowed = make([]string, allowedSet.Len())
+			for i, v := range allowedSet.List() {
+				res.Allowed[i] = v.(string)
+			}
+		}
+	}
+
+	if deniedI, ok := vaultConfig["denied"]; ok {
+		deniedSet, ok := deniedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected denied to be a *schema.Set, got %T", deniedI)
+		}
+		if deniedSet.Len() > 0 {
+			res.Denied = make([]string, deniedSet.Len())
+			for i, v := range deniedSet.List() {
+				res.Denied[i] = v.(string)
+			}
+		}
+	}
+
+	return &res, nil
+}
+
+func flattenNamespaceVaultConfig(vaultConfig *api.NamespaceVaultConfiguration) []any {
+	if vaultConfig == nil {
+		return nil
+	}
+
+	rawVaultConfig := map[string]any{
+		"default": vaultConfig.Default,
+	}
+
+	if vaultConfig.Allowed != nil {
+		allowed := make([]any, len(vaultConfig.Allowed))
+		for i, v := range vaultConfig.Allowed {
+			allowed[i] = v
+		}
+		rawVaultConfig["allowed"] = allowed
+	}
+
+	if vaultConfig.Denied != nil {
+		denied := make([]any, len(vaultConfig.Denied))
+		for i, v := range vaultConfig.Denied {
+			denied[i] = v
+		}
+		rawVaultConfig["denied"] = denied
+	}
+
+	return []any{rawVaultConfig}
+}
+
+func expandNamespaceConsulConfig(d *schema.ResourceData) (*api.NamespaceConsulConfiguration, error) {
+	consulConfigI := d.Get("consul_config").([]any)
+	if len(consulConfigI) < 1 {
+		return nil, nil
+	}
+
+	consulConfig, ok := consulConfigI[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected map[string]interface{} for namespace consul configuration, got %T", consulConfigI[0])
+	}
+
+	var res api.NamespaceConsulConfiguration
+
+	if defaultI, ok := consulConfig["default"]; ok {
+		defaultStr, ok := defaultI.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected default to be a string, got %T", defaultI)
+		}
+		res.Default = defaultStr
+	}
+
+	if allowedI, ok := consulConfig["allowed"]; ok {
+		allowedSet, ok := allowedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected allowed to be a *schema.Set, got %T", allowedI)
+		}
+		if allowedSet.Len() > 0 {
+			res.Allowed = make([]string, allowedSet.Len())
+			for i, v := range allowedSet.List() {
+				res.Allowed[i] = v.(string)
+			}
+		}
+	}
+
+	if deniedI, ok := consulConfig["denied"]; ok {
+		deniedSet, ok := deniedI.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("expected denied to be a *schema.Set, got %T", deniedI)
+		}
+		if deniedSet.Len() > 0 {
+			res.Denied = make([]string, deniedSet.Len())
+			for i, v := range deniedSet.List() {
+				res.Denied[i] = v.(string)
+			}
+		}
+	}
+
+	return &res, nil
+}
+
+func flattenNamespaceConsulConfig(consulConfig *api.NamespaceConsulConfiguration) []any {
+	if consulConfig == nil {
+		return nil
+	}
+
+	rawConsulConfig := map[string]any{
+		"default": consulConfig.Default,
+	}
+
+	if consulConfig.Allowed != nil {
+		allowed := make([]any, len(consulConfig.Allowed))
+		for i, v := range consulConfig.Allowed {
+			allowed[i] = v
+		}
+		rawConsulConfig["allowed"] = allowed
+	}
+
+	if consulConfig.Denied != nil {
+		denied := make([]any, len(consulConfig.Denied))
+		for i, v := range consulConfig.Denied {
+			denied[i] = v
+		}
+		rawConsulConfig["denied"] = denied
+	}
+
+	return []any{rawConsulConfig}
 }
