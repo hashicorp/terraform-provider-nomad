@@ -57,6 +57,27 @@ func TestResourceJob_service(t *testing.T) {
 	})
 }
 
+func TestResourceJob_serviceDeploymentStateFast(t *testing.T) {
+	resourceName := "nomad_job.service_deployment_state"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_serviceDeploymentStateFast,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "task_groups.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.desired_total"),
+					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.placed_allocs"),
+					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.healthy_allocs"),
+					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.unhealthy_allocs"),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-service-deployment-state"),
+	})
+}
+
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -217,10 +238,33 @@ func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
 					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
+					resource.TestCheckResourceAttr(resourceName, "update_strategy.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "update_strategy.0.max_parallel", "0"),
 				),
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-service-without-deployment"),
+	})
+}
+
+func TestResourceJob_periodicConfig(t *testing.T) {
+	resourceName := "nomad_job.periodic"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_periodicConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.spec", "*/1 * * * * *"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.prohibit_overlap", "true"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.timezone", "UTC"),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-periodic"),
 	})
 }
 
@@ -919,6 +963,27 @@ resource "nomad_job" "test" {
 			}
 		}
 	EOT
+}
+`
+
+var testResourceJob_serviceDeploymentStateFast = `
+resource "nomad_job" "service_deployment_state" {
+	detach = true
+	jobspec = <<EOT
+job "foo-service-deployment-state" {
+	datacenters = ["dc1"]
+	type = "service"
+	group "foo" {
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args = ["300"]
+			}
+		}
+	}
+}
+EOT
 }
 `
 
@@ -2359,14 +2424,54 @@ func TestVolumeSorting(t *testing.T) {
 			},
 		},
 	}
-	tg1 := jobTaskGroupsRaw(tgs)
+	tg1 := jobTaskGroupsRaw(tgs, nil)
 	tgs[0].Volumes = map[string]*api.VolumeRequest{
 		vols[1].Name: vols[1],
 		vols[0].Name: vols[0],
 	}
-	tg2 := jobTaskGroupsRaw(tgs)
+	tg2 := jobTaskGroupsRaw(tgs, nil)
 
 	require.ElementsMatch(tg1, tg2)
+}
+
+func TestJobTaskGroupsRawDeploymentState(t *testing.T) {
+	require := require.New(t)
+
+	groupName := "group"
+	groupCount := 2
+	tgs := []*api.TaskGroup{
+		{
+			Name:  &groupName,
+			Count: &groupCount,
+		},
+	}
+
+	deploymentTGs := map[string]*api.DeploymentState{
+		groupName: {
+			PlacedCanaries:  []string{"canary-alloc"},
+			AutoRevert:      true,
+			Promoted:        true,
+			DesiredCanaries: 1,
+			DesiredTotal:    2,
+			PlacedAllocs:    2,
+			HealthyAllocs:   2,
+			UnhealthyAllocs: 0,
+		},
+	}
+
+	groupsRaw := jobTaskGroupsRaw(tgs, deploymentTGs)
+	require.Len(groupsRaw, 1)
+
+	groupRaw, ok := groupsRaw[0].(map[string]interface{})
+	require.True(ok)
+	require.Equal([]interface{}{"canary-alloc"}, groupRaw["placed_canaries"])
+	require.Equal(true, groupRaw["auto_revert"])
+	require.Equal(true, groupRaw["promoted"])
+	require.Equal(1, groupRaw["desired_canaries"])
+	require.Equal(2, groupRaw["desired_total"])
+	require.Equal(2, groupRaw["placed_allocs"])
+	require.Equal(2, groupRaw["healthy_allocs"])
+	require.Equal(0, groupRaw["unhealthy_allocs"])
 }
 
 var testResourceJob_invalidNomadServerConfig = `
@@ -2760,10 +2865,10 @@ resource "nomad_job" "service" {
 job "foo-service-without-deployment" {
   type          = "service"
   datacenters   = ["dc1"]
+	update {
+		max_parallel = 0
+	}
   group "service" {
-    update {
-      max_parallel = 0
-    }
     task "sleep" {
       driver = "raw_exec"
       env {
@@ -2797,6 +2902,34 @@ job "foo-batch" {
 }
 EOT
 }`
+
+var testResourceJob_periodicConfig = `
+resource "nomad_job" "periodic" {
+	jobspec = <<EOT
+job "foo-periodic" {
+	type        = "batch"
+	datacenters = ["dc1"]
+
+	periodic {
+		enabled          = true
+		cron             = "*/1 * * * * *"
+		prohibit_overlap = true
+		time_zone         = "UTC"
+	}
+
+	group "periodic" {
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args = ["1"]
+			}
+		}
+	}
+}
+EOT
+}
+`
 
 var testResourceJob_lifecycle = `
 resource "nomad_job" "test" {
