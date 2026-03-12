@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/nomad v1.11.2
-	github.com/hashicorp/nomad/api v0.0.0-20251111223019-f626dee323f3
+	github.com/hashicorp/nomad/api v0.0.0-20260311215651-558bcb13671c
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.39.0
 	github.com/shoenig/test v1.12.2
 	github.com/stretchr/testify v1.11.1
@@ -37,6 +37,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/go-test/deep v1.1.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
