@@ -369,7 +369,6 @@ func dataSourceNodeRead(d *schema.ResourceData, meta any) error {
 	sw.Set("attributes", node.Attributes)
 	sw.Set("meta", node.Meta)
 
-	// Flatten drivers to a list with name, detected, healthy, and attributes
 	drivers := make([]map[string]any, 0, len(node.Drivers))
 	for name, info := range node.Drivers {
 		if info != nil {
@@ -383,7 +382,6 @@ func dataSourceNodeRead(d *schema.ResourceData, meta any) error {
 	}
 	sw.Set("drivers", drivers)
 
-	// Flatten host volumes to a list with name, path, read_only, and id
 	hostVolumes := make([]map[string]any, 0, len(node.HostVolumes))
 	for name, info := range node.HostVolumes {
 		if info != nil {
@@ -414,7 +412,6 @@ func flattenNodeResources(r *api.NodeResources) []map[string]any {
 		return nil
 	}
 
-	// Flatten CPU
 	cpu := []map[string]any{{
 		"cpu_shares":      r.Cpu.CpuShares,
 		"total_cpu_cores": int(r.Cpu.TotalCpuCores),
@@ -427,17 +424,14 @@ func flattenNodeResources(r *api.NodeResources) []map[string]any {
 		}(),
 	}}
 
-	// Flatten Memory
 	memory := []map[string]any{{
 		"memory_mb": r.Memory.MemoryMB,
 	}}
 
-	// Flatten Disk
 	disk := []map[string]any{{
 		"disk_mb": r.Disk.DiskMB,
 	}}
 
-	// Flatten Networks
 	networks := make([]map[string]any, len(r.Networks))
 	for i, n := range r.Networks {
 		networks[i] = map[string]any{
@@ -448,7 +442,6 @@ func flattenNodeResources(r *api.NodeResources) []map[string]any {
 		}
 	}
 
-	// Flatten Devices
 	devices := make([]map[string]any, len(r.Devices))
 	for i, d := range r.Devices {
 		instanceCount := 0
@@ -479,22 +472,18 @@ func flattenReservedResources(r *api.NodeReservedResources) []map[string]any {
 		return nil
 	}
 
-	// Flatten reserved CPU
 	cpu := []map[string]any{{
 		"cpu_shares": int(r.Cpu.CpuShares),
 	}}
 
-	// Flatten reserved Memory
 	memory := []map[string]any{{
 		"memory_mb": int(r.Memory.MemoryMB),
 	}}
 
-	// Flatten reserved Disk
 	disk := []map[string]any{{
 		"disk_mb": int(r.Disk.DiskMB),
 	}}
 
-	// Flatten reserved Networks as a map
 	networks := map[string]string{
 		"reserved_host_ports": r.Networks.ReservedHostPorts,
 	}
