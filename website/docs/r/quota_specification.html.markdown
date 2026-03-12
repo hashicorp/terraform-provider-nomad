@@ -34,6 +34,25 @@ resource "nomad_quota_specification" "prod_api" {
         count = 2
       }
 
+      node_pools {
+        node_pool     = "batch"
+        cpu           = 800
+        cores         = 2
+        memory_mb     = 1024
+        memory_max_mb = 2048
+        secrets_mb    = 64
+
+        devices {
+          name  = "fpga"
+          count = 1
+        }
+
+        storage {
+          variables_mb    = 25
+          host_volumes_mb = 50
+        }
+      }
+
       storage {
         variables_mb    = 500
         host_volumes_mb = 1000
@@ -83,6 +102,8 @@ It supports the following arguments:
   value is treated as fully disallowed.
 - [`devices`](#devices-blocks) `(block: optional)` - A list of device quotas to enforce. Can be
   repeated. See below for the structure of this block.
+- [`node_pools`](#node_pools-blocks) `(block: optional)` - Per-node-pool quota limits. Can be
+  repeated. See below for the structure of this block.
 - [`storage`](#storage-blocks) `(block: optional)` - Storage resource quota configuration. May only
   be specified once. See below for the structure of this block.
 
@@ -104,3 +125,28 @@ following arguments:
   Nomad variables to.
 - `host_volumes_mb` `(int: 0)` - The amount of storage (in megabytes) to limit
   host volumes to.
+
+### `node_pools` blocks
+
+The `node_pools` block describes per-node-pool quota limits. It supports the
+following arguments:
+
+- `node_pool` `(string: <required>)` - The node pool name to apply limits to.
+- `cpu` `(int: 0)` - The amount of CPU to limit allocations to. A value of zero
+  is treated as unlimited, and a negative value is treated as fully disallowed.
+- `cores` `(int: 0)` - The number of CPU cores to limit allocations to. A value
+  of zero is treated as unlimited, and a negative value is treated as fully
+  disallowed.
+- `memory_mb` `(int: 0)` - The amount of memory (in megabytes) to limit
+  allocations to. A value of zero is treated as unlimited, and a negative value
+  is treated as fully disallowed.
+- `memory_max_mb` `(int: 0)` - The maximum amount of memory (in megabytes) to
+  limit allocations to. A value of zero is treated as unlimited, and a negative
+  value is treated as fully disallowed.
+- `secrets_mb` `(int: 0)` - The amount of secrets storage (in megabytes) to
+  limit allocations to. A value of zero is treated as unlimited, and a negative
+  value is treated as fully disallowed.
+- [`devices`](#devices-blocks) `(block: optional)` - A list of device quotas to
+  enforce for the node pool. Can be repeated.
+- [`storage`](#storage-blocks) `(block: optional)` - Storage resource quota
+  configuration for the node pool. May only be specified once.

@@ -411,6 +411,25 @@ resource "nomad_quota_specification" "test" {
         count = 2
       }
 
+			node_pools {
+				node_pool     = "batch"
+				cpu           = 800
+				cores         = 2
+				memory_mb     = 1024
+				memory_max_mb = 2048
+				secrets_mb    = 64
+
+				devices {
+					name  = "fpga"
+					count = 1
+				}
+
+				storage {
+					variables_mb    = 25
+					host_volumes_mb = 50
+				}
+			}
+
       storage {
         variables_mb    = 100
         host_volumes_mb = 500
@@ -430,6 +449,12 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		memMax := 4096
 		secretsMB := 512
 		devCount := uint64(2)
+		nodePoolCPU := 800
+		nodePoolCores := 2
+		nodePoolMem := 1024
+		nodePoolMemMax := 2048
+		nodePoolSecrets := 64
+		nodePoolDevCount := uint64(1)
 		limits := []*api.QuotaLimit{
 			{
 				Region: "global",
@@ -448,6 +473,26 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 					Storage: &api.QuotaStorageResources{
 						VariablesMB:   100,
 						HostVolumesMB: 500,
+					},
+					NodePools: []*api.NodePoolLimit{
+						{
+							NodePool:    "batch",
+							CPU:         &nodePoolCPU,
+							Cores:       &nodePoolCores,
+							MemoryMB:    &nodePoolMem,
+							MemoryMaxMB: &nodePoolMemMax,
+							SecretsMB:   &nodePoolSecrets,
+							Devices: []*api.RequestedDevice{
+								{
+									Name:  "fpga",
+									Count: &nodePoolDevCount,
+								},
+							},
+							Storage: &api.QuotaStorageResources{
+								VariablesMB:   25,
+								HostVolumesMB: 50,
+							},
+						},
 					},
 				},
 			},
@@ -526,6 +571,45 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		}
 		if rl.Storage.HostVolumesMB != el.Storage.HostVolumesMB {
 			return fmt.Errorf("expected Storage.HostVolumesMB to be %d, got %d", el.Storage.HostVolumesMB, rl.Storage.HostVolumesMB)
+		}
+		if len(rl.NodePools) != len(el.NodePools) {
+			return fmt.Errorf("expected %d node pools, got %d", len(el.NodePools), len(rl.NodePools))
+		}
+		if rl.NodePools[0].NodePool != el.NodePools[0].NodePool {
+			return fmt.Errorf("expected node_pool to be %q, got %q", el.NodePools[0].NodePool, rl.NodePools[0].NodePool)
+		}
+		if *rl.NodePools[0].CPU != *el.NodePools[0].CPU {
+			return fmt.Errorf("expected node_pool CPU to be %d, got %d", *el.NodePools[0].CPU, *rl.NodePools[0].CPU)
+		}
+		if *rl.NodePools[0].Cores != *el.NodePools[0].Cores {
+			return fmt.Errorf("expected node_pool Cores to be %d, got %d", *el.NodePools[0].Cores, *rl.NodePools[0].Cores)
+		}
+		if *rl.NodePools[0].MemoryMB != *el.NodePools[0].MemoryMB {
+			return fmt.Errorf("expected node_pool MemoryMB to be %d, got %d", *el.NodePools[0].MemoryMB, *rl.NodePools[0].MemoryMB)
+		}
+		if *rl.NodePools[0].MemoryMaxMB != *el.NodePools[0].MemoryMaxMB {
+			return fmt.Errorf("expected node_pool MemoryMaxMB to be %d, got %d", *el.NodePools[0].MemoryMaxMB, *rl.NodePools[0].MemoryMaxMB)
+		}
+		if *rl.NodePools[0].SecretsMB != *el.NodePools[0].SecretsMB {
+			return fmt.Errorf("expected node_pool SecretsMB to be %d, got %d", *el.NodePools[0].SecretsMB, *rl.NodePools[0].SecretsMB)
+		}
+		if len(rl.NodePools[0].Devices) != len(el.NodePools[0].Devices) {
+			return fmt.Errorf("expected %d node_pool devices, got %d", len(el.NodePools[0].Devices), len(rl.NodePools[0].Devices))
+		}
+		if rl.NodePools[0].Devices[0].Name != el.NodePools[0].Devices[0].Name {
+			return fmt.Errorf("expected node_pool device name to be %q, got %q", el.NodePools[0].Devices[0].Name, rl.NodePools[0].Devices[0].Name)
+		}
+		if *rl.NodePools[0].Devices[0].Count != *el.NodePools[0].Devices[0].Count {
+			return fmt.Errorf("expected node_pool device count to be %d, got %d", *el.NodePools[0].Devices[0].Count, *rl.NodePools[0].Devices[0].Count)
+		}
+		if rl.NodePools[0].Storage == nil {
+			return errors.New("expected node_pool Storage to be set, got nil")
+		}
+		if rl.NodePools[0].Storage.VariablesMB != el.NodePools[0].Storage.VariablesMB {
+			return fmt.Errorf("expected node_pool Storage.VariablesMB to be %d, got %d", el.NodePools[0].Storage.VariablesMB, rl.NodePools[0].Storage.VariablesMB)
+		}
+		if rl.NodePools[0].Storage.HostVolumesMB != el.NodePools[0].Storage.HostVolumesMB {
+			return fmt.Errorf("expected node_pool Storage.HostVolumesMB to be %d, got %d", el.NodePools[0].Storage.HostVolumesMB, rl.NodePools[0].Storage.HostVolumesMB)
 		}
 
 		return nil

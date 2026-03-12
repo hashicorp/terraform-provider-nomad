@@ -95,22 +95,16 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 				Optional: true,
 				Elem:     resourceQuotaSpecificationDevices(),
 			},
+			"node_pools": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationNodePools(),
+			},
 			"storage": {
 				Type:     schema.TypeList,
 				Optional: true,
 				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"variables_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-						"host_volumes_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-					},
-				},
+				Elem:     resourceQuotaSpecificationStorage(),
 			},
 		},
 	}
@@ -126,6 +120,63 @@ func resourceQuotaSpecificationDevices() *schema.Resource {
 			"count": {
 				Type:     schema.TypeInt,
 				Optional: true,
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationStorage() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"variables_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"host_volumes_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+		},
+	}
+}
+
+func resourceQuotaSpecificationNodePools() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"node_pool": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"cpu": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"cores": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"memory_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"memory_max_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"secrets_mb": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"devices": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     resourceQuotaSpecificationDevices(),
+			},
+			"storage": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem:     resourceQuotaSpecificationStorage(),
 			},
 		},
 	}
@@ -271,6 +322,9 @@ func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 	if len(limit.Devices) > 0 {
 		result["devices"] = flattenQuotaDevices(limit.Devices)
 	}
+	if len(limit.NodePools) > 0 {
+		result["node_pools"] = flattenQuotaNodePools(limit.NodePools)
+	}
 	if limit.Storage != nil {
 		result["storage"] = []interface{}{
 			map[string]interface{}{
@@ -293,6 +347,43 @@ func flattenQuotaDevices(devices []*api.RequestedDevice) []any {
 			dev["count"] = int(*d.Count)
 		}
 		result = append(result, dev)
+	}
+	return result
+}
+
+func flattenQuotaNodePools(pools []*api.NodePoolLimit) []any {
+	result := make([]any, 0, len(pools))
+	for _, p := range pools {
+		pool := map[string]interface{}{
+			"node_pool": p.NodePool,
+		}
+		if p.CPU != nil {
+			pool["cpu"] = *p.CPU
+		}
+		if p.Cores != nil {
+			pool["cores"] = *p.Cores
+		}
+		if p.MemoryMB != nil {
+			pool["memory_mb"] = *p.MemoryMB
+		}
+		if p.MemoryMaxMB != nil {
+			pool["memory_max_mb"] = *p.MemoryMaxMB
+		}
+		if p.SecretsMB != nil {
+			pool["secrets_mb"] = *p.SecretsMB
+		}
+		if len(p.Devices) > 0 {
+			pool["devices"] = flattenQuotaDevices(p.Devices)
+		}
+		if p.Storage != nil {
+			pool["storage"] = []interface{}{
+				map[string]interface{}{
+					"variables_mb":    p.Storage.VariablesMB,
+					"host_volumes_mb": p.Storage.HostVolumesMB,
+				},
+			}
+		}
+		result = append(result, pool)
 	}
 	return result
 }
@@ -380,6 +471,75 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 				rd.Count = &c
 			}
 			res.Devices = append(res.Devices, rd)
+		}
+	}
+	if nodePools, ok := regLimit["node_pools"]; ok {
+		poolList := nodePools.([]interface{})
+		for _, p := range poolList {
+			pool := p.(map[string]interface{})
+			np := &api.NodePoolLimit{
+				NodePool: pool["node_pool"].(string),
+			}
+			if cpu, ok := pool["cpu"]; ok {
+				c, ok := cpu.(int)
+				if !ok {
+					return nil, fmt.Errorf("expected node_pool CPU to be int, got %T", cpu)
+				}
+				np.CPU = &c
+			}
+			if cores, ok := pool["cores"]; ok {
+				c, ok := cores.(int)
+				if !ok {
+					return nil, fmt.Errorf("expected node_pool cores to be int, got %T", cores)
+				}
+				np.Cores = &c
+			}
+			if mem, ok := pool["memory_mb"]; ok {
+				m, ok := mem.(int)
+				if !ok {
+					return nil, fmt.Errorf("expected node_pool memory to be int, got %T", mem)
+				}
+				np.MemoryMB = &m
+			}
+			if memMax, ok := pool["memory_max_mb"]; ok {
+				m, ok := memMax.(int)
+				if !ok {
+					return nil, fmt.Errorf("expected node_pool memory_max to be int, got %T", memMax)
+				}
+				np.MemoryMaxMB = &m
+			}
+			if secrets, ok := pool["secrets_mb"]; ok {
+				s, ok := secrets.(int)
+				if !ok {
+					return nil, fmt.Errorf("expected node_pool secrets_mb to be int, got %T", secrets)
+				}
+				np.SecretsMB = &s
+			}
+			if devices, ok := pool["devices"]; ok {
+				devList := devices.([]interface{})
+				for _, d := range devList {
+					dev := d.(map[string]interface{})
+					rd := &api.RequestedDevice{
+						Name: dev["name"].(string),
+					}
+					if count, ok := dev["count"]; ok {
+						c := uint64(count.(int))
+						rd.Count = &c
+					}
+					np.Devices = append(np.Devices, rd)
+				}
+			}
+			if storage, ok := pool["storage"]; ok {
+				storageList := storage.([]interface{})
+				if len(storageList) > 0 && storageList[0] != nil {
+					storageMap := storageList[0].(map[string]interface{})
+					np.Storage = &api.QuotaStorageResources{
+						VariablesMB:   storageMap["variables_mb"].(int),
+						HostVolumesMB: storageMap["host_volumes_mb"].(int),
+					}
+				}
+			}
+			res.NodePools = append(res.NodePools, np)
 		}
 	}
 	if storage, ok := regLimit["storage"]; ok {
