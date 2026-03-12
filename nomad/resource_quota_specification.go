@@ -95,24 +95,6 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 				Optional: true,
 				Elem:     resourceQuotaSpecificationDevices(),
 			},
-			"numa": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"affinity": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"devices": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
-						},
-					},
-				},
-			},
 			"storage": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -144,50 +126,6 @@ func resourceQuotaSpecificationDevices() *schema.Resource {
 			"count": {
 				Type:     schema.TypeInt,
 				Optional: true,
-			},
-			"constraints": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"ltarget": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"rtarget": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"operand": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"affinities": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"ltarget": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"rtarget": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"operand": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"weight": {
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -333,19 +271,6 @@ func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 	if len(limit.Devices) > 0 {
 		result["devices"] = flattenQuotaDevices(limit.Devices)
 	}
-	if limit.NUMA != nil {
-		numa := map[string]interface{}{
-			"affinity": limit.NUMA.Affinity,
-		}
-		if len(limit.NUMA.Devices) > 0 {
-			devs := make([]interface{}, 0, len(limit.NUMA.Devices))
-			for _, d := range limit.NUMA.Devices {
-				devs = append(devs, d)
-			}
-			numa["devices"] = devs
-		}
-		result["numa"] = []interface{}{numa}
-	}
 	if limit.Storage != nil {
 		result["storage"] = []interface{}{
 			map[string]interface{}{
@@ -366,32 +291,6 @@ func flattenQuotaDevices(devices []*api.RequestedDevice) []any {
 		}
 		if d.Count != nil {
 			dev["count"] = int(*d.Count)
-		}
-		if len(d.Constraints) > 0 {
-			constraints := make([]interface{}, 0, len(d.Constraints))
-			for _, c := range d.Constraints {
-				constraints = append(constraints, map[string]interface{}{
-					"ltarget": c.LTarget,
-					"rtarget": c.RTarget,
-					"operand": c.Operand,
-				})
-			}
-			dev["constraints"] = constraints
-		}
-		if len(d.Affinities) > 0 {
-			affinities := make([]interface{}, 0, len(d.Affinities))
-			for _, a := range d.Affinities {
-				aff := map[string]interface{}{
-					"ltarget": a.LTarget,
-					"rtarget": a.RTarget,
-					"operand": a.Operand,
-				}
-				if a.Weight != nil {
-					aff["weight"] = int(*a.Weight)
-				}
-				affinities = append(affinities, aff)
-			}
-			dev["affinities"] = affinities
 		}
 		result = append(result, dev)
 	}
@@ -480,43 +379,7 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 				c := uint64(count.(int))
 				rd.Count = &c
 			}
-			if constraints, ok := dev["constraints"]; ok {
-				for _, c := range constraints.([]interface{}) {
-					cm := c.(map[string]interface{})
-					rd.Constraints = append(rd.Constraints, &api.Constraint{
-						LTarget: cm["ltarget"].(string),
-						RTarget: cm["rtarget"].(string),
-						Operand: cm["operand"].(string),
-					})
-				}
-			}
-			if affinities, ok := dev["affinities"]; ok {
-				for _, a := range affinities.([]interface{}) {
-					am := a.(map[string]interface{})
-					w := int8(am["weight"].(int))
-					rd.Affinities = append(rd.Affinities, &api.Affinity{
-						LTarget: am["ltarget"].(string),
-						RTarget: am["rtarget"].(string),
-						Operand: am["operand"].(string),
-						Weight:  &w,
-					})
-				}
-			}
 			res.Devices = append(res.Devices, rd)
-		}
-	}
-	if numa, ok := regLimit["numa"]; ok {
-		numaList := numa.([]interface{})
-		if len(numaList) > 0 && numaList[0] != nil {
-			numaMap := numaList[0].(map[string]interface{})
-			res.NUMA = &api.NUMAResource{
-				Affinity: numaMap["affinity"].(string),
-			}
-			if devs, ok := numaMap["devices"]; ok {
-				for _, d := range devs.([]interface{}) {
-					res.NUMA.Devices = append(res.NUMA.Devices, d.(string))
-				}
-			}
 		}
 	}
 	if storage, ok := regLimit["storage"]; ok {

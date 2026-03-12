@@ -409,23 +409,6 @@ resource "nomad_quota_specification" "test" {
       devices {
         name  = "gpu"
         count = 2
-
-        constraints {
-          ltarget = "$${device.attr.driver_version}"
-          rtarget = "450.0"
-          operand = ">="
-        }
-
-        affinities {
-          ltarget = "$${device.attr.memory}"
-          rtarget = "8GB"
-          operand = ">="
-          weight  = 80
-        }
-      }
-
-      numa {
-        affinity = "require"
       }
 
       storage {
@@ -447,7 +430,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		memMax := 4096
 		secretsMB := 512
 		devCount := uint64(2)
-		affWeight := int8(80)
 		limits := []*api.QuotaLimit{
 			{
 				Region: "global",
@@ -461,25 +443,7 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 						{
 							Name:  "gpu",
 							Count: &devCount,
-							Constraints: []*api.Constraint{
-								{
-									LTarget: "${device.attr.driver_version}",
-									RTarget: "450.0",
-									Operand: ">=",
-								},
-							},
-							Affinities: []*api.Affinity{
-								{
-									LTarget: "${device.attr.memory}",
-									RTarget: "8GB",
-									Operand: ">=",
-									Weight:  &affWeight,
-								},
-							},
 						},
-					},
-					NUMA: &api.NUMAResource{
-						Affinity: "require",
 					},
 					Storage: &api.QuotaStorageResources{
 						VariablesMB:   100,
@@ -553,39 +517,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		}
 		if *rl.Devices[0].Count != *el.Devices[0].Count {
 			return fmt.Errorf("expected device count to be %d, got %d", *el.Devices[0].Count, *rl.Devices[0].Count)
-		}
-		if len(rl.Devices[0].Constraints) != 1 {
-			return fmt.Errorf("expected 1 device constraint, got %d", len(rl.Devices[0].Constraints))
-		}
-		if rl.Devices[0].Constraints[0].LTarget != el.Devices[0].Constraints[0].LTarget {
-			return fmt.Errorf("expected constraint LTarget to be %q, got %q", el.Devices[0].Constraints[0].LTarget, rl.Devices[0].Constraints[0].LTarget)
-		}
-		if rl.Devices[0].Constraints[0].RTarget != el.Devices[0].Constraints[0].RTarget {
-			return fmt.Errorf("expected constraint RTarget to be %q, got %q", el.Devices[0].Constraints[0].RTarget, rl.Devices[0].Constraints[0].RTarget)
-		}
-		if rl.Devices[0].Constraints[0].Operand != el.Devices[0].Constraints[0].Operand {
-			return fmt.Errorf("expected constraint Operand to be %q, got %q", el.Devices[0].Constraints[0].Operand, rl.Devices[0].Constraints[0].Operand)
-		}
-		if len(rl.Devices[0].Affinities) != 1 {
-			return fmt.Errorf("expected 1 device affinity, got %d", len(rl.Devices[0].Affinities))
-		}
-		if rl.Devices[0].Affinities[0].LTarget != el.Devices[0].Affinities[0].LTarget {
-			return fmt.Errorf("expected affinity LTarget to be %q, got %q", el.Devices[0].Affinities[0].LTarget, rl.Devices[0].Affinities[0].LTarget)
-		}
-		if rl.Devices[0].Affinities[0].RTarget != el.Devices[0].Affinities[0].RTarget {
-			return fmt.Errorf("expected affinity RTarget to be %q, got %q", el.Devices[0].Affinities[0].RTarget, rl.Devices[0].Affinities[0].RTarget)
-		}
-		if rl.Devices[0].Affinities[0].Operand != el.Devices[0].Affinities[0].Operand {
-			return fmt.Errorf("expected affinity Operand to be %q, got %q", el.Devices[0].Affinities[0].Operand, rl.Devices[0].Affinities[0].Operand)
-		}
-		if *rl.Devices[0].Affinities[0].Weight != *el.Devices[0].Affinities[0].Weight {
-			return fmt.Errorf("expected affinity Weight to be %d, got %d", *el.Devices[0].Affinities[0].Weight, *rl.Devices[0].Affinities[0].Weight)
-		}
-		if rl.NUMA == nil {
-			return errors.New("expected NUMA to be set, got nil")
-		}
-		if rl.NUMA.Affinity != el.NUMA.Affinity {
-			return fmt.Errorf("expected NUMA.Affinity to be %q, got %q", el.NUMA.Affinity, rl.NUMA.Affinity)
 		}
 		if rl.Storage == nil {
 			return errors.New("expected Storage to be set, got nil")

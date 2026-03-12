@@ -32,23 +32,6 @@ resource "nomad_quota_specification" "prod_api" {
       devices {
         name  = "nvidia/gpu"
         count = 2
-
-        constraints {
-          ltarget = "$${device.attr.memory}"
-          rtarget = "2 GiB"
-          operand = ">="
-        }
-
-        affinities {
-          ltarget = "$${device.attr.memory}"
-          rtarget = "4 GiB"
-          operand = ">="
-          weight  = 50
-        }
-      }
-
-      numa {
-        affinity = "require"
       }
 
       storage {
@@ -68,7 +51,6 @@ The following arguments are supported:
 - `description` `(string: "")` - A description of the quota specification.
 - [`limits`](#limits-blocks) `(block: <required>)` - A block of quota limits to enforce. Can
   be repeated. See below for the structure of this block.
-
 
 ### `limits` blocks
 
@@ -101,8 +83,6 @@ It supports the following arguments:
   value is treated as fully disallowed.
 - [`devices`](#devices-blocks) `(block: optional)` - A list of device quotas to enforce. Can be
   repeated. See below for the structure of this block.
-- [`numa`](#numa-blocks) `(block: optional)` - NUMA resource quota configuration. May only be
-  specified once. See below for the structure of this block.
 - [`storage`](#storage-blocks) `(block: optional)` - Storage resource quota configuration. May only
   be specified once. See below for the structure of this block.
 
@@ -114,28 +94,6 @@ following arguments:
 - `name` `(string: <required>)` - The name of the device, e.g.
   `"nvidia/gpu"`.
 - `count` `(int: 0)` - The number of device instances to limit allocations to.
-- `constraints` `(block: optional)` - A list of device constraints. Can be
-  repeated. Each block supports the following arguments:
-  - `ltarget` `(string: "")` - The left-hand side target of the constraint.
-  - `rtarget` `(string: "")` - The right-hand side target of the constraint.
-  - `operand` `(string: "")` - The operator used to evaluate the constraint
-    (e.g. `"="`, `">="`, `"regexp"`).
-- `affinities` `(block: optional)` - A list of device affinities. Can be
-  repeated. Each block supports the following arguments:
-  - `ltarget` `(string: "")` - The left-hand side target of the affinity.
-  - `rtarget` `(string: "")` - The right-hand side target of the affinity.
-  - `operand` `(string: "")` - The operator used to evaluate the affinity.
-  - `weight` `(int: 0)` - The weight of the affinity.
-
-### `numa` blocks
-
-The `numa` block describes NUMA resource quota settings. It supports the
-following arguments:
-
-- `affinity` `(string: "")` - The NUMA affinity mode, e.g. `"none"`,
-  `"prefer"`, or `"require"`.
-- `devices` `(list of string: [])` - A list of device names that require NUMA
-  awareness.
 
 ### `storage` blocks
 
