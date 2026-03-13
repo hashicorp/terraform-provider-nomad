@@ -1,6 +1,7 @@
 ## UNRELEASED
 
 IMPROVEMENTS:
+* data source/nomad_jwks: add EdDSA (Ed25519) key support ([#583](https://github.com/hashicorp/terraform-provider-nomad/pull/583))
 * resource/nomad_acl_policy: make `job_id` optional in `job_acl` block to allow policies that apply to all jobs in a namespace ([#580](https://github.com/hashicorp/terraform-provider-nomad/pull/580))
 * resource/nomad_namespace: add `vault_config` and `consul_config` blocks to configure Vault and Consul cluster permissions (Nomad Enterprise only) ([#581](https://github.com/hashicorp/terraform-provider-nomad/pull/581))
 * **New Data Source**: `nomad_node` to look up a single Nomad node by ID ([#579](https://github.com/hashicorp/terraform-provider-nomad/pull/579))
