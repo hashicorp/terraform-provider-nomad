@@ -132,43 +132,7 @@ func dataSourceJob() *schema.Resource {
 					},
 				},
 			},
-			"update_strategy": {
-				Description: "Job Update Strategy",
-				Computed:    true,
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"stagger": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"max_parallel": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-						"health_check": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"min_healthy_time": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"healthy_deadline": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"auto_revert": {
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-						"canary": {
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-					},
-				},
-			},
+			"update_strategy": updateStrategySchema(),
 			"periodic_config": {
 				Description: "Job Periodic Configuration",
 				Computed:    true,
