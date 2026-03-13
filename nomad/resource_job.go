@@ -232,50 +232,7 @@ func resourceJob() *schema.Resource {
 				},
 			},
 
-			"update_strategy": {
-				Description: "The job's update strategy for rolling updates and canary deployments.",
-				Computed:    true,
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"stagger": {
-							Description: "Delay between migrating job allocations off cluster nodes marked for draining.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"max_parallel": {
-							Description: "Number of task groups that can be updated at the same time.",
-							Type:        schema.TypeInt,
-							Computed:    true,
-						},
-						"health_check": {
-							Description: "Type of mechanism in which allocations health is determined.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"min_healthy_time": {
-							Description: "Minimum time the allocation must be in the healthy state.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"healthy_deadline": {
-							Description: "Deadline in which the allocation must be marked as healthy.",
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"auto_revert": {
-							Description: "Whether the job should auto-revert to the last stable job on deployment failure.",
-							Type:        schema.TypeBool,
-							Computed:    true,
-						},
-						"canary": {
-							Description: "Number of canary jobs that need to reach healthy status before unblocking rolling updates.",
-							Type:        schema.TypeInt,
-							Computed:    true,
-						},
-					},
-				},
-			},
+			"update_strategy": updateStrategySchema(),
 
 			"periodic_config": {
 				Description: "The job's periodic configuration for time-based scheduling.",
@@ -377,6 +334,7 @@ func taskGroupSchema() *schema.Schema {
 					Computed: true,
 					Type:     schema.TypeInt,
 				},
+				"update_strategy": updateStrategySchema(),
 				"placed_canaries": {
 					Computed: true,
 					Type:     schema.TypeList,
@@ -489,6 +447,53 @@ func taskGroupSchema() *schema.Schema {
 				"meta": {
 					Computed: true,
 					Type:     schema.TypeMap,
+				},
+			},
+		},
+	}
+}
+
+func updateStrategySchema() *schema.Schema {
+	return &schema.Schema{
+		Description: "The update strategy for rolling updates and canary deployments.",
+		Computed:    true,
+		Type:        schema.TypeList,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"stagger": {
+					Description: "Delay between migrating job allocations off cluster nodes marked for draining.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"max_parallel": {
+					Description: "Number of task groups that can be updated at the same time.",
+					Type:        schema.TypeInt,
+					Computed:    true,
+				},
+				"health_check": {
+					Description: "Type of mechanism in which allocations health is determined.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"min_healthy_time": {
+					Description: "Minimum time the allocation must be in the healthy state.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"healthy_deadline": {
+					Description: "Deadline in which the allocation must be marked as healthy.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"auto_revert": {
+					Description: "Whether the job should auto-revert to the last stable job on deployment failure.",
+					Type:        schema.TypeBool,
+					Computed:    true,
+				},
+				"canary": {
+					Description: "Number of canary jobs that need to reach healthy status before unblocking rolling updates.",
+					Type:        schema.TypeInt,
+					Computed:    true,
 				},
 			},
 		},
@@ -1003,11 +1008,36 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	// similarly, we won't know the allocation ids until after the job registration eval
 	d.SetNewComputed("allocation_ids")
 
+	canonicalizeTaskGroupUpdateStrategies(job)
 	plannedTaskGroups := jobTaskGroupsRaw(job.TaskGroups, nil)
 	plannedTaskGroups = mergeDeploymentStateFromState(plannedTaskGroups, d.Get("task_groups"))
 	d.SetNew("task_groups", plannedTaskGroups)
 
 	return nil
+}
+
+func canonicalizeTaskGroupUpdateStrategies(job *api.Job) {
+	if job == nil {
+		return
+	}
+
+	for _, taskGroup := range job.TaskGroups {
+		if taskGroup == nil {
+			continue
+		}
+
+		if jobUpdate, taskGroupUpdate := job.Update != nil, taskGroup.Update != nil; jobUpdate && taskGroupUpdate {
+			merged := job.Update.Copy()
+			merged.Merge(taskGroup.Update)
+			taskGroup.Update = merged
+		} else if jobUpdate && !job.Update.Empty() {
+			taskGroup.Update = job.Update.Copy()
+		}
+
+		if taskGroup.Update != nil {
+			taskGroup.Update.Canonicalize()
+		}
+	}
 }
 
 func mergeDeploymentStateFromState(planned []interface{}, state interface{}) []interface{} {
@@ -1238,6 +1268,9 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup, deploymentTGs map[string]*api.Deploy
 			tgM["meta"] = tg.Meta
 		} else {
 			tgM["meta"] = make(map[string]interface{})
+		}
+		if tg.Update != nil {
+			tgM["update_strategy"] = flattenUpdateStrategy(tg.Update)
 		}
 
 		tasksI := make([]interface{}, 0, len(tg.Tasks))

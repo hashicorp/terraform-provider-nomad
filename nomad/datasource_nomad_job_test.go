@@ -37,13 +37,17 @@ func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"data.nomad_job.test-job", "update_strategy.0.max_parallel", "2"),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "update_strategy.0.min_healthy_time", "11s"),
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.#", "1"),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "update_strategy.0.healthy_deadline", "6m0s"),
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.max_parallel", "2"),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "update_strategy.0.auto_revert", "true"),
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.min_healthy_time", "11s"),
 					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "update_strategy.0.canary", "1"),
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.healthy_deadline", "6m0s"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.auto_revert", "true"),
+					resource.TestCheckResourceAttr(
+						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.canary", "1"),
 				),
 			},
 		},
