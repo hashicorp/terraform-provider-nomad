@@ -132,6 +132,7 @@ func dataSourceJob() *schema.Resource {
 					},
 				},
 			},
+			"update_strategy": updateStrategySchema(),
 			"periodic_config": {
 				Description: "Job Periodic Configuration",
 				Computed:    true,
@@ -204,29 +205,23 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("stop", job.Stop)
 	d.Set("priority", job.Priority)
 	d.Set("parent_id", job.ParentID)
-	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
+
+	// Fetch the latest deployment for task group deployment status.
+	var deploymentTGs map[string]*api.DeploymentState
+	deploys, _, err := client.Jobs().Deployments(id, false, &api.QueryOptions{
+		Namespace: ns,
+	})
+	if err != nil {
+		log.Printf("[WARN] error listing deployments for Job %q: %s", id, err)
+	} else if len(deploys) > 0 {
+		deploymentTGs = deploys[0].TaskGroups
+	}
+	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups, deploymentTGs))
 	d.Set("stable", job.Stable)
 	d.Set("all_at_once", job.AllAtOnce)
 	d.Set("constraints", job.Constraints)
-	if job.Periodic != nil {
-		periodic := map[string]interface{}{}
-		if job.Periodic.Enabled != nil {
-			periodic["enabled"] = *job.Periodic.Enabled
-		}
-		if job.Periodic.Spec != nil {
-			periodic["spec"] = *job.Periodic.Spec
-		}
-		if job.Periodic.SpecType != nil {
-			periodic["spec_type"] = *job.Periodic.SpecType
-		}
-		if job.Periodic.ProhibitOverlap != nil {
-			periodic["prohibit_overlap"] = *job.Periodic.ProhibitOverlap
-		}
-		if job.Periodic.TimeZone != nil {
-			periodic["timezone"] = *job.Periodic.TimeZone
-		}
-		d.Set("periodic_config", []map[string]interface{}{periodic})
-	}
+	d.Set("update_strategy", flattenUpdateStrategy(job.Update))
+	d.Set("periodic_config", flattenPeriodicConfig(job.Periodic))
 
 	return nil
 }
