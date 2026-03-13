@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -27,6 +28,13 @@ func dataSourceJobParser() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 			},
+			"variables": {
+				Description: "HCL2 variables to pass to the job parser. Interpreted as the content of a variables file.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+			},
+
 			"json": {
 				Description: "The parsed job as JSON string.",
 				Type:        schema.TypeString,
@@ -42,9 +50,17 @@ func dataSourceJobParserRead(d *schema.ResourceData, meta interface{}) error {
 
 	hcl := d.Get("hcl").(string)
 	canonicalize := d.Get("canonicalize").(bool)
+	variables := d.Get("variables").(string)
 
 	log.Printf("[DEBUG] Parsing Job with Canonicalize set to %t", canonicalize)
-	job, err := client.Jobs().ParseHCL(hcl, canonicalize)
+
+	req := &api.JobsParseRequest{
+		JobHCL:       hcl,
+		Canonicalize: canonicalize,
+		Variables:    variables,
+	}
+
+	job, err := client.Jobs().ParseHCLOpts(req)
 	if err != nil {
 		return fmt.Errorf("error parsing job: %#v", err)
 	}
@@ -57,8 +73,6 @@ func dataSourceJobParserRead(d *schema.ResourceData, meta interface{}) error {
 	jobJSONString := string(jobJSON)
 
 	d.SetId(*job.ID)
-	d.Set("hcl", strings.TrimSpace(hcl))
-	d.Set("canonicalize", canonicalize)
 	d.Set("json", strings.TrimSpace(jobJSONString))
 
 	return nil
