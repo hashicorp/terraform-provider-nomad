@@ -179,7 +179,6 @@ example, Terraform will not be able to detect changes to files loaded using the
 [`file`](https://www.nomadproject.io/docs/job-specification/hcl2/functions/file/file)
 function inside a jobspec.
 
-
 To avoid confusion, these functions are disabled by default. To enable them
 set `allow_fs` to `true`:
 
@@ -265,10 +264,85 @@ The following arguments are supported:
   - `allow_fs` `(boolean: false)` - Set this to `true` to be able to use
     [HCL2 filesystem functions](#filesystem-functions)
 
+## Attributes Reference
+
+The following attributes are exported:
+
+- `name` `(string)` - The job name, as derived from the jobspec.
+- `namespace` `(string)` - The namespace of the job, as derived from the jobspec.
+- `type` `(string)` - The type of the job, as derived from the jobspec.
+- `region` `(string)` - The target region for the job.
+- `datacenters` `(set of strings)` - The target datacenters for the job.
+- `modify_index` `(string)` - Integer that increments for each change. Used to detect any changes between plan and apply.
+- `status` `(string)` - The current status of the job.
+- `status_description` `(string)` - Additional status information returned by Nomad.
+- `version` `(integer)` - The current job version.
+- `submit_time` `(integer)` - The Unix timestamp when the job was submitted.
+- `create_index` `(integer)` - The job creation index.
+- `stop` `(boolean)` - Whether the job is stopped.
+- `priority` `(integer)` - The job priority for scheduling and resource access.
+- `parent_id` `(string)` - The parent job ID, if applicable.
+- `stable` `(boolean)` - Whether the job is stable.
+- `all_at_once` `(boolean)` - Whether the scheduler can make partial placements on oversubscribed nodes.
+- `deployment_id` `(string)` - If `detach = false`, the deployment associated with the last create or update, if one exists.
+- `deployment_status` `(string)` - If `detach = false`, the status for the deployment associated with the last create or update, if one exists.
+- `allocation_ids` `(list of strings)` - Allocation IDs associated with the job when `read_allocation_ids = true`.
+- `constraints` `(list of maps)` - Job constraints.
+  - `ltarget` `(string)` - Attribute being constrained.
+  - `rtarget` `(string)` - Constraint value.
+  - `operand` `(string)` - Operator used to compare the attribute to the constraint.
+- `update_strategy` `(list of maps)` - Job-level update strategy returned by Nomad.
+  - `stagger` `(string)` - Delay between migrating job allocations off cluster nodes marked for draining.
+  - `max_parallel` `(integer)` - Number of task groups that can be updated at the same time.
+  - `health_check` `(string)` - Type of mechanism in which allocations health is determined.
+  - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state.
+  - `healthy_deadline` `(string)` - Deadline in which the allocation must be marked as healthy.
+  - `auto_revert` `(boolean)` - Whether the job should auto-revert to the last stable job on deployment failure.
+  - `canary` `(integer)` - Number of canary jobs that need to reach healthy status before unblocking rolling updates.
+- `periodic_config` `(list of maps)` - The job's periodic configuration.
+  - `enabled` `(boolean)` - Whether periodic scheduling is enabled for the job.
+  - `spec` `(string)` - Cron specification for the periodic job.
+  - `spec_type` `(string)` - Type of periodic specification.
+  - `prohibit_overlap` `(boolean)` - Whether the job should wait until previous instances have completed.
+  - `timezone` `(string)` - Time zone used to evaluate the next launch interval.
+- `task_groups` `(list of maps)` - A list of the job's task groups.
+  - `name` `(string)` - Task group name.
+  - `count` `(integer)` - Task group count.
+  - `update_strategy` `(list of maps)` - Effective update strategy for the task group.
+    - `stagger` `(string)` - Delay between migrating job allocations off cluster nodes marked for draining.
+    - `max_parallel` `(integer)` - Number of task groups that can be updated at the same time.
+    - `health_check` `(string)` - Type of mechanism in which allocations health is determined.
+    - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state.
+    - `healthy_deadline` `(string)` - Deadline in which the allocation must be marked as healthy.
+    - `auto_revert` `(boolean)` - Whether the job should auto-revert to the last stable job on deployment failure.
+    - `canary` `(integer)` - Number of canary jobs that need to reach healthy status before unblocking rolling updates.
+  - `placed_canaries` `(list of strings)` - Allocations placed as canaries for the task group.
+  - `auto_revert` `(boolean)` - Whether the latest deployment for the task group is marked for auto-revert.
+  - `promoted` `(boolean)` - Whether the canary deployment has been promoted.
+  - `desired_canaries` `(integer)` - Desired number of canaries.
+  - `desired_total` `(integer)` - Desired total number of allocations.
+  - `placed_allocs` `(integer)` - Number of placed allocations.
+  - `healthy_allocs` `(integer)` - Number of healthy allocations.
+  - `unhealthy_allocs` `(integer)` - Number of unhealthy allocations.
+  - `task` `(list of maps)` - Tasks in the task group.
+    - `name` `(string)` - Task name.
+    - `driver` `(string)` - Task driver.
+    - `meta` `(map of strings)` - Task metadata.
+    - `volume_mounts` `(list of maps)` - Task volume mounts.
+      - `volume` `(string)` - Volume name.
+      - `destination` `(string)` - Destination path inside the task.
+      - `read_only` `(boolean)` - Whether the volume mount is read-only.
+  - `volumes` `(list of maps)` - Volume requests for the task group.
+    - `name` `(string)` - Volume name.
+    - `type` `(string)` - Volume type.
+    - `read_only` `(boolean)` - Whether the volume is read-only.
+    - `source` `(string)` - Volume source.
+  - `meta` `(map of strings)` - Task group metadata.
+
 ### Timeouts
 
 `nomad_job` provides the following [`Timeouts`][tf_docs_timeouts] configuration
-options when [`detach`](#detach) is set to `false`:
+options when `detach` is set to `false`:
 
 - `create` `(string: "5m")` - Timeout when registering a new job.
 - `update` `(string: "5m")` - Timeout when updating an existing job.
