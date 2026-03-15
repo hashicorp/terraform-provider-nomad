@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -27,6 +28,17 @@ func resourceCSIVolume() *schema.Resource {
 		UpdateContext: resourceCSIVolumeCreate,
 		DeleteContext: resourceCSIVolumeDelete,
 		Read:          resourceCSIVolumeRead,
+		CustomizeDiff: resourceCSIVolumeCustomizeDiff,
+		ValidateRawResourceConfigFuncs: []schema.ValidateRawResourceConfigFunc{
+			validation.PreferWriteOnlyAttribute(
+				cty.GetAttrPath("secrets"),
+				cty.GetAttrPath("secrets_wo"),
+			),
+			validation.PreferWriteOnlyAttribute(
+				cty.GetAttrPath("mount_options"),
+				cty.GetAttrPath("mount_options_wo"),
+			),
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -175,6 +187,37 @@ func resourceCSIVolume() *schema.Resource {
 				},
 			},
 
+			"mount_options_wo": {
+				Description: "Write-only version of `mount_options`. Options for mounting 'block-device' volumes " +
+					"without a pre-formatted file system. Unlike `mount_options`, this value is never stored in state. " +
+					"Use `mount_options_wo_version` to trigger updates.",
+				Optional:  true,
+				WriteOnly: true,
+				Type:      schema.TypeList,
+				MaxItems:  1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"fs_type": {
+							Description: "The file system type.",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
+						"mount_flags": {
+							Description: "The flags passed to mount.",
+							Type:        schema.TypeList,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Optional:    true,
+						},
+					},
+				},
+			},
+
+			"mount_options_wo_version": {
+				Description: "Version counter for `mount_options_wo`. Increment to trigger an update when mount options change.",
+				Optional:    true,
+				Type:        schema.TypeInt,
+			},
+
 			"secrets": {
 				Description: "An optional key-value map of strings used as credentials for publishing and unpublishing volumes.",
 				Optional:    true,
@@ -183,6 +226,22 @@ func resourceCSIVolume() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+
+			"secrets_wo": {
+				Description: "Write-only version of `secrets`. An optional key-value map of strings used as " +
+					"credentials for publishing and unpublishing volumes. Unlike `secrets`, this value is " +
+					"never stored in state. Use `secrets_wo_version` to trigger updates.",
+				Optional:  true,
+				WriteOnly: true,
+				Type:      schema.TypeMap,
+				Elem:      &schema.Schema{Type: schema.TypeString},
+			},
+
+			"secrets_wo_version": {
+				Description: "Version counter for `secrets_wo`. Increment to trigger an update when rotating secrets.",
+				Optional:    true,
+				Type:        schema.TypeInt,
 			},
 
 			"parameters": {
@@ -349,6 +408,32 @@ func resourceCSIVolume() *schema.Resource {
 	}
 }
 
+func resourceCSIVolumeCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	rawConfig := d.GetRawConfig()
+	secretsSet := len(d.Get("secrets").(map[string]interface{})) > 0
+	secretsWOSet := rawConfig.IsKnown() && !rawConfig.IsNull() &&
+		!rawConfig.GetAttr("secrets_wo").IsNull()
+	if secretsSet && secretsWOSet {
+		return fmt.Errorf("only one of `secrets` or `secrets_wo` may be set")
+	}
+
+	mountOptionsSet := len(d.Get("mount_options").([]interface{})) > 0
+	mountOptionsWOSet := rawConfig.IsKnown() && !rawConfig.IsNull() &&
+		!rawConfig.GetAttr("mount_options_wo").IsNull()
+	if mountOptionsSet && mountOptionsWOSet {
+		return fmt.Errorf("only one of `mount_options` or `mount_options_wo` may be set")
+	}
+
+	if !secretsWOSet && d.Get("secrets_wo_version").(int) != 0 {
+		return fmt.Errorf("`secrets_wo_version` is set but `secrets_wo` is not; `secrets_wo_version` has no effect without `secrets_wo`")
+	}
+	if !mountOptionsWOSet && d.Get("mount_options_wo_version").(int) != 0 {
+		return fmt.Errorf("`mount_options_wo_version` is set but `mount_options_wo` is not; `mount_options_wo_version` has no effect without `mount_options_wo`")
+	}
+
+	return nil
+}
+
 // resourceCSIVolumeRead is shared between nomad_csi_volume and
 // nomad_csi_volume_registration because once a volume is stored in Nomad it
 // is read from the same endpoint, regardless of how it was created.
@@ -445,6 +530,21 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		return parsingDiags
 	}
 
+	rawConfig := d.GetRawConfig()
+
+	secrets := helper.ToMapStringString(d.Get("secrets"))
+	if rawConfig.IsKnown() && !rawConfig.IsNull() {
+		secretsWORaw := rawConfig.GetAttr("secrets_wo")
+		if secretsWORaw.IsKnown() && !secretsWORaw.IsNull() {
+			secretsWO := map[string]string{}
+			secretsWORaw.ForEachElement(func(key, val cty.Value) (stop bool) {
+				secretsWO[key.AsString()] = val.AsString()
+				return
+			})
+			secrets = secretsWO
+		}
+	}
+
 	volume := &api.CSIVolume{
 		ID:                    d.Get("volume_id").(string),
 		PluginID:              d.Get("plugin_id").(string),
@@ -455,7 +555,7 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 		RequestedCapacityMax:  int64(capacityMax),
 		RequestedCapabilities: capabilities,
 		RequestedTopologies:   topologyRequest,
-		Secrets:               helper.ToMapStringString(d.Get("secrets")),
+		Secrets:               secrets,
 		Parameters:            helper.ToMapStringString(d.Get("parameters")),
 		Context:               helper.ToMapStringString(d.Get("context")),
 	}
@@ -482,6 +582,26 @@ func resourceCSIVolumeCreate(ctx context.Context, d *schema.ResourceData, meta i
 			for _, rawflag := range mountFlagsList {
 				volume.MountOptions.MountFlags = append(volume.MountOptions.MountFlags, rawflag.(string))
 			}
+		}
+	}
+
+	// mount_options_wo overrides mount_options when set.
+	if rawConfig.IsKnown() && !rawConfig.IsNull() {
+		mountOptsWORaw := rawConfig.GetAttr("mount_options_wo")
+		if mountOptsWORaw.IsKnown() && !mountOptsWORaw.IsNull() && mountOptsWORaw.LengthInt() > 0 {
+			volume.MountOptions = &api.CSIMountOptions{}
+			mountOptsWORaw.ForEachElement(func(_, item cty.Value) (stop bool) {
+				if fsType := item.GetAttr("fs_type"); fsType.IsKnown() && !fsType.IsNull() {
+					volume.MountOptions.FSType = fsType.AsString()
+				}
+				if flags := item.GetAttr("mount_flags"); flags.IsKnown() && !flags.IsNull() {
+					flags.ForEachElement(func(_, flag cty.Value) (stop bool) {
+						volume.MountOptions.MountFlags = append(volume.MountOptions.MountFlags, flag.AsString())
+						return
+					})
+				}
+				return
+			})
 		}
 	}
 
