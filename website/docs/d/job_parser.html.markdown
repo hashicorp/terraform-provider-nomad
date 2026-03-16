@@ -19,10 +19,29 @@ data "nomad_job_parser" "my_job" {
 }
 ```
 
+### With Variables
+
+```hcl
+data "nomad_job_parser" "my_job" {
+  hcl = file("${path.module}/jobspec.hcl")
+
+  variables = <<EOT
+datacenter = "dc1"
+image      = "nginx:latest"
+EOT
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+- `hcl` `(string: <required>)` - The HCL definition of the job.
+- `canonicalize` `(boolean: false)` - Flag to enable setting any unset fields to their default values.
+- `variables` `(string: "")` - HCL2 variables to pass to the job parser. Interpreted as the content of a variables file.
+
 ## Attribute Reference
 
 The following attributes are exported:
 
-- `hcl` `(string)` - the HCL definition of the job.
-- `canonicalize` `(boolean: true)` - flag to enable setting any unset fields to their default values.
-- `json` `(string)` - the parsed job as JSON string.
+- `json` `(string)` - The parsed job as JSON string.
