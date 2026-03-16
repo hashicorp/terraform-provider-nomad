@@ -241,27 +241,27 @@ func resourceJob() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"enabled": {
-							Description: "Whether periodic scheduling is enabled for this job.",
+							Description: "Whether the periodic job is enabled. When disabled, scheduled runs and force launches are prevented.",
 							Type:        schema.TypeBool,
 							Computed:    true,
 						},
 						"spec": {
-							Description: "The cron spec for the periodic job.",
+							Description: "Cron expression configuring the interval at which the job is launched.",
 							Type:        schema.TypeString,
 							Computed:    true,
 						},
 						"spec_type": {
-							Description: "The type of the periodic spec.",
+							Description: "Type of periodic specification, such as cron.",
 							Type:        schema.TypeString,
 							Computed:    true,
 						},
 						"prohibit_overlap": {
-							Description: "Whether the job should wait until previous instances have completed.",
+							Description: "Whether this job should wait until previous instances of the same job have completed before launching again.",
 							Type:        schema.TypeBool,
 							Computed:    true,
 						},
 						"timezone": {
-							Description: "Time zone to evaluate the next launch interval against.",
+							Description: "Time zone used to evaluate the next launch interval.",
 							Type:        schema.TypeString,
 							Computed:    true,
 						},
@@ -461,37 +461,37 @@ func updateStrategySchema() *schema.Schema {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"stagger": {
-					Description: "Delay between migrating job allocations off cluster nodes marked for draining.",
+					Description: "Delay between each set of max_parallel updates when updating system jobs.",
 					Type:        schema.TypeString,
 					Computed:    true,
 				},
 				"max_parallel": {
-					Description: "Number of task groups that can be updated at the same time.",
+					Description: "Number of allocations within a task group that can be destructively updated at the same time. Setting 0 forces updates instead of deployments.",
 					Type:        schema.TypeInt,
 					Computed:    true,
 				},
 				"health_check": {
-					Description: "Type of mechanism in which allocations health is determined.",
+					Description: "Mechanism used to determine allocation health: checks, task_states, or manual.",
 					Type:        schema.TypeString,
 					Computed:    true,
 				},
 				"min_healthy_time": {
-					Description: "Minimum time the allocation must be in the healthy state.",
+					Description: "Minimum time the allocation must be in the healthy state before further updates can proceed.",
 					Type:        schema.TypeString,
 					Computed:    true,
 				},
 				"healthy_deadline": {
-					Description: "Deadline in which the allocation must be marked as healthy.",
+					Description: "Deadline by which the allocation must become healthy before it is marked unhealthy.",
 					Type:        schema.TypeString,
 					Computed:    true,
 				},
 				"auto_revert": {
-					Description: "Whether the job should auto-revert to the last stable job on deployment failure.",
+					Description: "Whether the job should automatically revert to the last stable job on deployment failure.",
 					Type:        schema.TypeBool,
 					Computed:    true,
 				},
 				"canary": {
-					Description: "Number of canary jobs that need to reach healthy status before unblocking rolling updates.",
+					Description: "Number of canary allocations created before destructive updates continue.",
 					Type:        schema.TypeInt,
 					Computed:    true,
 				},

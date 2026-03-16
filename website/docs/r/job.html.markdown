@@ -292,30 +292,30 @@ The following attributes are exported:
   - `rtarget` `(string)` - Constraint value.
   - `operand` `(string)` - Operator used to compare the attribute to the constraint.
 - `update_strategy` `(list of maps)` - Job-level update strategy returned by Nomad.
-  - `stagger` `(string)` - Delay between migrating job allocations off cluster nodes marked for draining.
-  - `max_parallel` `(integer)` - Number of task groups that can be updated at the same time.
-  - `health_check` `(string)` - Type of mechanism in which allocations health is determined.
-  - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state.
-  - `healthy_deadline` `(string)` - Deadline in which the allocation must be marked as healthy.
-  - `auto_revert` `(boolean)` - Whether the job should auto-revert to the last stable job on deployment failure.
-  - `canary` `(integer)` - Number of canary jobs that need to reach healthy status before unblocking rolling updates.
+  - `stagger` `(string)` - Delay between each set of `max_parallel` updates when updating system jobs.
+  - `max_parallel` `(integer)` - Number of allocations within a task group that can be destructively updated at the same time. Setting `0` forces updates instead of deployments.
+  - `health_check` `(string)` - Mechanism used to determine allocation health: `checks`, `task_states`, or `manual`.
+  - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state before further updates can proceed.
+  - `healthy_deadline` `(string)` - Deadline by which the allocation must become healthy before it is marked unhealthy.
+  - `auto_revert` `(boolean)` - Whether the job should automatically revert to the last stable job on deployment failure.
+  - `canary` `(integer)` - Number of canary allocations created before destructive updates continue.
 - `periodic_config` `(list of maps)` - The job's periodic configuration.
-  - `enabled` `(boolean)` - Whether periodic scheduling is enabled for the job.
-  - `spec` `(string)` - Cron specification for the periodic job.
-  - `spec_type` `(string)` - Type of periodic specification.
-  - `prohibit_overlap` `(boolean)` - Whether the job should wait until previous instances have completed.
+  - `enabled` `(boolean)` - Whether the periodic job is enabled. When disabled, scheduled runs and force launches are prevented.
+  - `spec` `(string)` - Cron expression configuring the interval at which the job is launched.
+  - `spec_type` `(string)` - Type of periodic specification, such as `cron`.
+  - `prohibit_overlap` `(boolean)` - Whether this job should wait until previous instances of the same job have completed before launching again.
   - `timezone` `(string)` - Time zone used to evaluate the next launch interval.
 - `task_groups` `(list of maps)` - A list of the job's task groups.
   - `name` `(string)` - Task group name.
   - `count` `(integer)` - Task group count.
   - `update_strategy` `(list of maps)` - Effective update strategy for the task group.
-    - `stagger` `(string)` - Delay between migrating job allocations off cluster nodes marked for draining.
-    - `max_parallel` `(integer)` - Number of task groups that can be updated at the same time.
-    - `health_check` `(string)` - Type of mechanism in which allocations health is determined.
-    - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state.
-    - `healthy_deadline` `(string)` - Deadline in which the allocation must be marked as healthy.
-    - `auto_revert` `(boolean)` - Whether the job should auto-revert to the last stable job on deployment failure.
-    - `canary` `(integer)` - Number of canary jobs that need to reach healthy status before unblocking rolling updates.
+    - `stagger` `(string)` - Delay between each set of `max_parallel` updates when updating system jobs.
+    - `max_parallel` `(integer)` - Number of allocations within a task group that can be destructively updated at the same time. Setting `0` forces updates instead of deployments.
+    - `health_check` `(string)` - Mechanism used to determine allocation health: `checks`, `task_states`, or `manual`.
+    - `min_healthy_time` `(string)` - Minimum time the allocation must be in the healthy state before further updates can proceed.
+    - `healthy_deadline` `(string)` - Deadline by which the allocation must become healthy before it is marked unhealthy.
+    - `auto_revert` `(boolean)` - Whether the job should automatically revert to the last stable job on deployment failure.
+    - `canary` `(integer)` - Number of canary allocations created before destructive updates continue.
   - `placed_canaries` `(list of strings)` - Allocations placed as canaries for the task group.
   - `auto_revert` `(boolean)` - Whether the latest deployment for the task group is marked for auto-revert.
   - `promoted` `(boolean)` - Whether the canary deployment has been promoted.
