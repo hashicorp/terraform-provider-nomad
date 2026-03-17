@@ -2392,50 +2392,6 @@ func TestVolumeSorting(t *testing.T) {
 	require.ElementsMatch(tg1, tg2)
 }
 
-func TestDeploymentStateRaw(t *testing.T) {
-	require := require.New(t)
-
-	groupName := "group"
-	deployment := &api.Deployment{
-		TaskGroups: map[string]*api.DeploymentState{
-			groupName: {
-				PlacedCanaries:  []string{"canary-alloc"},
-				AutoRevert:      true,
-				Promoted:        true,
-				DesiredCanaries: 1,
-				DesiredTotal:    2,
-				PlacedAllocs:    2,
-				HealthyAllocs:   2,
-				UnhealthyAllocs: 0,
-			},
-		},
-	}
-
-	deploymentRaw := deploymentStateRaw(deployment)
-	require.Len(deploymentRaw, 1)
-
-	stateRaw, ok := deploymentRaw[0].(map[string]interface{})
-	require.True(ok)
-	require.Equal("", stateRaw["id"])
-	require.Equal("", stateRaw["status"])
-	require.Equal("", stateRaw["status_description"])
-	groupsRaw, ok := stateRaw["task_groups"].([]interface{})
-	require.True(ok)
-	require.Len(groupsRaw, 1)
-
-	groupRaw, ok := groupsRaw[0].(map[string]interface{})
-	require.True(ok)
-	require.Equal(groupName, groupRaw["name"])
-	require.Equal([]interface{}{"canary-alloc"}, groupRaw["placed_canaries"])
-	require.Equal(true, groupRaw["auto_revert"])
-	require.Equal(true, groupRaw["promoted"])
-	require.Equal(1, groupRaw["desired_canaries"])
-	require.Equal(2, groupRaw["desired_total"])
-	require.Equal(2, groupRaw["placed_allocs"])
-	require.Equal(2, groupRaw["healthy_allocs"])
-	require.Equal(0, groupRaw["unhealthy_allocs"])
-}
-
 var testResourceJob_invalidNomadServerConfig = `
 provider "nomad" {
 	alias = "tf_test"

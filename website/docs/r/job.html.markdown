@@ -330,21 +330,6 @@ The following attributes are exported:
     - `read_only` `(boolean)` - Whether the volume is read-only.
     - `source` `(string)` - Volume source.
   - `meta` `(map of strings)` - Task group metadata.
-- `deployment_state` `(list of maps)` - State from the latest deployment for the job, if one exists. This data is typically empty for job types without deployments, such as `batch` and `sysbatch`.
-  - `id` `(string)` - ID of the latest deployment.
-  - `status` `(string)` - Status of the latest deployment.
-  - `status_description` `(string)` - Status description of the latest deployment.
-  - `task_groups` `(list of maps)` - Deployment state keyed by task group.
-    - `name` `(string)` - Task group name.
-    - `placed_canaries` `(list of strings)` - Allocations placed as canaries for the task group.
-    - `auto_revert` `(boolean)` - Whether the latest deployment for the task group is marked for auto-revert.
-    - `promoted` `(boolean)` - Whether the canary deployment has been promoted.
-    - `desired_canaries` `(integer)` - Desired number of canaries.
-    - `desired_total` `(integer)` - Desired total number of allocations.
-    - `placed_allocs` `(integer)` - Number of placed allocations.
-    - `healthy_allocs` `(integer)` - Number of healthy allocations.
-    - `unhealthy_allocs` `(integer)` - Number of unhealthy allocations.
-
 ### Timeouts
 
 `nomad_job` provides the following [`Timeouts`][tf_docs_timeouts] configuration

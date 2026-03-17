@@ -48,22 +48,6 @@ func TestAccDataSourceNomadJob_Basic(t *testing.T) {
 						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.auto_revert", "true"),
 					resource.TestCheckResourceAttr(
 						"data.nomad_job.test-job", "task_groups.0.update_strategy.0.canary", "1"),
-					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "deployment_state.#", "1"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.id"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.status"),
-					resource.TestCheckResourceAttr(
-						"data.nomad_job.test-job", "deployment_state.0.task_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.task_groups.0.desired_total"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.task_groups.0.placed_allocs"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.task_groups.0.healthy_allocs"),
-					resource.TestCheckResourceAttrSet(
-						"data.nomad_job.test-job", "deployment_state.0.task_groups.0.unhealthy_allocs"),
 				),
 			},
 		},

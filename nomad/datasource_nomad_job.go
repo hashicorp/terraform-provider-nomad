@@ -100,8 +100,7 @@ func dataSourceJob() *schema.Resource {
 				Computed:    true,
 				Type:        schema.TypeString,
 			},
-			"task_groups":      taskGroupSchema(),
-			"deployment_state": deploymentStateSchema(),
+			"task_groups": taskGroupSchema(),
 			"stable": {
 				Description: "Job Stable",
 				Type:        schema.TypeBool,
@@ -207,9 +206,7 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("priority", job.Priority)
 	d.Set("parent_id", job.ParentID)
 
-	deployment := latestDeployment(client, id, &api.QueryOptions{Namespace: ns})
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
-	d.Set("deployment_state", deploymentStateRaw(deployment))
 	d.Set("stable", job.Stable)
 	d.Set("all_at_once", job.AllAtOnce)
 	d.Set("constraints", job.Constraints)
