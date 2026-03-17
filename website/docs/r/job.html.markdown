@@ -306,7 +306,6 @@ The following attributes are exported:
   - `prohibit_overlap` `(boolean)` - Whether this job should wait until previous instances of the same job have completed before launching again.
   - `timezone` `(string)` - Time zone used to evaluate the next launch interval.
 - `task_groups` `(list of maps)` - A list of the job's task groups.
-  Deployment-derived task group fields such as `placed_canaries`, `promoted`, `desired_canaries`, `desired_total`, `placed_allocs`, `healthy_allocs`, and `unhealthy_allocs` are only populated when Nomad reports a latest deployment for the job. These fields are typically empty for job types without deployments, such as `batch` and `sysbatch`.
   - `name` `(string)` - Task group name.
   - `count` `(integer)` - Task group count.
   - `update_strategy` `(list of maps)` - Effective update strategy for the task group.
@@ -317,14 +316,6 @@ The following attributes are exported:
     - `healthy_deadline` `(string)` - Deadline by which the allocation must become healthy before it is marked unhealthy.
     - `auto_revert` `(boolean)` - Whether the job should automatically revert to the last stable job on deployment failure.
     - `canary` `(integer)` - Number of canary allocations created before destructive updates continue.
-  - `placed_canaries` `(list of strings)` - Allocations placed as canaries for the task group.
-  - `auto_revert` `(boolean)` - Whether the latest deployment for the task group is marked for auto-revert.
-  - `promoted` `(boolean)` - Whether the canary deployment has been promoted.
-  - `desired_canaries` `(integer)` - Desired number of canaries.
-  - `desired_total` `(integer)` - Desired total number of allocations.
-  - `placed_allocs` `(integer)` - Number of placed allocations.
-  - `healthy_allocs` `(integer)` - Number of healthy allocations.
-  - `unhealthy_allocs` `(integer)` - Number of unhealthy allocations.
   - `task` `(list of maps)` - Tasks in the task group.
     - `name` `(string)` - Task name.
     - `driver` `(string)` - Task driver.
@@ -339,6 +330,20 @@ The following attributes are exported:
     - `read_only` `(boolean)` - Whether the volume is read-only.
     - `source` `(string)` - Volume source.
   - `meta` `(map of strings)` - Task group metadata.
+- `deployment_state` `(list of maps)` - State from the latest deployment for the job, if one exists. This data is typically empty for job types without deployments, such as `batch` and `sysbatch`.
+  - `id` `(string)` - ID of the latest deployment.
+  - `status` `(string)` - Status of the latest deployment.
+  - `status_description` `(string)` - Status description of the latest deployment.
+  - `task_groups` `(list of maps)` - Deployment state keyed by task group.
+    - `name` `(string)` - Task group name.
+    - `placed_canaries` `(list of strings)` - Allocations placed as canaries for the task group.
+    - `auto_revert` `(boolean)` - Whether the latest deployment for the task group is marked for auto-revert.
+    - `promoted` `(boolean)` - Whether the canary deployment has been promoted.
+    - `desired_canaries` `(integer)` - Desired number of canaries.
+    - `desired_total` `(integer)` - Desired total number of allocations.
+    - `placed_allocs` `(integer)` - Number of placed allocations.
+    - `healthy_allocs` `(integer)` - Number of healthy allocations.
+    - `unhealthy_allocs` `(integer)` - Number of unhealthy allocations.
 
 ### Timeouts
 

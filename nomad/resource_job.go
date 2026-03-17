@@ -302,7 +302,8 @@ func resourceJob() *schema.Resource {
 				},
 			},
 
-			"task_groups": taskGroupSchema(),
+			"task_groups":      taskGroupSchema(),
+			"deployment_state": deploymentStateSchema(),
 
 			"purge_on_destroy": {
 				Description: "Whether to purge the job when the resource is destroyed.",
@@ -335,39 +336,6 @@ func taskGroupSchema() *schema.Schema {
 					Type:     schema.TypeInt,
 				},
 				"update_strategy": updateStrategySchema(),
-				"placed_canaries": {
-					Computed: true,
-					Type:     schema.TypeList,
-					Elem:     &schema.Schema{Type: schema.TypeString},
-				},
-				"auto_revert": {
-					Computed: true,
-					Type:     schema.TypeBool,
-				},
-				"promoted": {
-					Computed: true,
-					Type:     schema.TypeBool,
-				},
-				"desired_canaries": {
-					Computed: true,
-					Type:     schema.TypeInt,
-				},
-				"desired_total": {
-					Computed: true,
-					Type:     schema.TypeInt,
-				},
-				"placed_allocs": {
-					Computed: true,
-					Type:     schema.TypeInt,
-				},
-				"healthy_allocs": {
-					Computed: true,
-					Type:     schema.TypeInt,
-				},
-				"unhealthy_allocs": {
-					Computed: true,
-					Type:     schema.TypeInt,
-				},
 				// "scaling": {
 				// 	Computed: true,
 				// 	Type:     schema.TypeList,
@@ -447,6 +415,79 @@ func taskGroupSchema() *schema.Schema {
 				"meta": {
 					Computed: true,
 					Type:     schema.TypeMap,
+				},
+			},
+		},
+	}
+}
+
+func deploymentStateSchema() *schema.Schema {
+	return &schema.Schema{
+		Description: "State from the latest deployment for the job, if one exists.",
+		Computed:    true,
+		Type:        schema.TypeList,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"id": {
+					Computed: true,
+					Type:     schema.TypeString,
+				},
+				"status": {
+					Computed: true,
+					Type:     schema.TypeString,
+				},
+				"status_description": {
+					Computed: true,
+					Type:     schema.TypeString,
+				},
+				"task_groups": deploymentTaskGroupStateSchema(),
+			},
+		},
+	}
+}
+
+func deploymentTaskGroupStateSchema() *schema.Schema {
+	return &schema.Schema{
+		Computed: true,
+		Type:     schema.TypeList,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"name": {
+					Computed: true,
+					Type:     schema.TypeString,
+				},
+				"placed_canaries": {
+					Computed: true,
+					Type:     schema.TypeList,
+					Elem:     &schema.Schema{Type: schema.TypeString},
+				},
+				"auto_revert": {
+					Computed: true,
+					Type:     schema.TypeBool,
+				},
+				"promoted": {
+					Computed: true,
+					Type:     schema.TypeBool,
+				},
+				"desired_canaries": {
+					Computed: true,
+					Type:     schema.TypeInt,
+				},
+				"desired_total": {
+					Computed: true,
+					Type:     schema.TypeInt,
+				},
+				"placed_allocs": {
+					Computed: true,
+					Type:     schema.TypeInt,
+				},
+				"healthy_allocs": {
+					Computed: true,
+					Type:     schema.TypeInt,
+				},
+				"unhealthy_allocs": {
+					Computed: true,
+					Type:     schema.TypeInt,
 				},
 			},
 		},
@@ -805,8 +846,9 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("update_strategy", flattenUpdateStrategy(job.Update))
 	d.Set("periodic_config", flattenPeriodicConfig(job.Periodic))
 
-	deploymentTGs := latestDeploymentTaskGroups(client, id, opts)
-	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups, deploymentTGs))
+	deployment := latestDeployment(client, id, opts)
+	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
+	d.Set("deployment_state", deploymentStateRaw(deployment))
 
 	if d.Get("read_allocation_ids").(bool) {
 		allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
@@ -890,6 +932,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 		d.SetNewComputed("datacenters")
 		d.SetNewComputed("allocation_ids")
 		d.SetNewComputed("task_groups")
+		d.SetNewComputed("deployment_state")
 		d.SetNewComputed("deployment_id")
 		d.SetNewComputed("deployment_status")
 		d.SetNewComputed("status")
@@ -1000,10 +1043,10 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	d.SetNewComputed("modify_index")
 	// similarly, we won't know the allocation ids until after the job registration eval
 	d.SetNewComputed("allocation_ids")
+	d.SetNewComputed("deployment_state")
 
 	canonicalizeTaskGroupUpdateStrategies(job)
-	plannedTaskGroups := jobTaskGroupsRaw(job.TaskGroups, nil)
-	plannedTaskGroups = mergeDeploymentStateFromState(plannedTaskGroups, d.Get("task_groups"))
+	plannedTaskGroups := jobTaskGroupsRaw(job.TaskGroups)
 	d.SetNew("task_groups", plannedTaskGroups)
 
 	return nil
@@ -1033,69 +1076,13 @@ func canonicalizeTaskGroupUpdateStrategies(job *api.Job) {
 	}
 }
 
-func latestDeploymentTaskGroups(client *api.Client, jobID string, opts *api.QueryOptions) map[string]*api.DeploymentState {
+func latestDeployment(client *api.Client, jobID string, opts *api.QueryOptions) *api.Deployment {
 	deployment, _, err := client.Jobs().LatestDeployment(jobID, opts)
 	if err != nil {
 		log.Printf("[WARN] error reading latest deployment for Job %q: %s", jobID, err)
 		return nil
 	}
-	if deployment == nil {
-		return nil
-	}
-	return deployment.TaskGroups
-}
-
-func mergeDeploymentStateFromState(planned []interface{}, state interface{}) []interface{} {
-	stateList, ok := state.([]interface{})
-	if !ok || len(stateList) == 0 {
-		return planned
-	}
-
-	stateByName := make(map[string]map[string]interface{}, len(stateList))
-	for _, item := range stateList {
-		tgM, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		name, ok := tgM["name"].(string)
-		if !ok || name == "" {
-			continue
-		}
-		stateByName[name] = tgM
-	}
-
-	keys := []string{
-		"placed_canaries",
-		"auto_revert",
-		"promoted",
-		"desired_canaries",
-		"desired_total",
-		"placed_allocs",
-		"healthy_allocs",
-		"unhealthy_allocs",
-	}
-
-	for _, item := range planned {
-		plannedTG, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		name, ok := plannedTG["name"].(string)
-		if !ok || name == "" {
-			continue
-		}
-		stateTG, ok := stateByName[name]
-		if !ok {
-			continue
-		}
-		for _, key := range keys {
-			if v, ok := stateTG[key]; ok {
-				plannedTG[key] = v
-			}
-		}
-	}
-
-	return planned
+	return deployment
 }
 
 func flattenPeriodicConfig(periodic *api.PeriodicConfig) []map[string]interface{} {
@@ -1251,7 +1238,7 @@ func parseHCL2Jobspec(raw string, config HCL2JobParserConfig) (*api.Job, error) 
 	})
 }
 
-func jobTaskGroupsRaw(tgs []*api.TaskGroup, deploymentTGs map[string]*api.DeploymentState) []interface{} {
+func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 	ret := make([]interface{}, 0, len(tgs))
 
 	for _, tg := range tgs {
@@ -1324,26 +1311,52 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup, deploymentTGs map[string]*api.Deploy
 
 		tgM["volumes"] = volumesI
 
-		// Populate deployment state fields for this task group.
-		if ds, ok := deploymentTGs[tgName]; ok && ds != nil {
-			canaries := make([]interface{}, len(ds.PlacedCanaries))
-			for i, c := range ds.PlacedCanaries {
-				canaries[i] = c
-			}
-			tgM["placed_canaries"] = canaries
-			tgM["auto_revert"] = ds.AutoRevert
-			tgM["promoted"] = ds.Promoted
-			tgM["desired_canaries"] = ds.DesiredCanaries
-			tgM["desired_total"] = ds.DesiredTotal
-			tgM["placed_allocs"] = ds.PlacedAllocs
-			tgM["healthy_allocs"] = ds.HealthyAllocs
-			tgM["unhealthy_allocs"] = ds.UnhealthyAllocs
-		}
-
 		ret = append(ret, tgM)
 	}
 
 	return ret
+}
+
+func deploymentStateRaw(deployment *api.Deployment) []interface{} {
+	if deployment == nil {
+		return nil
+	}
+
+	taskGroups := make([]interface{}, 0, len(deployment.TaskGroups))
+	for name, state := range deployment.TaskGroups {
+		if state == nil {
+			continue
+		}
+
+		placedCanaries := make([]interface{}, len(state.PlacedCanaries))
+		for i, canary := range state.PlacedCanaries {
+			placedCanaries[i] = canary
+		}
+
+		taskGroups = append(taskGroups, map[string]interface{}{
+			"name":             name,
+			"placed_canaries":  placedCanaries,
+			"auto_revert":      state.AutoRevert,
+			"promoted":         state.Promoted,
+			"desired_canaries": state.DesiredCanaries,
+			"desired_total":    state.DesiredTotal,
+			"placed_allocs":    state.PlacedAllocs,
+			"healthy_allocs":   state.HealthyAllocs,
+			"unhealthy_allocs": state.UnhealthyAllocs,
+		})
+	}
+
+	sort.Slice(taskGroups, func(i, j int) bool {
+		return taskGroups[i].(map[string]interface{})["name"].(string) <
+			taskGroups[j].(map[string]interface{})["name"].(string)
+	})
+
+	return []interface{}{map[string]interface{}{
+		"id":                 deployment.ID,
+		"status":             deployment.Status,
+		"status_description": deployment.StatusDescription,
+		"task_groups":        taskGroups,
+	}}
 }
 
 func flattenJobConstraints(constraints []*api.Constraint) []map[string]interface{} {

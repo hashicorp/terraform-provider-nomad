@@ -67,10 +67,14 @@ func TestResourceJob_serviceDeploymentStateFast(t *testing.T) {
 				Config: testResourceJob_serviceDeploymentStateFast,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "task_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.desired_total"),
-					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.placed_allocs"),
-					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.healthy_allocs"),
-					resource.TestCheckResourceAttrSet(resourceName, "task_groups.0.unhealthy_allocs"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_state.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.id"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.status"),
+					resource.TestCheckResourceAttr(resourceName, "deployment_state.0.task_groups.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.desired_total"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.placed_allocs"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.healthy_allocs"),
+					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.unhealthy_allocs"),
 				),
 			},
 		},
@@ -2424,46 +2428,50 @@ func TestVolumeSorting(t *testing.T) {
 			},
 		},
 	}
-	tg1 := jobTaskGroupsRaw(tgs, nil)
+	tg1 := jobTaskGroupsRaw(tgs)
 	tgs[0].Volumes = map[string]*api.VolumeRequest{
 		vols[1].Name: vols[1],
 		vols[0].Name: vols[0],
 	}
-	tg2 := jobTaskGroupsRaw(tgs, nil)
+	tg2 := jobTaskGroupsRaw(tgs)
 
 	require.ElementsMatch(tg1, tg2)
 }
 
-func TestJobTaskGroupsRawDeploymentState(t *testing.T) {
+func TestDeploymentStateRaw(t *testing.T) {
 	require := require.New(t)
 
 	groupName := "group"
-	groupCount := 2
-	tgs := []*api.TaskGroup{
-		{
-			Name:  &groupName,
-			Count: &groupCount,
+	deployment := &api.Deployment{
+		TaskGroups: map[string]*api.DeploymentState{
+			groupName: {
+				PlacedCanaries:  []string{"canary-alloc"},
+				AutoRevert:      true,
+				Promoted:        true,
+				DesiredCanaries: 1,
+				DesiredTotal:    2,
+				PlacedAllocs:    2,
+				HealthyAllocs:   2,
+				UnhealthyAllocs: 0,
+			},
 		},
 	}
 
-	deploymentTGs := map[string]*api.DeploymentState{
-		groupName: {
-			PlacedCanaries:  []string{"canary-alloc"},
-			AutoRevert:      true,
-			Promoted:        true,
-			DesiredCanaries: 1,
-			DesiredTotal:    2,
-			PlacedAllocs:    2,
-			HealthyAllocs:   2,
-			UnhealthyAllocs: 0,
-		},
-	}
+	deploymentRaw := deploymentStateRaw(deployment)
+	require.Len(deploymentRaw, 1)
 
-	groupsRaw := jobTaskGroupsRaw(tgs, deploymentTGs)
+	stateRaw, ok := deploymentRaw[0].(map[string]interface{})
+	require.True(ok)
+	require.Equal("", stateRaw["id"])
+	require.Equal("", stateRaw["status"])
+	require.Equal("", stateRaw["status_description"])
+	groupsRaw, ok := stateRaw["task_groups"].([]interface{})
+	require.True(ok)
 	require.Len(groupsRaw, 1)
 
 	groupRaw, ok := groupsRaw[0].(map[string]interface{})
 	require.True(ok)
+	require.Equal(groupName, groupRaw["name"])
 	require.Equal([]interface{}{"canary-alloc"}, groupRaw["placed_canaries"])
 	require.Equal(true, groupRaw["auto_revert"])
 	require.Equal(true, groupRaw["promoted"])
