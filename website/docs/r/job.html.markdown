@@ -306,6 +306,7 @@ The following attributes are exported:
   - `prohibit_overlap` `(boolean)` - Whether this job should wait until previous instances of the same job have completed before launching again.
   - `timezone` `(string)` - Time zone used to evaluate the next launch interval.
 - `task_groups` `(list of maps)` - A list of the job's task groups.
+  Deployment-derived task group fields such as `placed_canaries`, `promoted`, `desired_canaries`, `desired_total`, `placed_allocs`, `healthy_allocs`, and `unhealthy_allocs` are only populated when Nomad reports a latest deployment for the job. These fields are typically empty for job types without deployments, such as `batch` and `sysbatch`.
   - `name` `(string)` - Task group name.
   - `count` `(integer)` - Task group count.
   - `update_strategy` `(list of maps)` - Effective update strategy for the task group.

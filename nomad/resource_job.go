@@ -805,14 +805,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("update_strategy", flattenUpdateStrategy(job.Update))
 	d.Set("periodic_config", flattenPeriodicConfig(job.Periodic))
 
-	// Fetch the latest deployment for task group deployment status.
-	var deploymentTGs map[string]*api.DeploymentState
-	deploys, _, err := client.Jobs().Deployments(id, false, opts)
-	if err != nil {
-		log.Printf("[WARN] error listing deployments for Job %q: %s", id, err)
-	} else if len(deploys) > 0 {
-		deploymentTGs = deploys[0].TaskGroups
-	}
+	deploymentTGs := latestDeploymentTaskGroups(client, id, opts)
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups, deploymentTGs))
 
 	if d.Get("read_allocation_ids").(bool) {
@@ -1038,6 +1031,18 @@ func canonicalizeTaskGroupUpdateStrategies(job *api.Job) {
 			taskGroup.Update.Canonicalize()
 		}
 	}
+}
+
+func latestDeploymentTaskGroups(client *api.Client, jobID string, opts *api.QueryOptions) map[string]*api.DeploymentState {
+	deployment, _, err := client.Jobs().LatestDeployment(jobID, opts)
+	if err != nil {
+		log.Printf("[WARN] error reading latest deployment for Job %q: %s", jobID, err)
+		return nil
+	}
+	if deployment == nil {
+		return nil
+	}
+	return deployment.TaskGroups
 }
 
 func mergeDeploymentStateFromState(planned []interface{}, state interface{}) []interface{} {

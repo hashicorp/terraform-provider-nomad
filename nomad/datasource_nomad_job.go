@@ -206,16 +206,7 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("priority", job.Priority)
 	d.Set("parent_id", job.ParentID)
 
-	// Fetch the latest deployment for task group deployment status.
-	var deploymentTGs map[string]*api.DeploymentState
-	deploys, _, err := client.Jobs().Deployments(id, false, &api.QueryOptions{
-		Namespace: ns,
-	})
-	if err != nil {
-		log.Printf("[WARN] error listing deployments for Job %q: %s", id, err)
-	} else if len(deploys) > 0 {
-		deploymentTGs = deploys[0].TaskGroups
-	}
+	deploymentTGs := latestDeploymentTaskGroups(client, id, &api.QueryOptions{Namespace: ns})
 	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups, deploymentTGs))
 	d.Set("stable", job.Stable)
 	d.Set("all_at_once", job.AllAtOnce)
