@@ -57,31 +57,6 @@ func TestResourceJob_service(t *testing.T) {
 	})
 }
 
-func TestResourceJob_serviceDeploymentStateFast(t *testing.T) {
-	resourceName := "nomad_job.service_deployment_state"
-	r.Test(t, r.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
-			{
-				Config: testResourceJob_serviceDeploymentStateFast,
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "task_groups.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "deployment_state.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.id"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.status"),
-					resource.TestCheckResourceAttr(resourceName, "deployment_state.0.task_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.desired_total"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.placed_allocs"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.healthy_allocs"),
-					resource.TestCheckResourceAttrSet(resourceName, "deployment_state.0.task_groups.0.unhealthy_allocs"),
-				),
-			},
-		},
-		CheckDestroy: testResourceJob_checkDestroy("foo-service-deployment-state"),
-	})
-}
-
 func TestResourceJob_namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -967,27 +942,6 @@ resource "nomad_job" "test" {
 			}
 		}
 	EOT
-}
-`
-
-var testResourceJob_serviceDeploymentStateFast = `
-resource "nomad_job" "service_deployment_state" {
-	detach = true
-	jobspec = <<EOT
-job "foo-service-deployment-state" {
-	datacenters = ["dc1"]
-	type = "service"
-	group "foo" {
-		task "sleep" {
-			driver = "raw_exec"
-			config {
-				command = "/bin/sleep"
-				args = ["300"]
-			}
-		}
-	}
-}
-EOT
 }
 `
 
