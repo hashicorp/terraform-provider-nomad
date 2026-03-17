@@ -16,7 +16,7 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec2"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"golang.org/x/exp/maps"
 
@@ -153,6 +153,122 @@ func resourceJob() *schema.Resource {
 				Type:        schema.TypeString,
 			},
 
+			"status_description": {
+				Description: "The status description of the job.",
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+
+			"version": {
+				Description: "The version of the job.",
+				Computed:    true,
+				Type:        schema.TypeInt,
+			},
+
+			"submit_time": {
+				Description: "The time the job was submitted.",
+				Computed:    true,
+				Type:        schema.TypeInt,
+			},
+
+			"create_index": {
+				Description: "The creation index of the job.",
+				Computed:    true,
+				Type:        schema.TypeInt,
+			},
+
+			"stop": {
+				Description: "Whether the job is stopped.",
+				Computed:    true,
+				Type:        schema.TypeBool,
+			},
+
+			"priority": {
+				Description: "The priority of the job for scheduling and resource access.",
+				Computed:    true,
+				Type:        schema.TypeInt,
+			},
+
+			"parent_id": {
+				Description: "The parent job ID, if applicable.",
+				Computed:    true,
+				Type:        schema.TypeString,
+			},
+
+			"stable": {
+				Description: "Whether the job is stable.",
+				Computed:    true,
+				Type:        schema.TypeBool,
+			},
+
+			"all_at_once": {
+				Description: "Whether the scheduler can make partial placements on oversubscribed nodes.",
+				Computed:    true,
+				Type:        schema.TypeBool,
+			},
+
+			"constraints": {
+				Description: "The job constraints.",
+				Computed:    true,
+				Type:        schema.TypeList,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ltarget": {
+							Description: "The attribute being constrained.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"rtarget": {
+							Description: "The constraint value.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"operand": {
+							Description: "The operator used to compare the attribute to the constraint.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+					},
+				},
+			},
+
+			"update_strategy": updateStrategySchema(),
+
+			"periodic_config": {
+				Description: "The job's periodic configuration for time-based scheduling.",
+				Computed:    true,
+				Type:        schema.TypeList,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "Whether the periodic job is enabled. When disabled, scheduled runs and force launches are prevented.",
+							Type:        schema.TypeBool,
+							Computed:    true,
+						},
+						"spec": {
+							Description: "Cron expression configuring the interval at which the job is launched.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"spec_type": {
+							Description: "Type of periodic specification, such as cron.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"prohibit_overlap": {
+							Description: "Whether this job should wait until previous instances of the same job have completed before launching again.",
+							Type:        schema.TypeBool,
+							Computed:    true,
+						},
+						"timezone": {
+							Description: "Time zone used to evaluate the next launch interval.",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+					},
+				},
+			},
+
 			"region": {
 				Description: "The target region for the job, as derived from the jobspec.",
 				Computed:    true,
@@ -218,6 +334,7 @@ func taskGroupSchema() *schema.Schema {
 					Computed: true,
 					Type:     schema.TypeInt,
 				},
+				"update_strategy": updateStrategySchema(),
 				// "scaling": {
 				// 	Computed: true,
 				// 	Type:     schema.TypeList,
@@ -297,6 +414,53 @@ func taskGroupSchema() *schema.Schema {
 				"meta": {
 					Computed: true,
 					Type:     schema.TypeMap,
+				},
+			},
+		},
+	}
+}
+
+func updateStrategySchema() *schema.Schema {
+	return &schema.Schema{
+		Description: "The update strategy for rolling updates and canary deployments.",
+		Computed:    true,
+		Type:        schema.TypeList,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"stagger": {
+					Description: "Delay between each set of max_parallel updates when updating system jobs.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"max_parallel": {
+					Description: "Number of allocations within a task group that can be destructively updated at the same time. Setting 0 forces updates instead of deployments.",
+					Type:        schema.TypeInt,
+					Computed:    true,
+				},
+				"health_check": {
+					Description: "Mechanism used to determine allocation health: checks, task_states, or manual.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"min_healthy_time": {
+					Description: "Minimum time the allocation must be in the healthy state before further updates can proceed.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"healthy_deadline": {
+					Description: "Deadline by which the allocation must become healthy before it is marked unhealthy.",
+					Type:        schema.TypeString,
+					Computed:    true,
+				},
+				"auto_revert": {
+					Description: "Whether the job should automatically revert to the last stable job on deployment failure.",
+					Type:        schema.TypeBool,
+					Computed:    true,
+				},
+				"canary": {
+					Description: "Number of canary allocations created before destructive updates continue.",
+					Type:        schema.TypeInt,
+					Computed:    true,
 				},
 			},
 		},
@@ -422,7 +586,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 // if they result in a deployment, monitors that deployment until completion.
 func monitorDeployment(client *api.Client, timeout time.Duration, namespace string, initialEvalID string) (*api.Deployment, error) {
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    []string{MonitoringEvaluation},
 		Target:     []string{EvaluationComplete},
 		Refresh:    evaluationStateRefreshFunc(client, namespace, initialEvalID),
@@ -431,7 +595,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, namespace stri
 		MinTimeout: 3 * time.Second,
 	}
 
-	state, err := stateConf.WaitForState()
+	state, err := stateConf.WaitForStateContext(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
 	}
@@ -442,7 +606,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, namespace stri
 		return nil, nil
 	}
 
-	stateConf = &resource.StateChangeConf{
+	stateConf = &retry.StateChangeConf{
 		Pending:    []string{MonitoringDeployment},
 		Target:     []string{DeploymentSuccessful},
 		Refresh:    deploymentStateRefreshFunc(client, namespace, evaluation.DeploymentID),
@@ -451,16 +615,16 @@ func monitorDeployment(client *api.Client, timeout time.Duration, namespace stri
 		MinTimeout: 5 * time.Second,
 	}
 
-	state, err = stateConf.WaitForState()
+	state, err = stateConf.WaitForStateContext(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
 	}
 	return state.(*api.Deployment), nil
 }
 
-// evaluationStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// evaluationStateRefreshFunc returns a retry.StateRefreshFunc that is used to watch
 // the evaluation(s) from a job create/update
-func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEvalID string) resource.StateRefreshFunc {
+func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEvalID string) retry.StateRefreshFunc {
 
 	// evalID is the evaluation that we are currently monitoring. This will change
 	// along with follow-up evaluations.
@@ -498,9 +662,9 @@ func evaluationStateRefreshFunc(client *api.Client, namespace string, initialEva
 	}
 }
 
-// deploymentStateRefreshFunc returns a resource.StateRefreshFunc that is used to watch
+// deploymentStateRefreshFunc returns a retry.StateRefreshFunc that is used to watch
 // the deployment from a job create/update
-func deploymentStateRefreshFunc(client *api.Client, namespace string, deploymentID string) resource.StateRefreshFunc {
+func deploymentStateRefreshFunc(client *api.Client, namespace string, deploymentID string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		// monitor the deployment
 		var state string
@@ -588,7 +752,6 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("type", job.Type)
 	d.Set("region", job.Region)
 	d.Set("datacenters", job.Datacenters)
-	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 	d.Set("namespace", job.Namespace)
 	if job.JobModifyIndex != nil {
 		d.Set("modify_index", strconv.FormatUint(*job.JobModifyIndex, 10))
@@ -596,6 +759,20 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("modify_index", "0")
 	}
 	d.Set("status", job.Status)
+	d.Set("status_description", job.StatusDescription)
+	d.Set("version", job.Version)
+	d.Set("submit_time", job.SubmitTime)
+	d.Set("create_index", job.CreateIndex)
+	d.Set("stop", job.Stop)
+	d.Set("priority", job.Priority)
+	d.Set("parent_id", job.ParentID)
+	d.Set("stable", job.Stable)
+	d.Set("all_at_once", job.AllAtOnce)
+	d.Set("constraints", flattenJobConstraints(job.Constraints))
+	d.Set("update_strategy", flattenUpdateStrategy(job.Update))
+	d.Set("periodic_config", flattenPeriodicConfig(job.Periodic))
+
+	d.Set("task_groups", jobTaskGroupsRaw(job.TaskGroups))
 
 	if d.Get("read_allocation_ids").(bool) {
 		allocStubs, _, err := client.Jobs().Allocations(id, false, opts)
@@ -682,6 +859,18 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 		d.SetNewComputed("deployment_id")
 		d.SetNewComputed("deployment_status")
 		d.SetNewComputed("status")
+		d.SetNewComputed("status_description")
+		d.SetNewComputed("version")
+		d.SetNewComputed("submit_time")
+		d.SetNewComputed("create_index")
+		d.SetNewComputed("stop")
+		d.SetNewComputed("priority")
+		d.SetNewComputed("parent_id")
+		d.SetNewComputed("stable")
+		d.SetNewComputed("all_at_once")
+		d.SetNewComputed("constraints")
+		d.SetNewComputed("update_strategy")
+		d.SetNewComputed("periodic_config")
 		return nil
 	}
 
@@ -734,6 +923,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	d.SetNew("region", job.Region)
 	d.SetNew("datacenters", job.Datacenters)
 	d.SetNew("status", job.Status)
+	d.SetNew("periodic_config", flattenPeriodicConfig(job.Periodic))
 
 	// If the identity has changed and the config asks us to deregister on identity
 	// change then the id field "forces new resource".
@@ -776,10 +966,60 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	d.SetNewComputed("modify_index")
 	// similarly, we won't know the allocation ids until after the job registration eval
 	d.SetNewComputed("allocation_ids")
-
-	d.SetNew("task_groups", jobTaskGroupsRaw(job.TaskGroups))
+	canonicalizeTaskGroupUpdateStrategies(job)
+	plannedTaskGroups := jobTaskGroupsRaw(job.TaskGroups)
+	d.SetNew("task_groups", plannedTaskGroups)
 
 	return nil
+}
+
+func canonicalizeTaskGroupUpdateStrategies(job *api.Job) {
+	if job == nil {
+		return
+	}
+
+	for _, taskGroup := range job.TaskGroups {
+		if taskGroup == nil {
+			continue
+		}
+
+		if jobUpdate, taskGroupUpdate := job.Update != nil, taskGroup.Update != nil; jobUpdate && taskGroupUpdate {
+			merged := job.Update.Copy()
+			merged.Merge(taskGroup.Update)
+			taskGroup.Update = merged
+		} else if jobUpdate && !job.Update.Empty() {
+			taskGroup.Update = job.Update.Copy()
+		}
+
+		if taskGroup.Update != nil {
+			taskGroup.Update.Canonicalize()
+		}
+	}
+}
+
+func flattenPeriodicConfig(periodic *api.PeriodicConfig) []map[string]interface{} {
+	if periodic == nil {
+		return nil
+	}
+
+	flattened := map[string]interface{}{}
+	if periodic.Enabled != nil {
+		flattened["enabled"] = *periodic.Enabled
+	}
+	if periodic.Spec != nil {
+		flattened["spec"] = *periodic.Spec
+	}
+	if periodic.SpecType != nil {
+		flattened["spec_type"] = *periodic.SpecType
+	}
+	if periodic.ProhibitOverlap != nil {
+		flattened["prohibit_overlap"] = *periodic.ProhibitOverlap
+	}
+	if periodic.TimeZone != nil {
+		flattened["timezone"] = *periodic.TimeZone
+	}
+
+	return []map[string]interface{}{flattened}
 }
 
 func parseJobParserConfig(d ResourceFieldGetter) (JobParserConfig, error) {
@@ -916,8 +1156,10 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 	for _, tg := range tgs {
 		tgM := make(map[string]interface{})
 
+		tgName := ""
 		if tg.Name != nil {
-			tgM["name"] = *tg.Name
+			tgName = *tg.Name
+			tgM["name"] = tgName
 		} else {
 			tgM["name"] = ""
 		}
@@ -930,6 +1172,9 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 			tgM["meta"] = tg.Meta
 		} else {
 			tgM["meta"] = make(map[string]interface{})
+		}
+		if tg.Update != nil {
+			tgM["update_strategy"] = flattenUpdateStrategy(tg.Update)
 		}
 
 		tasksI := make([]interface{}, 0, len(tg.Tasks))
@@ -982,6 +1227,47 @@ func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
 	}
 
 	return ret
+}
+
+func flattenJobConstraints(constraints []*api.Constraint) []map[string]interface{} {
+	result := make([]map[string]interface{}, 0, len(constraints))
+	for _, c := range constraints {
+		result = append(result, map[string]interface{}{
+			"ltarget": c.LTarget,
+			"rtarget": c.RTarget,
+			"operand": c.Operand,
+		})
+	}
+	return result
+}
+
+func flattenUpdateStrategy(update *api.UpdateStrategy) []map[string]interface{} {
+	if update == nil {
+		return nil
+	}
+	u := map[string]interface{}{}
+	if update.Stagger != nil {
+		u["stagger"] = update.Stagger.String()
+	}
+	if update.MaxParallel != nil {
+		u["max_parallel"] = *update.MaxParallel
+	}
+	if update.HealthCheck != nil {
+		u["health_check"] = *update.HealthCheck
+	}
+	if update.MinHealthyTime != nil {
+		u["min_healthy_time"] = update.MinHealthyTime.String()
+	}
+	if update.HealthyDeadline != nil {
+		u["healthy_deadline"] = update.HealthyDeadline.String()
+	}
+	if update.AutoRevert != nil {
+		u["auto_revert"] = *update.AutoRevert
+	}
+	if update.Canary != nil {
+		u["canary"] = *update.Canary
+	}
+	return []map[string]interface{}{u}
 }
 
 // jobspecDiffSuppress is the DiffSuppressFunc used by the schema to

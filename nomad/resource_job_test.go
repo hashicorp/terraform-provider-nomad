@@ -217,10 +217,33 @@ func TestResourceJob_serviceWithoutDeployment(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "deployment_id", ""),
 					resource.TestCheckResourceAttr(resourceName, "deployment_status", ""),
+					resource.TestCheckResourceAttr(resourceName, "update_strategy.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "update_strategy.0.max_parallel", "0"),
 				),
 			},
 		},
 		CheckDestroy: testResourceJob_checkDestroy("foo-service-without-deployment"),
+	})
+}
+
+func TestResourceJob_periodicConfig(t *testing.T) {
+	resourceName := "nomad_job.periodic"
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_periodicConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.enabled", "true"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.spec", "*/1 * * * * *"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.prohibit_overlap", "true"),
+					resource.TestCheckResourceAttr(resourceName, "periodic_config.0.timezone", "UTC"),
+				),
+			},
+		},
+		CheckDestroy: testResourceJob_checkDestroy("foo-periodic"),
 	})
 }
 
@@ -2760,10 +2783,10 @@ resource "nomad_job" "service" {
 job "foo-service-without-deployment" {
   type          = "service"
   datacenters   = ["dc1"]
+	update {
+		max_parallel = 0
+	}
   group "service" {
-    update {
-      max_parallel = 0
-    }
     task "sleep" {
       driver = "raw_exec"
       env {
@@ -2797,6 +2820,34 @@ job "foo-batch" {
 }
 EOT
 }`
+
+var testResourceJob_periodicConfig = `
+resource "nomad_job" "periodic" {
+	jobspec = <<EOT
+job "foo-periodic" {
+	type        = "batch"
+	datacenters = ["dc1"]
+
+	periodic {
+		enabled          = true
+		cron             = "*/1 * * * * *"
+		prohibit_overlap = true
+		time_zone         = "UTC"
+	}
+
+	group "periodic" {
+		task "sleep" {
+			driver = "raw_exec"
+			config {
+				command = "/bin/sleep"
+				args = ["1"]
+			}
+		}
+	}
+}
+EOT
+}
+`
 
 var testResourceJob_lifecycle = `
 resource "nomad_job" "test" {

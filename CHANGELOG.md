@@ -10,6 +10,7 @@ IMPROVEMENTS:
 * data source/nomad_node_pool: Added the `node_identity_ttl` argument ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
 * resource/nomad_node_pool: Added the `node_identity_ttl` argument to configure the node identity TTL for nodes in the pool ([#569](https://github.com/hashicorp/terraform-provider-nomad/pull/569))
 * resource/nomad_quota_specification: add support for all `QuotaResources` fields including `secrets_mb`, `devices`, `numa`, and `storage` ([#584](https://github.com/hashicorp/terraform-provider-nomad/pull/584))
+* resource/nomad_job, data source/nomad_job: Added and aligned computed job and task group attributes, including periodic and update strategy fields, to match the `nomad_job` implementation and documentation ([#585](https://github.com/hashicorp/terraform-provider-nomad/pull/585))
 
 ## 2.5.2 (November 13, 2025)
 
