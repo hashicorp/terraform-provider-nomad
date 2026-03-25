@@ -4,14 +4,27 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"context"
+	"log"
 
-	"github.com/hashicorp/terraform-provider-nomad/nomad"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
+
+	"github.com/hashicorp/terraform-provider-nomad/internal/mux"
+)
+
+const (
+	providerName = "registry.terraform.io/hashicorp/nomad"
 )
 
 func main() {
-	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: func() *schema.Provider { return nomad.Provider() },
-	})
+	ctx := context.Background()
+	muxServer, err := mux.MuxServer(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := tf6server.Serve(providerName, func() tfprotov6.ProviderServer { return muxServer }); err != nil {
+		log.Fatal(err)
+	}
 }
