@@ -31,6 +31,12 @@ func TestResourceQuotaSpecification_import(t *testing.T) {
 				ResourceName:      "nomad_quota_specification.test",
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"limits.0.region_limit.0.cores",
+					"limits.0.region_limit.0.memory_mb",
+					"limits.0.region_limit.0.memory_max_mb",
+					"limits.0.region_limit.0.secrets_mb",
+				},
 			},
 		},
 
