@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/id"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -76,7 +76,7 @@ func scalingPoliciesDataSourceRead(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("failed to query scaling policies: %v", err)
 	}
 
-	d.SetId(resource.UniqueId())
+	d.SetId(id.UniqueId())
 
 	if err := d.Set("policies", flattenScalingPolicies(policies)); err != nil {
 		return fmt.Errorf("failed to set policies: %v", err)

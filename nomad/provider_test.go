@@ -13,9 +13,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // How to run the acceptance tests for this provider:
@@ -68,7 +69,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
 
-	err := testProvider.Configure(context.Background(), terraform.NewResourceConfigRaw(nil))
+	err := testProvider.Configure(context.Background(), sdkterraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
