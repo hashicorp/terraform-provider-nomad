@@ -163,8 +163,12 @@ func TestSchedulerConfig_memoryOversubscriptionEnabledOutsideTest(t *testing.T) 
 					}
 					log.Printf("[DEBUG] Upserted scheduler configuration")
 				},
-				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
 				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
+				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
 		},
