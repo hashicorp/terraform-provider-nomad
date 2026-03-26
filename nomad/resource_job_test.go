@@ -3309,10 +3309,14 @@ func TestResourceJob_externalStop(t *testing.T) {
 				Check:  testResourceJob_statusCheck(t, "running"),
 			},
 			// Simulate an external job stop.
-			// Expect non-empty plan since job should rerun.
 			{
-				Config:             testResourceJob_rerunIfDead(jobID, true),
-				Check:              testResourceJob_externalStopCheck(t),
+				Config: testResourceJob_rerunIfDead(jobID, true),
+				Check:  testResourceJob_externalStopCheck(t),
+			},
+			// Refresh state and expect drift since rerun_if_dead should cause the
+			// job to be started again on the next apply.
+			{
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify job reruns on apply.
