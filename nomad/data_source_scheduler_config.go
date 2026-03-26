@@ -6,7 +6,7 @@ package nomad
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/id"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-nomad/nomad/helper"
 )
@@ -46,7 +46,7 @@ func dataSourceSchedulerConfigRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Set a unique ID, as we have nothing else to go on.
-	d.SetId(resource.UniqueId())
+	d.SetId(id.UniqueId())
 
 	premptMap := map[string]bool{
 		"batch_scheduler_enabled":    schedCfg.SchedulerConfig.PreemptionConfig.BatchSchedulerEnabled,
