@@ -404,7 +404,6 @@ resource "nomad_quota_specification" "test" {
       cores         = 4
       memory_mb     = 2048
       memory_max_mb = 4096
-      secrets_mb    = 512
 
       devices {
         name  = "gpu"
@@ -417,7 +416,6 @@ resource "nomad_quota_specification" "test" {
 				cores         = 2
 				memory_mb     = 1024
 				memory_max_mb = 2048
-				secrets_mb    = 64
 
 				devices {
 					name  = "fpga"
@@ -447,13 +445,11 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		cores := 4
 		mem := 2048
 		memMax := 4096
-		secretsMB := 512
 		devCount := uint64(2)
 		nodePoolCPU := 800
 		nodePoolCores := 2
 		nodePoolMem := 1024
 		nodePoolMemMax := 2048
-		nodePoolSecrets := 64
 		nodePoolDevCount := uint64(1)
 		limits := []*api.QuotaLimit{
 			{
@@ -463,7 +459,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 					Cores:       &cores,
 					MemoryMB:    &mem,
 					MemoryMaxMB: &memMax,
-					SecretsMB:   &secretsMB,
 					Devices: []*api.RequestedDevice{
 						{
 							Name:  "gpu",
@@ -481,7 +476,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 							Cores:       &nodePoolCores,
 							MemoryMB:    &nodePoolMem,
 							MemoryMaxMB: &nodePoolMemMax,
-							SecretsMB:   &nodePoolSecrets,
 							Devices: []*api.RequestedDevice{
 								{
 									Name:  "fpga",
@@ -551,9 +545,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		if *rl.MemoryMaxMB != *el.MemoryMaxMB {
 			return fmt.Errorf("expected MemoryMaxMB to be %d, got %d", *el.MemoryMaxMB, *rl.MemoryMaxMB)
 		}
-		if *rl.SecretsMB != *el.SecretsMB {
-			return fmt.Errorf("expected SecretsMB to be %d, got %d", *el.SecretsMB, *rl.SecretsMB)
-		}
 		if len(rl.Devices) != len(el.Devices) {
 			return fmt.Errorf("expected %d devices, got %d", len(el.Devices), len(rl.Devices))
 		}
@@ -589,9 +580,6 @@ func testResourceQuotaSpecification_allFieldsCheck(name string) resource.TestChe
 		}
 		if *rl.NodePools[0].MemoryMaxMB != *el.NodePools[0].MemoryMaxMB {
 			return fmt.Errorf("expected node_pool MemoryMaxMB to be %d, got %d", *el.NodePools[0].MemoryMaxMB, *rl.NodePools[0].MemoryMaxMB)
-		}
-		if *rl.NodePools[0].SecretsMB != *el.NodePools[0].SecretsMB {
-			return fmt.Errorf("expected node_pool SecretsMB to be %d, got %d", *el.NodePools[0].SecretsMB, *rl.NodePools[0].SecretsMB)
 		}
 		if len(rl.NodePools[0].Devices) != len(el.NodePools[0].Devices) {
 			return fmt.Errorf("expected %d node_pool devices, got %d", len(el.NodePools[0].Devices), len(rl.NodePools[0].Devices))

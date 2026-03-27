@@ -86,10 +86,6 @@ func resourceQuotaSpecificationRegionLimits() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"secrets_mb": {
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
 			"devices": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -160,10 +156,6 @@ func resourceQuotaSpecificationNodePools() *schema.Resource {
 				Optional: true,
 			},
 			"memory_max_mb": {
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
-			"secrets_mb": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
@@ -316,9 +308,6 @@ func flattenQuotaRegionLimit(limit *api.QuotaResources) *schema.Set {
 	if limit.MemoryMaxMB != nil {
 		result["memory_max_mb"] = *limit.MemoryMaxMB
 	}
-	if limit.SecretsMB != nil {
-		result["secrets_mb"] = *limit.SecretsMB
-	}
 	if len(limit.Devices) > 0 {
 		result["devices"] = flattenQuotaDevices(limit.Devices)
 	}
@@ -368,9 +357,6 @@ func flattenQuotaNodePools(pools []*api.NodePoolLimit) []any {
 		}
 		if p.MemoryMaxMB != nil {
 			pool["memory_max_mb"] = *p.MemoryMaxMB
-		}
-		if p.SecretsMB != nil {
-			pool["secrets_mb"] = *p.SecretsMB
 		}
 		if len(p.Devices) > 0 {
 			pool["devices"] = flattenQuotaDevices(p.Devices)
@@ -452,13 +438,6 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 		}
 		res.MemoryMaxMB = &m
 	}
-	if secrets, ok := regLimit["secrets_mb"]; ok {
-		s, ok := secrets.(int)
-		if !ok {
-			return nil, fmt.Errorf("expected secrets_mb to be int, got %T", secrets)
-		}
-		res.SecretsMB = &s
-	}
 	if devices, ok := regLimit["devices"]; ok {
 		devList := devices.([]interface{})
 		for _, d := range devList {
@@ -507,13 +486,6 @@ func expandRegionLimit(limit interface{}) (*api.QuotaResources, error) {
 					return nil, fmt.Errorf("expected node_pool memory_max to be int, got %T", memMax)
 				}
 				np.MemoryMaxMB = &m
-			}
-			if secrets, ok := pool["secrets_mb"]; ok {
-				s, ok := secrets.(int)
-				if !ok {
-					return nil, fmt.Errorf("expected node_pool secrets_mb to be int, got %T", secrets)
-				}
-				np.SecretsMB = &s
 			}
 			if devices, ok := pool["devices"]; ok {
 				devList := devices.([]interface{})
