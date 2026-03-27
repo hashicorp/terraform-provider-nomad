@@ -55,6 +55,13 @@ func resourceJob() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 
+			"preserve_counts": {
+				Description: "If true, preserve the current task group counts during job registration instead of using the counts from the jobspec.",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+
 			"deregister_on_destroy": {
 				Description: "If true, the job will be deregistered on destroy.",
 				Optional:    true,
@@ -543,6 +550,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
 		PolicyOverride: d.Get("policy_override").(bool),
+		PreserveCounts: d.Get("preserve_counts").(bool),
 		ModifyIndex:    wantModifyIndex,
 		Submission:     sub,
 	}, &api.WriteOptions{
@@ -968,9 +976,54 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 	d.SetNewComputed("allocation_ids")
 	canonicalizeTaskGroupUpdateStrategies(job)
 	plannedTaskGroups := jobTaskGroupsRaw(job.TaskGroups)
+	if d.Get("preserve_counts").(bool) && d.Id() != "" {
+		if currentTaskGroups, ok := d.Get("task_groups").([]interface{}); ok {
+			plannedTaskGroups = preserveTaskGroupCounts(currentTaskGroups, plannedTaskGroups)
+		}
+	}
 	d.SetNew("task_groups", plannedTaskGroups)
 
 	return nil
+}
+
+func preserveTaskGroupCounts(currentTaskGroups, plannedTaskGroups []interface{}) []interface{} {
+	countsByName := make(map[string]interface{}, len(currentTaskGroups))
+	for _, rawTaskGroup := range currentTaskGroups {
+		taskGroup, ok := rawTaskGroup.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, _ := taskGroup["name"].(string)
+		if name == "" {
+			continue
+		}
+
+		count, ok := taskGroup["count"]
+		if !ok {
+			continue
+		}
+
+		countsByName[name] = count
+	}
+
+	for _, rawTaskGroup := range plannedTaskGroups {
+		taskGroup, ok := rawTaskGroup.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, _ := taskGroup["name"].(string)
+		if name == "" {
+			continue
+		}
+
+		if count, ok := countsByName[name]; ok {
+			taskGroup["count"] = count
+		}
+	}
+
+	return plannedTaskGroups
 }
 
 func canonicalizeTaskGroupUpdateStrategies(job *api.Job) {

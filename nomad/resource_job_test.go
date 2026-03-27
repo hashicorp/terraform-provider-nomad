@@ -72,6 +72,38 @@ func TestResourceJob_namespace(t *testing.T) {
 	})
 }
 
+func TestResourceJob_preserveCounts(t *testing.T) {
+	const resourcePath = "nomad_job.test"
+	const jobID = "foo-preserve-counts"
+	const groupName = "foo"
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testResourceJob_preserveCountsConfig(jobID, false, 50),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "task_groups.0.count", "1"),
+					resource.TestCheckResourceAttr(resourcePath, "priority", "50"),
+					testResourceJob_checkTaskGroupCount(jobID, groupName, 1),
+				),
+			},
+			{
+				PreConfig: testResourceJob_scaleTaskGroup(t, jobID, groupName, 3),
+				Config:    testResourceJob_preserveCountsConfig(jobID, true, 75),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "task_groups.0.count", "3"),
+					resource.TestCheckResourceAttr(resourcePath, "priority", "75"),
+					testResourceJob_checkTaskGroupCount(jobID, groupName, 3),
+				),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy(jobID),
+	})
+}
+
 func TestResourceJob_v086(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
@@ -2282,6 +2314,74 @@ func testResourceJob_checkExists(jobID string) r.TestCheckFunc {
 	return testResourceJob_checkExistsNS(jobID, "default")
 }
 
+func testResourceJob_checkTaskGroupCount(jobID, groupName string, expectedCount int) r.TestCheckFunc {
+	return func(*terraform.State) error {
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		job, _, err := client.Jobs().Info(jobID, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+
+		for _, taskGroup := range job.TaskGroups {
+			if taskGroup == nil || taskGroup.Name == nil || *taskGroup.Name != groupName {
+				continue
+			}
+
+			if taskGroup.Count == nil {
+				return fmt.Errorf("task group %q has nil count", groupName)
+			}
+
+			if got := *taskGroup.Count; got != expectedCount {
+				return fmt.Errorf("task group %q count is %d; want %d", groupName, got, expectedCount)
+			}
+
+			return nil
+		}
+
+		return fmt.Errorf("task group %q not found", groupName)
+	}
+}
+
+func testResourceJob_scaleTaskGroup(t *testing.T, jobID, groupName string, count int) func() {
+	return func() {
+		t.Helper()
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		resp, _, err := client.Jobs().Scale(jobID, groupName, &count, "terraform acceptance test scale", false, nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		job, _, err := client.Jobs().Info(jobID, nil)
+		require.NoError(t, err)
+		namespace := "default"
+		if job != nil && job.Namespace != nil && *job.Namespace != "" {
+			namespace = *job.Namespace
+		}
+
+		if resp.EvalID != "" {
+			_, err = monitorDeployment(client, 2*time.Minute, namespace, resp.EvalID)
+			require.NoError(t, err)
+		}
+
+		job, _, err = client.Jobs().Info(jobID, nil)
+		require.NoError(t, err)
+
+		for _, taskGroup := range job.TaskGroups {
+			if taskGroup != nil && taskGroup.Name != nil && *taskGroup.Name == groupName {
+				require.NotNil(t, taskGroup.Count)
+				require.Equal(t, count, *taskGroup.Count)
+				return
+			}
+		}
+
+		t.Fatalf("task group %q not found after scaling", groupName)
+	}
+}
+
 func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 	return testResourceJob_checkDestroyNS(jobID, "default")
 }
@@ -2392,6 +2492,26 @@ func TestVolumeSorting(t *testing.T) {
 	require.ElementsMatch(tg1, tg2)
 }
 
+func TestPreserveTaskGroupCounts(t *testing.T) {
+	currentTaskGroups := []interface{}{
+		map[string]interface{}{"name": "web", "count": 3},
+		map[string]interface{}{"name": "worker", "count": 5},
+	}
+	plannedTaskGroups := []interface{}{
+		map[string]interface{}{"name": "web", "count": 1},
+		map[string]interface{}{"name": "worker", "count": 2},
+		map[string]interface{}{"name": "new", "count": 4},
+	}
+
+	preserved := preserveTaskGroupCounts(currentTaskGroups, plannedTaskGroups)
+
+	require.Equal(t, []interface{}{
+		map[string]interface{}{"name": "web", "count": 3},
+		map[string]interface{}{"name": "worker", "count": 5},
+		map[string]interface{}{"name": "new", "count": 4},
+	}, preserved)
+}
+
 var testResourceJob_invalidNomadServerConfig = `
 provider "nomad" {
 	alias = "tf_test"
@@ -2417,6 +2537,42 @@ resource "nomad_job" "test" {
 	EOT
 }
 `
+
+func testResourceJob_preserveCountsConfig(jobID string, preserveCounts bool, priority int) string {
+	const groupName = "foo"
+
+	return fmt.Sprintf(`
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+job %q {
+	datacenters = ["dc1"]
+	type        = "service"
+	priority    = %d
+
+	group %q {
+		count = 1
+
+		task "server" {
+			driver = "raw_exec"
+
+			config {
+				command = "/bin/sleep"
+				args    = ["60"]
+			}
+
+			resources {
+				cpu    = 100
+				memory = 32
+			}
+		}
+	}
+}
+EOT
+	detach = false
+	preserve_counts = %t
+}
+`, jobID, priority, groupName, preserveCounts)
+}
 
 func testResourceJob_policyOverrideConfig() string {
 	return fmt.Sprintf(`

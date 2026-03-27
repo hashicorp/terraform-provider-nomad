@@ -257,6 +257,10 @@ The following arguments are supported:
 - `policy_override` `(boolean: false)` - Determines if the job will override any
   soft-mandatory Sentinel policies and register even if they fail.
 
+- `preserve_counts` `(boolean: false)` - If true, preserves the current task
+  group counts already stored in Nomad during job registration instead of
+  applying the counts from the submitted jobspec.
+
 - `json` `(boolean: false)` - Set this to `true` if your jobspec is structured with
   JSON instead of the default HCL.
 
