@@ -27,7 +27,6 @@ resource "nomad_quota_specification" "prod_api" {
       cores        = 4
       memory_mb    = 1200
       memory_max_mb = 2400
-      secrets_mb   = 100
 
       devices {
         name  = "nvidia/gpu"
@@ -40,7 +39,6 @@ resource "nomad_quota_specification" "prod_api" {
         cores         = 2
         memory_mb     = 1024
         memory_max_mb = 2048
-        secrets_mb    = 64
 
         devices {
           name  = "fpga"
@@ -97,9 +95,6 @@ It supports the following arguments:
 - `memory_max_mb` `(int: 0)` - The maximum amount of memory (in megabytes) to
   limit allocations to. A value of zero is treated as unlimited, and a negative
   value is treated as fully disallowed.
-- `secrets_mb` `(int: 0)` - The amount of secrets storage (in megabytes) to
-  limit allocations to. A value of zero is treated as unlimited, and a negative
-  value is treated as fully disallowed.
 - [`devices`](#devices-blocks) `(block: optional)` - A list of device quotas to enforce. Can be
   repeated. See below for the structure of this block.
 - [`node_pools`](#node_pools-blocks) `(block: optional)` - Per-node-pool quota limits. Can be
@@ -141,9 +136,6 @@ following arguments:
   allocations to. A value of zero is treated as unlimited, and a negative value
   is treated as fully disallowed.
 - `memory_max_mb` `(int: 0)` - The maximum amount of memory (in megabytes) to
-  limit allocations to. A value of zero is treated as unlimited, and a negative
-  value is treated as fully disallowed.
-- `secrets_mb` `(int: 0)` - The amount of secrets storage (in megabytes) to
   limit allocations to. A value of zero is treated as unlimited, and a negative
   value is treated as fully disallowed.
 - [`devices`](#devices-blocks) `(block: optional)` - A list of device quotas to
