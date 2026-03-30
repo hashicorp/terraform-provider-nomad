@@ -21,12 +21,14 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 func TestMuxServer_MetadataAndSchema(t *testing.T) {
 	t.Parallel()
 
-	server, err := MuxServer(context.Background())
+	ctx := t.Context()
+
+	server, err := MuxServer(ctx)
 	if err != nil {
 		t.Fatalf("expected mux server to initialize: %v", err)
 	}
 
-	metadata, err := server.GetMetadata(context.Background(), &tfprotov6.GetMetadataRequest{})
+	metadata, err := server.GetMetadata(ctx, &tfprotov6.GetMetadataRequest{})
 	if err != nil {
 		t.Fatalf("expected metadata from mux server: %v", err)
 	}
@@ -39,7 +41,7 @@ func TestMuxServer_MetadataAndSchema(t *testing.T) {
 		t.Fatalf("expected nomad_node_intro_token ephemeral resource in mux metadata")
 	}
 
-	schema, err := server.GetProviderSchema(context.Background(), &tfprotov6.GetProviderSchemaRequest{})
+	schema, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
 	if err != nil {
 		t.Fatalf("expected provider schema from mux server: %v", err)
 	}
