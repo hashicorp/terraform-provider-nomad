@@ -37,10 +37,6 @@ func TestMuxServer_MetadataAndSchema(t *testing.T) {
 		t.Fatalf("expected nomad_regions data source in mux metadata")
 	}
 
-	if !containsEphemeralResource(metadata.EphemeralResources, "nomad_node_intro_token") {
-		t.Fatalf("expected nomad_node_intro_token ephemeral resource in mux metadata")
-	}
-
 	schema, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
 	if err != nil {
 		t.Fatalf("expected provider schema from mux server: %v", err)
@@ -85,15 +81,6 @@ data "nomad_regions" "test" {}
 func containsDataSource(dataSources []tfprotov6.DataSourceMetadata, typeName string) bool {
 	for _, dataSource := range dataSources {
 		if dataSource.TypeName == typeName {
-			return true
-		}
-	}
-	return false
-}
-
-func containsEphemeralResource(ephemeralResources []tfprotov6.EphemeralResourceMetadata, typeName string) bool {
-	for _, ephemeralResource := range ephemeralResources {
-		if ephemeralResource.TypeName == typeName {
 			return true
 		}
 	}

@@ -4,7 +4,6 @@
 package nomad
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -69,7 +68,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
 	}
 
-	err := testProvider.Configure(context.Background(), sdkterraform.NewResourceConfigRaw(nil))
+	err := testProvider.Configure(t.Context(), sdkterraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
