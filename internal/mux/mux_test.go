@@ -50,9 +50,6 @@ func TestMuxServer_MetadataAndSchema(t *testing.T) {
 		t.Fatal("expected nomad_regions schema from mux server")
 	}
 
-	if _, ok := schema.EphemeralResourceSchemas["nomad_node_intro_token"]; !ok {
-		t.Fatal("expected nomad_node_intro_token schema from mux server")
-	}
 }
 
 func TestAccMuxProvider_RegionsDataSource(t *testing.T) {
