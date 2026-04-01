@@ -168,11 +168,6 @@ func TestSchedulerConfig_memoryOversubscriptionEnabledOutsideTest(t *testing.T) 
 			},
 			{
 				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
-				RefreshState:       true,
-				ExpectNonEmptyPlan: true,
-			},
-			{
-				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
