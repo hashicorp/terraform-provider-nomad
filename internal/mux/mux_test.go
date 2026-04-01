@@ -34,10 +34,6 @@ func TestMuxServer_MetadataAndSchema(t *testing.T) {
 
 	must.True(t, containsEphemeralResource(metadata.EphemeralResources, "nomad_node_intro_token"), must.Sprint("expected nomad_node_intro_token ephemeral resource in mux metadata"))
 
-	if !containsEphemeralResource(metadata.EphemeralResources, "nomad_node_intro_token") {
-		t.Fatalf("expected nomad_node_intro_token ephemeral resource in mux metadata")
-	}
-
 	schema, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
 	must.NoError(t, err, must.Sprintf("expected provider schema from mux server: %v", err))
 
