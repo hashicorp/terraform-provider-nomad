@@ -6,6 +6,7 @@ package nomad
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
@@ -67,7 +68,7 @@ func dataSourceJob() *schema.Resource {
 			},
 			"submit_time": {
 				Description: "Job Submit Time",
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 				Computed:    true,
 			},
 			"create_index": {
@@ -198,7 +199,11 @@ func dataSourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("datacenters", job.Datacenters)
 	d.Set("status", job.Status)
 	d.Set("status_description", job.StatusDescription)
-	d.Set("submit_time", job.SubmitTime)
+	if job.SubmitTime != nil {
+		d.Set("submit_time", strconv.FormatInt(*job.SubmitTime, 10))
+	} else {
+		d.Set("submit_time", "")
+	}
 	d.Set("create_index", job.CreateIndex)
 	d.Set("modify_index", job.ModifyIndex)
 	d.Set("job_modify_index", job.JobModifyIndex)

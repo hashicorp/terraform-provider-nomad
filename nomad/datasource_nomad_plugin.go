@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -96,9 +96,11 @@ func dataSourcePluginRead(d *schema.ResourceData, meta interface{}) error {
 	wait := d.Get("wait_for_registration").(bool)
 	waitForHealthy := d.Get("wait_for_healthy").(bool)
 	if wait || waitForHealthy {
-		resource.Retry(d.Timeout(schema.TimeoutRead), func() *resource.RetryError {
+		if err := retry.Retry(d.Timeout(schema.TimeoutRead), func() *retry.RetryError {
 			return getPluginInfo(client, d)
-		})
+		}); err != nil {
+			return err
+		}
 	} else {
 		err := getPluginInfo(client, d)
 		if err != nil {
@@ -109,7 +111,7 @@ func dataSourcePluginRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryError {
+func getPluginInfo(client *api.Client, d *schema.ResourceData) *retry.RetryError {
 	id := d.Get("plugin_id").(string)
 	waitForHealthy := d.Get("wait_for_healthy").(bool)
 
@@ -120,9 +122,9 @@ func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryEr
 		// rather than a nil result, so we must check this way.
 		log.Printf("[ERROR] error checking for plugin: %#v", err)
 		if strings.Contains(err.Error(), "404") {
-			return resource.RetryableError(fmt.Errorf("plugin %q not found", id))
+			return retry.RetryableError(fmt.Errorf("plugin %q not found", id))
 		}
-		return resource.NonRetryableError(fmt.Errorf("error checking for plugin: %#v", err))
+		return retry.NonRetryableError(fmt.Errorf("error checking for plugin: %#v", err))
 	}
 
 	healthy := plugin.ControllersExpected == plugin.ControllersHealthy &&
@@ -134,7 +136,7 @@ func getPluginInfo(client *api.Client, d *schema.ResourceData) *resource.RetryEr
 			plugin.ControllersHealthy, plugin.ControllersExpected,
 			plugin.NodesHealthy, plugin.NodesExpected)
 
-		return resource.RetryableError(fmt.Errorf("plugin %s not yet healthy", id))
+		return retry.RetryableError(fmt.Errorf("plugin %s not yet healthy", id))
 	}
 
 	d.SetId(plugin.ID)

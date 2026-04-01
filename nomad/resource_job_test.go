@@ -22,9 +22,9 @@ import (
 	"github.com/hashicorp/terraform-provider-nomad/nomad/helper/pointer"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	r "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestResourceJob_basic(t *testing.T) {
@@ -3291,11 +3291,9 @@ func TestResourceJob_externalStop(t *testing.T) {
 				Config: testResourceJob_rerunIfDead(jobID, false),
 				Check:  testResourceJob_initialCheck(t),
 			},
-			// Simulate an external job stop.
-			// Expect empty plan since nothing should happen.
 			{
-				Config:             testResourceJob_rerunIfDead(jobID, false),
-				Check:              testResourceJob_externalStopCheck(t),
+				PreConfig:          testResourceJob_deregister(t, jobID),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: false,
 			},
 			// Verify job doesn't rerun on apply.
@@ -3308,11 +3306,9 @@ func TestResourceJob_externalStop(t *testing.T) {
 				Config: testResourceJob_rerunIfDead(jobID, true),
 				Check:  testResourceJob_statusCheck(t, "running"),
 			},
-			// Simulate an external job stop.
-			// Expect non-empty plan since job should rerun.
 			{
-				Config:             testResourceJob_rerunIfDead(jobID, true),
-				Check:              testResourceJob_externalStopCheck(t),
+				PreConfig:          testResourceJob_deregister(t, jobID),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify job reruns on apply.
@@ -3346,32 +3342,6 @@ EOT
   rerun_if_dead = %t
 }
 `, name, rerunIfDead)
-}
-
-func testResourceJob_externalStopCheck(t *testing.T) r.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["nomad_job.test"]
-		if resourceState == nil {
-			return errors.New("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return errors.New("resource has no primary instance")
-		}
-
-		jobID := instanceState.ID
-		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
-		_, _, err := client.Jobs().Deregister(jobID, false, &api.WriteOptions{
-			Namespace: instanceState.Attributes["namespace"],
-		})
-		if err != nil {
-			return fmt.Errorf("error deregistering job: %s", err)
-		}
-
-		return nil
-	}
 }
 
 func testResourceJob_statusCheck(t *testing.T, status string) r.TestCheckFunc {

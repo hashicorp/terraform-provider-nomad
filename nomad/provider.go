@@ -39,6 +39,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_HTTP_AUTH", ""),
+				Sensitive:   true,
 				Description: "HTTP basic auth configuration.",
 			},
 			"ca_file": {
@@ -77,6 +78,7 @@ func Provider() *schema.Provider {
 			"key_pem": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Sensitive:     true,
 				Description:   "PEM-encoded private key, required if cert_file or cert_pem is specified.",
 				ConflictsWith: []string{"key_file"},
 			},
@@ -84,6 +86,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("NOMAD_TOKEN", ""),
+				Sensitive:   true,
 				Description: "ACL token secret for API requests.",
 			},
 			"headers": {
@@ -101,6 +104,7 @@ func Provider() *schema.Provider {
 						"value": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The header value",
 						},
 					},
@@ -121,6 +125,7 @@ func Provider() *schema.Provider {
 						"login_token": {
 							Type:        schema.TypeString,
 							Required:    true,
+							Sensitive:   true,
 							Description: "The externally issued authentication token to be exchanged for a Nomad ACL Token.",
 						},
 					},
@@ -333,4 +338,12 @@ func nonPooledHttpClient() *http.Client {
 	transport.ForceAttemptHTTP2 = false
 
 	return httpClient
+}
+
+func (p ProviderConfig) Client() *api.Client {
+	return p.client
+}
+
+func (p ProviderConfig) Config() *api.Config {
+	return p.config
 }

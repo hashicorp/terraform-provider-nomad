@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/id"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -51,7 +51,7 @@ func dataSourceDatacentersRead(d *schema.ResourceData, meta interface{}) error {
 	prefix := d.Get("prefix").(string)
 	ignoreDown := d.Get("ignore_down_nodes").(bool)
 
-	d.SetId(resource.UniqueId())
+	d.SetId(id.UniqueId())
 	if err := d.Set("datacenters", filterDatacenters(nodes, prefix, ignoreDown)); err != nil {
 		return fmt.Errorf("error setting datacenters: %v", err)
 	}

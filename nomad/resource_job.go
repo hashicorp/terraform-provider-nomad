@@ -175,7 +175,7 @@ func resourceJob() *schema.Resource {
 			"submit_time": {
 				Description: "The time the job was submitted.",
 				Computed:    true,
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 			},
 
 			"create_index": {
@@ -769,7 +769,11 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("status", job.Status)
 	d.Set("status_description", job.StatusDescription)
 	d.Set("version", job.Version)
-	d.Set("submit_time", job.SubmitTime)
+	if job.SubmitTime != nil {
+		d.Set("submit_time", strconv.FormatInt(*job.SubmitTime, 10))
+	} else {
+		d.Set("submit_time", "")
+	}
 	d.Set("create_index", job.CreateIndex)
 	d.Set("stop", job.Stop)
 	d.Set("priority", job.Priority)

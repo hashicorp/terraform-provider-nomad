@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestSchedulerConfig_basic(t *testing.T) {
@@ -163,6 +163,10 @@ func TestSchedulerConfig_memoryOversubscriptionEnabledOutsideTest(t *testing.T) 
 					}
 					log.Printf("[DEBUG] Upserted scheduler configuration")
 				},
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
 				Config:             testAccNomadSchedulerConfigMemoryOversubscription,
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
