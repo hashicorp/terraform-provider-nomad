@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -22,6 +24,8 @@ import (
 )
 
 func TestAccEphemeralACLToken_basic(t *testing.T) {
+	accessorID, tokenName := createTestACLToken(t)
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
@@ -30,7 +34,7 @@ func TestAccEphemeralACLToken_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEphemeralACLTokenConfig(),
+				Config: testAccEphemeralACLTokenConfig(accessorID),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"echo.test",
@@ -40,17 +44,22 @@ func TestAccEphemeralACLToken_basic(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"echo.test",
 						tfjsonpath.New("data").AtMapKey("name"),
-						knownvalue.StringExact("acctest-ephemeral-token"),
+						knownvalue.StringExact(tokenName),
 					),
 					statecheck.ExpectKnownValue(
 						"echo.test",
 						tfjsonpath.New("data").AtMapKey("accessor_id"),
-						knownvalue.NotNull(),
+						knownvalue.StringExact(accessorID),
 					),
 					statecheck.ExpectKnownValue(
 						"echo.test",
 						tfjsonpath.New("data").AtMapKey("secret_id"),
 						knownvalue.NotNull(),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("policies"),
+						knownvalue.SetExact([]knownvalue.Check{knownvalue.StringExact("dev")}),
 					),
 				},
 			},
@@ -58,19 +67,12 @@ func TestAccEphemeralACLToken_basic(t *testing.T) {
 	})
 }
 
-func testAccEphemeralACLTokenConfig() string {
-	return `
+func testAccEphemeralACLTokenConfig(accessorID string) string {
+	return fmt.Sprintf(`
 provider "nomad" {}
 
-resource "nomad_acl_token" "test" {
-  name           = "acctest-ephemeral-token"
-  type           = "client"
-  policies       = ["dev"]
-  expiration_ttl = "5m"
-}
-
 ephemeral "nomad_acl_token" "test" {
-  accessor_id = nomad_acl_token.test.accessor_id
+  accessor_id = %q
 }
 
 provider "echo" {
@@ -78,7 +80,41 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`
+`, accessorID)
+}
+
+func createTestACLToken(t *testing.T) (string, string) {
+	t.Helper()
+
+	providerData := sdkv2providerMeta(t)()
+	providerConfig, ok := providerData.(nomad.ProviderConfig)
+	if !ok {
+		t.Fatalf("expected nomad.ProviderConfig, got %T", providerData)
+	}
+
+	tokenName := fmt.Sprintf("acctest-ephemeral-token-%d", time.Now().UnixNano())
+	ttl, err := time.ParseDuration("5m")
+	if err != nil {
+		t.Fatalf("failed to parse ttl: %v", err)
+	}
+
+	token, _, err := providerConfig.Client().ACLTokens().Create(&api.ACLToken{
+		Name:          tokenName,
+		Type:          "client",
+		Policies:      []string{"dev"},
+		ExpirationTTL: ttl,
+	}, nil)
+	if err != nil {
+		t.Fatalf("failed to create test ACL token: %v", err)
+	}
+
+	t.Cleanup(func() {
+		if _, err := providerConfig.Client().ACLTokens().Delete(token.AccessorID, nil); err != nil {
+			t.Logf("failed to delete test ACL token %q: %v", token.AccessorID, err)
+		}
+	})
+
+	return token.AccessorID, tokenName
 }
 
 func sdkv2providerMeta(t *testing.T) func() any {
