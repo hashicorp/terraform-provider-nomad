@@ -14,6 +14,10 @@ Manages an ACL token in Nomad.
   Terraform's state file. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
+-> **Note:** `secret_id` is deprecated on this resource. Use the `nomad_acl_token`
+ephemeral resource when the token secret is needed during a run without
+storing it in Terraform state.
+
 ## Example Usage
 
 Creating a token with limited policies:
@@ -90,7 +94,8 @@ can be referenced:
   can be logged and shared safely without granting any access to the cluster.
 
 - `secret_id` `(string)` - The token value itself, which is presented for
-  access to the cluster.
+  access to the cluster. This attribute is deprecated and will be removed in a
+  future release.
 
 - `create_time` `(string)` - The timestamp the token was created.
 
