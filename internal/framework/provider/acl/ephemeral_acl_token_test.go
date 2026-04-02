@@ -1,0 +1,121 @@
+// Copyright IBM Corp. 2017, 2026
+
+package acl_test
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider"
+	"github.com/hashicorp/terraform-provider-nomad/nomad"
+)
+
+func TestAccEphemeralACLToken_basic(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(),
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccEphemeralACLTokenConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("type"),
+						knownvalue.StringExact("client"),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("name"),
+						knownvalue.StringExact("acctest-ephemeral-token"),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("accessor_id"),
+						knownvalue.NotNull(),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("secret_id"),
+						knownvalue.NotNull(),
+					),
+				},
+			},
+		},
+	})
+}
+
+func testAccEphemeralACLTokenConfig() string {
+	return `
+provider "nomad" {}
+
+resource "nomad_acl_token" "test" {
+  name           = "acctest-ephemeral-token"
+  type           = "client"
+  policies       = ["dev"]
+  expiration_ttl = "5m"
+}
+
+ephemeral "nomad_acl_token" "test" {
+  accessor_id = nomad_acl_token.test.accessor_id
+}
+
+provider "echo" {
+  data = ephemeral.nomad_acl_token.test
+}
+
+resource "echo" "test" {}
+`
+}
+
+func sdkv2providerMeta(t *testing.T) func() any {
+	t.Helper()
+
+	p := nomad.Provider()
+	if err := p.Configure(context.Background(), sdkv2.NewResourceConfigRaw(nil)); err != nil {
+		t.Fatalf("failed to configure sdkv2 provider: %v", err)
+	}
+
+	return p.Meta
+}
+
+func testAccProtoV6ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
+	return map[string]func() (tfprotov6.ProviderServer, error){
+		"nomad": func() (tfprotov6.ProviderServer, error) {
+			return providerserver.NewProtocol6WithError(provider.New(sdkv2providerMetaForFactory()))()
+		},
+		"echo": echoprovider.NewProviderServer(),
+	}
+}
+
+func sdkv2providerMetaForFactory() func() any {
+	p := nomad.Provider()
+	if err := p.Configure(context.Background(), sdkv2.NewResourceConfigRaw(nil)); err != nil {
+		panic(fmt.Sprintf("failed to configure sdkv2 provider: %v", err))
+	}
+
+	return p.Meta
+}
+
+func testAccPreCheck(t *testing.T) {
+	t.Helper()
+
+	if os.Getenv("NOMAD_ADDR") == "" {
+		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
+	}
+
+	_ = sdkv2providerMeta(t)
+}
