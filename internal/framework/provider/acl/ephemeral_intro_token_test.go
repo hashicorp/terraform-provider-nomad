@@ -32,6 +32,11 @@ func TestAccEphemeralIntroToken_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
+				// Ephemeral values must be consumed by another part of the graph rather
+				// than asserted directly from state. The echo provider gives the test a
+				// safe sink for the ephemeral object and reflects the consumed data back
+				// into test-checkable state. See
+				// https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources#testing-ephemeral-data-with-echo-provider
 				Config: testAccEphemeralIntroTokenConfig(nodeName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
