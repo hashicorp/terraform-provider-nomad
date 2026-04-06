@@ -15,6 +15,9 @@ Nomad cluster.
   `items` in the Terraform's state file. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
+~> **Note:** Use `items_wo` with `items_wo_version` when you want Terraform to
+  write variable items without storing those values in the state file.
+
 ## Example Usage
 
 Creating a variable in the default namespace:
@@ -25,6 +28,20 @@ resource "nomad_variable" "example" {
   items = {
     example_key = "example_value"
   }
+}
+```
+
+Creating a variable with write-only items:
+
+```hcl
+resource "nomad_variable" "example" {
+  path = "some/path/of/your/choosing"
+
+  items_wo = jsonencode({
+    example_key = "example_value"
+  })
+
+  items_wo_version = 1
 }
 ```
 
@@ -49,4 +66,6 @@ resource "nomad_variable" "example" {
 
 - `path` `(string: <required>)` - A unique path to create the variable at.
 - `namespace` `(string: "default")` - The namepsace to create the variable in.
-- `items` `(map[string]string: <required>)` - An arbitrary map of items to create in the variable.
+- `items` `(map[string]string)` - An arbitrary map of items to create in the variable. Conflicts with `items_wo`.
+- `items_wo` `(string)` - A JSON-encoded map of variable items to write without storing those values in Terraform state. Conflicts with `items`.
+- `items_wo_version` `(number)` - A version marker for `items_wo`. Increment this value to apply a new write-only payload.
