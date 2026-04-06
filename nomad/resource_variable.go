@@ -92,9 +92,17 @@ func resourceVariableWrite(d *schema.ResourceData, meta any) error {
 
 	if rawItems, ok := d.GetOk("items"); ok {
 		variable.Items = expandVariableItems(rawItems.(map[string]any))
-	} else if _, ok := d.GetOk("items_wo"); ok {
+	} else if d.IsNewResource() || d.HasChange("items_wo_version") {
+		rawItems, diags := d.GetRawConfigAt(cty.GetAttrPath("items_wo"))
+		if diags.HasError() {
+			return fmt.Errorf("error reading items_wo config: %v", diags)
+		}
+		if rawItems.IsNull() || !rawItems.IsKnown() {
+			return fmt.Errorf("items_wo must be provided when items_wo_version is set")
+		}
+
 		items := map[string]string{}
-		if err := json.Unmarshal([]byte(d.Get("items_wo").(string)), &items); err != nil {
+		if err := json.Unmarshal([]byte(rawItems.AsString()), &items); err != nil {
 			return fmt.Errorf("error decoding items_wo: %w", err)
 		}
 		variable.Items = items
