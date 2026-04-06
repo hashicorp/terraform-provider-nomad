@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
@@ -29,6 +30,7 @@ func testAccProtoV6ProviderFactories(t *testing.T) map[string]func() (tfprotov6.
 		"nomad": func() (tfprotov6.ProviderServer, error) {
 			return providerserver.NewProtocol6WithError(provider.New(sdkv2providerMeta(t)))()
 		},
+		"echo": echoprovider.NewProviderServer(),
 	}
 }
 

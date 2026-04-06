@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/shoenig/test/must"
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
@@ -24,32 +25,23 @@ func TestMuxServer_MetadataAndSchema(t *testing.T) {
 	ctx := t.Context()
 
 	server, err := MuxServer(ctx)
-	if err != nil {
-		t.Fatalf("expected mux server to initialize: %v", err)
-	}
+	must.NoError(t, err, must.Sprintf("expected mux server to initialize: %v", err))
 
 	metadata, err := server.GetMetadata(ctx, &tfprotov6.GetMetadataRequest{})
-	if err != nil {
-		t.Fatalf("expected metadata from mux server: %v", err)
-	}
+	must.NoError(t, err, must.Sprintf("expected metadata from mux server: %v", err))
 
-	if !containsDataSource(metadata.DataSources, "nomad_regions") {
-		t.Fatalf("expected nomad_regions data source in mux metadata")
-	}
+	must.True(t, containsDataSource(metadata.DataSources, "nomad_regions"), must.Sprint("expected nomad_regions data source in mux metadata"))
+
+	must.True(t, containsEphemeralResource(metadata.EphemeralResources, "nomad_node_intro_token"), must.Sprint("expected nomad_node_intro_token ephemeral resource in mux metadata"))
 
 	schema, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
-	if err != nil {
-		t.Fatalf("expected provider schema from mux server: %v", err)
-	}
+	must.NoError(t, err, must.Sprintf("expected provider schema from mux server: %v", err))
 
-	if schema.Provider == nil {
-		t.Fatal("expected provider schema to be returned")
-	}
+	must.NotNil(t, schema.Provider, must.Sprint("expected provider schema to be returned"))
 
-	if _, ok := schema.DataSourceSchemas["nomad_regions"]; !ok {
-		t.Fatal("expected nomad_regions schema from mux server")
-	}
+	must.MapContainsKey(t, schema.DataSourceSchemas, "nomad_regions", must.Sprint("expected nomad_regions schema from mux server"))
 
+	must.MapContainsKey(t, schema.EphemeralResourceSchemas, "nomad_node_intro_token", must.Sprint("expected nomad_node_intro_token schema from mux server"))
 }
 
 func TestAccMuxProvider_RegionsDataSource(t *testing.T) {
@@ -78,6 +70,15 @@ data "nomad_regions" "test" {}
 func containsDataSource(dataSources []tfprotov6.DataSourceMetadata, typeName string) bool {
 	for _, dataSource := range dataSources {
 		if dataSource.TypeName == typeName {
+			return true
+		}
+	}
+	return false
+}
+
+func containsEphemeralResource(ephemeralResources []tfprotov6.EphemeralResourceMetadata, typeName string) bool {
+	for _, ephemeralResource := range ephemeralResources {
+		if ephemeralResource.TypeName == typeName {
 			return true
 		}
 	}
