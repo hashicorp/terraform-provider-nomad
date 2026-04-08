@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/nomad v1.11.3
-	github.com/hashicorp/nomad/api v0.0.0-20260311215651-558bcb13671c
+	github.com/hashicorp/nomad/api v0.0.0-20260408063511-b0f552dbe971
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-mux v0.23.0
