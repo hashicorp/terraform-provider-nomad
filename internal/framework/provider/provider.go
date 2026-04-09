@@ -147,5 +147,6 @@ func (p *NomadProvider) DataSources(_ context.Context) []func() datasource.DataS
 func (p *NomadProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		acl.NewIntroTokenEphemeralResource,
+		acl.NewACLTokenEphemeralResource,
 	}
 }

@@ -13,6 +13,10 @@ Get information on an ACL token.
 ~> **Warning:** this data source will store tokens in the Terraform state. Take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
+-> **Note:** This data source is deprecated and may be removed in a future
+release. Use the `nomad_acl_token` ephemeral resource when the token secret is
+needed during a run without storing it in Terraform state.
+
 ## Example Usage
 
 ```hcl
