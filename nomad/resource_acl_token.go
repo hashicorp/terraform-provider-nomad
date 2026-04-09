@@ -35,6 +35,7 @@ func resourceACLToken() *schema.Resource {
 				Description: "The value that grants access to Nomad.",
 				Computed:    true,
 				Sensitive:   true,
+				Deprecated:  "Use the nomad_acl_token ephemeral resource when the token secret is needed during a run without storing it in Terraform state. This attribute will be removed in a future release.",
 				Type:        schema.TypeString,
 			},
 			"name": {

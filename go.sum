@@ -111,8 +111,8 @@ github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
 github.com/hashicorp/nomad v1.11.3 h1:u16fs0X1BGXyD0q4wIG2VSIZ0rbtrHj7+KcayGQv9JY=
 github.com/hashicorp/nomad v1.11.3/go.mod h1:LnGz6+ktjHW6828q6EMFDY2N4pbHvT32yudY7iKMQGo=
-github.com/hashicorp/nomad/api v0.0.0-20260311215651-558bcb13671c h1:/EvZDcnO3/hiQy9/oeUi7vdC5PQHiJZyr6p2AFbc6ss=
-github.com/hashicorp/nomad/api v0.0.0-20260311215651-558bcb13671c/go.mod h1:KkLNLU0Nyfh5jWsFoF/PsmMbKpRIAoIV4lmQoJWgKCk=
+github.com/hashicorp/nomad/api v0.0.0-20260408063511-b0f552dbe971 h1:UCu7VUBDCIm7YPcY6Lf2986Xw5GgNaQEXnvgdvlD8zA=
+github.com/hashicorp/nomad/api v0.0.0-20260408063511-b0f552dbe971/go.mod h1:KkLNLU0Nyfh5jWsFoF/PsmMbKpRIAoIV4lmQoJWgKCk=
 github.com/hashicorp/terraform-exec v0.25.0 h1:Bkt6m3VkJqYh+laFMrWIpy9KHYFITpOyzRMNI35rNaY=
 github.com/hashicorp/terraform-exec v0.25.0/go.mod h1:dl9IwsCfklDU6I4wq9/StFDp7dNbH/h5AnfS1RmiUl8=
 github.com/hashicorp/terraform-json v0.27.2 h1:BwGuzM6iUPqf9JYM/Z4AF1OJ5VVJEEzoKST/tRDBJKU=

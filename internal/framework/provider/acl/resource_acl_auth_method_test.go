@@ -20,6 +20,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/testutil"
+	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
 
 const testResourceName = "nomad_acl_auth_method.test"
@@ -32,10 +34,9 @@ func TestACLAuthMethod(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			testCheckMinVersion(t, "1.4.4-dev")
+			testutil.TestAccPreCheck(t)
 		},
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		CheckDestroy:             testACLAuthMethodDestroyedAll(t, oidcName, jwtName),
 		Steps: []resource.TestStep{
 			{
@@ -60,8 +61,8 @@ func TestACLAuthMethod_writeOnly(t *testing.T) {
 	methodName := fmt.Sprintf("tf-test-wo-%d", time.Now().UnixNano())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
@@ -105,8 +106,8 @@ func TestACLAuthMethod_writeOnly(t *testing.T) {
 func TestACLAuthMethod_conflictingOIDCSecretAndWO(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-conflict")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
@@ -122,8 +123,8 @@ func TestACLAuthMethod_conflictingOIDCSecretAndWO(t *testing.T) {
 func TestACLAuthMethod_conflictingPemKeyAndWO(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-conflict")
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
@@ -148,10 +149,9 @@ func TestACLAuthMethod_OIDCClientAssertion(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			testCheckMinVersion(t, "1.10.0")
+			testutil.TestAccPreCheck(t)
 		},
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		ExternalProviders: map[string]resource.ExternalProvider{
 			"tls":   {VersionConstraint: ">= 4.0.0", Source: "hashicorp/tls"},
 			"local": {VersionConstraint: ">= 2.5.0", Source: "hashicorp/local"},
@@ -209,7 +209,12 @@ func TestACLAuthMethod_OIDCClientAssertion(t *testing.T) {
 func testACLAuthMethodExists(t *testing.T, name string) resource.TestCheckFunc {
 	t.Helper()
 	return func(s *terraform.State) error {
-		client := nomadClientFromMeta(t)
+		providerData := testutil.SDKV2ProviderMeta(t)()
+		providerConfig, ok := providerData.(nomad.ProviderConfig)
+		if !ok {
+			t.Fatalf("expected nomad.ProviderConfig, got %T", providerData)
+		}
+		client := providerConfig.Client()
 		am, _, err := client.ACLAuthMethods().Get(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading ACL auth method %q: %w", name, err)
@@ -224,7 +229,12 @@ func testACLAuthMethodExists(t *testing.T, name string) resource.TestCheckFunc {
 func testACLAuthMethodDestroyed(t *testing.T, name string) resource.TestCheckFunc {
 	t.Helper()
 	return func(*terraform.State) error {
-		client := nomadClientFromMeta(t)
+		providerData := testutil.SDKV2ProviderMeta(t)()
+		providerConfig, ok := providerData.(nomad.ProviderConfig)
+		if !ok {
+			t.Fatalf("expected nomad.ProviderConfig, got %T", providerData)
+		}
+		client := providerConfig.Client()
 		am, _, err := client.ACLAuthMethods().Get(name, nil)
 		if err != nil && strings.Contains(err.Error(), "404") {
 			return nil
@@ -269,7 +279,13 @@ func testACLAuthMethodFullOIDCAPICheck(t *testing.T, name, uiCallback, defaultVa
 		expectedClaimMappings := map[string]string{"http://nomad.internal/name": "name"}
 		expectedListClaimMappings := map[string]string{"http://nomad.internal/roles": "roles"}
 
-		authMethod, _, err := nomadClientFromMeta(t).ACLAuthMethods().Get(name, nil)
+		providerData := testutil.SDKV2ProviderMeta(t)()
+		providerConfig, ok := providerData.(nomad.ProviderConfig)
+		if !ok {
+			t.Fatalf("expected nomad.ProviderConfig, got %T", providerData)
+		}
+		client := providerConfig.Client()
+		authMethod, _, err := client.ACLAuthMethods().Get(name, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back auth method %q: %w", name, err)
 		}
@@ -338,7 +354,7 @@ func TestACLAuthMethod_upgradeToFramework(t *testing.T) {
 	methodName := fmt.Sprintf("tf-test-jwt-%d", time.Now().UnixNano())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
 
 		CheckDestroy: testACLAuthMethodDestroyed(t, methodName),
 		Steps: []resource.TestStep{
@@ -355,7 +371,7 @@ func TestACLAuthMethod_upgradeToFramework(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+				ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 				Config:                   testACLAuthMethodConfigOIDCWithMaxTTL(methodName, "someclientsecret", "http://localhost:4649/oidc/callback", false, "10m0s"),
 			},
 		},
@@ -366,8 +382,8 @@ func TestACLAuthMethod_writeOnlyManualVersion(t *testing.T) {
 	methodName := fmt.Sprintf("tf-test-wov-%d", time.Now().UnixNano())
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories(t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_11_0),
 		},
