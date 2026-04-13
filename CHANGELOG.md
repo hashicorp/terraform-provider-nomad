@@ -4,6 +4,7 @@ IMPROVEMENTS:
 * provider: add a muxed framework provider alongside the existing SDKv2 provider ([#594](https://github.com/hashicorp/terraform-provider-nomad/pull/594))
 * **New Ephemeral Resource**: `nomad_node_intro_token` creates a temporary Nomad client introduction token ([#595](https://github.com/hashicorp/terraform-provider-nomad/pull/595))
 * **New Ephemeral Resource**: `nomad_acl_token` reads a temporary Nomad ACL token without storing its secret in Terraform state ([#596](https://github.com/hashicorp/terraform-provider-nomad/pull/596))
+* **New Ephemeral Resource**: `nomad_variable` reads a Nomad variable during a Terraform run without storing its items in state ([#598](https://github.com/hashicorp/terraform-provider-nomad/pull/598))
 * data source/nomad_jwks: add EdDSA (Ed25519) key support ([#583](https://github.com/hashicorp/terraform-provider-nomad/pull/583))
 * data source/nomad_job_parser: add `variables` parameter to pass HCL2 variables to the job parser ([#582](https://github.com/hashicorp/terraform-provider-nomad/pull/582))
 * resource/nomad_acl_policy: make `job_id` optional in `job_acl` block to allow policies that apply to all jobs in a namespace ([#580](https://github.com/hashicorp/terraform-provider-nomad/pull/580))

@@ -4,6 +4,7 @@
 package nomad
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const (
@@ -54,10 +56,27 @@ func resourceVariable() *schema.Resource {
 				Default:     api.DefaultNamespace,
 			},
 			"items": {
-				Description: "A map of strings to be added as items in the variable",
-				Type:        schema.TypeMap,
-				Required:    true,
-				Sensitive:   true,
+				Description:  "A map of strings to be added as items in the variable",
+				Type:         schema.TypeMap,
+				Optional:     true,
+				Sensitive:    true,
+				ExactlyOneOf: []string{"items", "items_wo"},
+			},
+			"items_wo": {
+				Description:  "JSON-encoded variable items to write without storing them in Terraform state.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Sensitive:    true,
+				WriteOnly:    true,
+				ExactlyOneOf: []string{"items", "items_wo"},
+			},
+			"items_wo_version": {
+				Description:   "Version marker for items_wo updates. Increment this value to apply a new write-only variable payload.",
+				Type:          schema.TypeInt,
+				Optional:      true,
+				ConflictsWith: []string{"items"},
+				RequiredWith:  []string{"items_wo"},
+				ValidateFunc:  validation.IntAtLeast(1),
 			},
 		},
 	}
@@ -69,11 +88,24 @@ func resourceVariableWrite(d *schema.ResourceData, meta any) error {
 	variable := &api.Variable{
 		Namespace: d.Get("namespace").(string),
 		Path:      d.Get("path").(string),
-		Items:     make(map[string]string),
 	}
 
-	for name, value := range d.Get("items").(map[string]any) {
-		variable.Items[name] = value.(string)
+	if rawItems, ok := d.GetOk("items"); ok {
+		variable.Items = expandVariableItems(rawItems.(map[string]any))
+	} else if d.IsNewResource() || d.HasChange("items_wo_version") {
+		rawItems, diags := d.GetRawConfigAt(cty.GetAttrPath("items_wo"))
+		if diags.HasError() {
+			return fmt.Errorf("error reading items_wo config: %v", diags)
+		}
+		if rawItems.IsNull() || !rawItems.IsKnown() {
+			return fmt.Errorf("items_wo must be provided when items_wo_version is set")
+		}
+
+		items := map[string]string{}
+		if err := json.Unmarshal([]byte(rawItems.AsString()), &items); err != nil {
+			return fmt.Errorf("error decoding items_wo: %w", err)
+		}
+		variable.Items = items
 	}
 
 	log.Printf("[DEBUG] Upserting variable %s@%s", variable.Path, variable.Namespace)
@@ -119,6 +151,11 @@ func resourceVariableRead(d *schema.ResourceData, meta any) error {
 	}
 
 	d.SetId(variableID)
+
+	if d.Get("items_wo_version").(int) > 0 {
+		return d.Set("items", nil)
+	}
+
 	return d.Set("items", variable.Items)
 }
 
@@ -140,6 +177,15 @@ func resourceVariableExists(d *schema.ResourceData, meta any) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func expandVariableItems(rawItems map[string]any) map[string]string {
+	items := make(map[string]string, len(rawItems))
+	for name, value := range rawItems {
+		items[name] = value.(string)
+	}
+
+	return items
 }
 
 func pathValidation() schema.SchemaValidateDiagFunc {
