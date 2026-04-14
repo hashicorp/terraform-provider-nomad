@@ -63,19 +63,19 @@ func resourceVariable() *schema.Resource {
 				ExactlyOneOf: []string{"items", "items_wo"},
 			},
 			"items_wo": {
-				Description:  "JSON-encoded variable items to write without storing them in Terraform state.",
+				Description:  "JSON-encoded variable items to write without storing them in Terraform state. Requires items_wo_version.",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Sensitive:    true,
 				WriteOnly:    true,
 				ExactlyOneOf: []string{"items", "items_wo"},
+				RequiredWith: []string{"items_wo_version"},
 			},
 			"items_wo_version": {
-				Description:   "Version marker for items_wo updates. Increment this value to apply a new write-only variable payload.",
+				Description:   "Version marker for items_wo updates. Required when using items_wo, and increment this value to apply a new write-only variable payload.",
 				Type:          schema.TypeInt,
 				Optional:      true,
 				ConflictsWith: []string{"items"},
-				RequiredWith:  []string{"items_wo"},
 				ValidateFunc:  validation.IntAtLeast(1),
 			},
 		},
@@ -98,7 +98,7 @@ func resourceVariableWrite(d *schema.ResourceData, meta any) error {
 			return fmt.Errorf("error reading items_wo config: %v", diags)
 		}
 		if rawItems.IsNull() || !rawItems.IsKnown() {
-			return fmt.Errorf("items_wo must be provided when items_wo_version is set")
+			return fmt.Errorf("items_wo must be provided when using items_wo_version")
 		}
 
 		items := map[string]string{}
