@@ -6,6 +6,7 @@ package nomad
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -104,6 +105,34 @@ func TestResourceVariable_writeOnlyItems(t *testing.T) {
 	})
 }
 
+func TestResourceVariable_writeOnlyItemsRequiresVersion(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testResourceVariable_writeOnlyConfigWithoutVersion(api.DefaultNamespace, path, "test_value"),
+				ExpectError: regexp.MustCompile(`"items_wo": all of ` + "`items_wo,items_wo_version`" + ` must be specified`),
+			},
+		},
+	})
+}
+
+func TestResourceVariable_itemsConflictWithWriteOnlyVersion(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testResourceVariable_itemsConfigWithWriteOnlyVersion(api.DefaultNamespace, path, 1),
+				ExpectError: regexp.MustCompile(`"items_wo_version": conflicts with items`),
+			},
+		},
+	})
+}
+
 func testResourceVariable_initialConfig(namespace, path string) string {
 	return fmt.Sprintf(`
 resource "nomad_variable" "test" {
@@ -115,6 +144,21 @@ resource "nomad_variable" "test" {
   }
 }
 `, namespace, path)
+}
+
+func testResourceVariable_itemsConfigWithWriteOnlyVersion(namespace, path string, version int) string {
+	return fmt.Sprintf(`
+resource "nomad_variable" "test" {
+	namespace = %q
+	path      = %q
+
+	items = {
+		test_key = "test_value"
+	}
+
+	items_wo_version = %d
+}
+`, namespace, path, version)
 }
 
 func testResourceVariable_initialConfigWithNamespace(namespace, path string) string {
@@ -139,6 +183,19 @@ resource "nomad_variable" "test" {
 	items_wo_version = %d
 }
 `, namespace, path, value, version)
+}
+
+func testResourceVariable_writeOnlyConfigWithoutVersion(namespace, path, value string) string {
+	return fmt.Sprintf(`
+resource "nomad_variable" "test" {
+	namespace = %q
+	path      = %q
+
+	items_wo = jsonencode({
+	  test_key = %q
+	})
+}
+`, namespace, path, value)
 }
 
 func testResourceVariable_initialCheck(namespace, path string) resource.TestCheckFunc {
