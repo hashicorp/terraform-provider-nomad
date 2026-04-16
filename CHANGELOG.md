@@ -16,6 +16,7 @@ IMPROVEMENTS:
 * resource/nomad_quota_specification: add support for all `QuotaResources` fields including `secrets_mb`, `devices`, `numa`, and `storage` ([#584](https://github.com/hashicorp/terraform-provider-nomad/pull/584))
 * resource/nomad_job, data source/nomad_job: Added and aligned computed job and task group attributes, including periodic and update strategy fields, to match the `nomad_job` implementation and documentation ([#585](https://github.com/hashicorp/terraform-provider-nomad/pull/585))
 * resource/nomad_job: add `preserve_counts` argument to preserve task group counts during job updates ([#591](https://github.com/hashicorp/terraform-provider-nomad/pull/591))
+* provider: update Go to 1.25.9 ([#601](https://github.com/hashicorp/terraform-provider-nomad/pull/601))
 
 ## 2.5.2 (November 13, 2025)
 
