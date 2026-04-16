@@ -10,10 +10,6 @@ Manages an ACL Binding Rule in Nomad.
 
 Manages an ACL Binding Rule in Nomad.
 
-~> **Warning:** this resource will store the sensitive value placed in
-  `config.oidc_client_secret` in the Terraform's state file. Take care to
-  [protect your state file](/docs/state/sensitive-data.html).
-
 ## Example Usage
 
 Creating an ALC Binding Rule associated to an ACL Auth Method also created and
