@@ -53,10 +53,9 @@ test-compile:
 	go test -c $(TEST) $(TESTARGS)
 
 website:
-ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
-	echo "$(WEBSITE_REPO) not found in your GOPATH (necessary for layouts and assets), get-ting..."
-	git clone https://$(WEBSITE_REPO) $(GOPATH)/src/$(WEBSITE_REPO)
+ifeq (,$(shell which tfplugindocs))
+	go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
 endif
-	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
+	tfplugindocs generate --rendered-website-dir website/docs
 
 .PHONY: build test testacc vet fmt fmtcheck errcheck test-compile website
