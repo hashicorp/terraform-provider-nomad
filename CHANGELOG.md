@@ -1,4 +1,4 @@
-## UNRELEASED
+## 2.6.0 (April 16, 2026)
 
 IMPROVEMENTS:
 * provider: add a muxed framework provider alongside the existing SDKv2 provider ([#594](https://github.com/hashicorp/terraform-provider-nomad/pull/594))
