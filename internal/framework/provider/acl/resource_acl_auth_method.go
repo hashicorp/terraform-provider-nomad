@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -193,8 +194,8 @@ func (r *ACLAuthMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 						Optional:    true,
 						Computed:    true,
 						Description: "Version counter for oidc_client_secret_wo. Increments automatically when the write-only secret changes, or set manually to trigger an update.",
-						Validators: []validator.String{
-							stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("oidc_client_secret")),
+						Validators: []validator.Int64{
+							int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("oidc_client_secret")),
 						},
 					},
 					"oidc_enable_pkce": schema.BoolAttribute{
@@ -324,8 +325,8 @@ func (r *ACLAuthMethodResource) Schema(_ context.Context, _ resource.SchemaReque
 										Optional:    true,
 										Computed:    true,
 										Description: "Version counter for pem_key_wo. Increments automatically when the write-only key changes, or set manually to trigger an update.",
-										Validators: []validator.String{
-											stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("pem_key")),
+										Validators: []validator.Int64{
+											int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("pem_key")),
 										},
 									},
 									"pem_key_file": schema.StringAttribute{
