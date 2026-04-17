@@ -6,6 +6,7 @@ package nomad
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestResourceVariable_basic(t *testing.T) {
@@ -79,6 +81,58 @@ func TestResourceVariable_namespaceChange(t *testing.T) {
 	})
 }
 
+func TestResourceVariable_writeOnlyItems(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0") },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceVariable_writeOnlyConfig(api.DefaultNamespace, path, 1, "test_value"),
+				Check:  testResourceVariable_writeOnlyCheck(api.DefaultNamespace, path, "test_value"),
+			},
+			{
+				Config: testResourceVariable_writeOnlyConfig(api.DefaultNamespace, path, 2, "updated_value"),
+				Check:  testResourceVariable_writeOnlyCheck(api.DefaultNamespace, path, "updated_value"),
+			},
+		},
+
+		CheckDestroy: testResourceVariable_checkDestroy(api.DefaultNamespace, path),
+	})
+}
+
+func TestResourceVariable_writeOnlyItemsRequiresVersion(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testResourceVariable_writeOnlyConfigWithoutVersion(api.DefaultNamespace, path, "test_value"),
+				ExpectError: regexp.MustCompile(`"items_wo": all of ` + "`items_wo,items_wo_version`" + ` must be specified`),
+			},
+		},
+	})
+}
+
+func TestResourceVariable_itemsConflictWithWriteOnlyVersion(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testResourceVariable_itemsConfigWithWriteOnlyVersion(api.DefaultNamespace, path, 1),
+				ExpectError: regexp.MustCompile(`"items_wo_version": conflicts with items`),
+			},
+		},
+	})
+}
+
 func testResourceVariable_initialConfig(namespace, path string) string {
 	return fmt.Sprintf(`
 resource "nomad_variable" "test" {
@@ -92,6 +146,21 @@ resource "nomad_variable" "test" {
 `, namespace, path)
 }
 
+func testResourceVariable_itemsConfigWithWriteOnlyVersion(namespace, path string, version int) string {
+	return fmt.Sprintf(`
+resource "nomad_variable" "test" {
+	namespace = %q
+	path      = %q
+
+	items = {
+		test_key = "test_value"
+	}
+
+	items_wo_version = %d
+}
+`, namespace, path, version)
+}
+
 func testResourceVariable_initialConfigWithNamespace(namespace, path string) string {
 	return fmt.Sprintf(`
 resource nomad_namespace "nomad_var_test" {
@@ -99,6 +168,34 @@ resource nomad_namespace "nomad_var_test" {
 }
 %s
 `, namespace, testResourceVariable_initialConfig("${nomad_namespace.nomad_var_test.name}", path))
+}
+
+func testResourceVariable_writeOnlyConfig(namespace, path string, version int, value string) string {
+	return fmt.Sprintf(`
+resource "nomad_variable" "test" {
+	namespace = %q
+	path      = %q
+
+	items_wo = jsonencode({
+	  test_key = %q
+	})
+
+	items_wo_version = %d
+}
+`, namespace, path, value, version)
+}
+
+func testResourceVariable_writeOnlyConfigWithoutVersion(namespace, path, value string) string {
+	return fmt.Sprintf(`
+resource "nomad_variable" "test" {
+	namespace = %q
+	path      = %q
+
+	items_wo = jsonencode({
+	  test_key = %q
+	})
+}
+`, namespace, path, value)
 }
 
 func testResourceVariable_initialCheck(namespace, path string) resource.TestCheckFunc {
@@ -156,5 +253,37 @@ func testResourceVariable_checkDestroy(namespace, path string) resource.TestChec
 		}
 
 		return fmt.Errorf("variable %q has not been deleted.", resourceID)
+	}
+}
+
+func testResourceVariable_writeOnlyCheck(namespace, path, value string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if err := testResourceVariable_initialCheck(namespace, path)(s); err != nil {
+			return err
+		}
+
+		resourceState := s.Modules[0].Resources["nomad_variable.test"]
+		if resourceState == nil || resourceState.Primary == nil {
+			return errors.New("resource has no primary instance")
+		}
+
+		instanceState := resourceState.Primary
+		if storedValue, ok := instanceState.Attributes["items.test_key"]; ok && storedValue != "" {
+			return fmt.Errorf("expected write-only items not to be stored in state, found value %q", storedValue)
+		}
+		if itemCount, ok := instanceState.Attributes["items.%"]; ok && itemCount != "" && itemCount != "0" {
+			return fmt.Errorf("expected no persisted items in state for write-only variable, found items.%%=%q", itemCount)
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		variable, _, err := client.Variables().Read(path, &api.QueryOptions{Namespace: namespace})
+		if err != nil {
+			return fmt.Errorf("error reading back variable %q: %s", path+"@"+namespace, err)
+		}
+		if got := variable.Items["test_key"]; got != value {
+			return fmt.Errorf("expected variable item test_key to be %q, got %q", value, got)
+		}
+
+		return nil
 	}
 }

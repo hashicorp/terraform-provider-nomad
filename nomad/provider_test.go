@@ -4,6 +4,7 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -545,4 +546,33 @@ func testAccProviderFactoryInternal(provider **schema.Provider) map[string]func(
 		*provider = p
 	}
 	return factories
+}
+
+func TestProviderConfigure_AddressFromEnv(t *testing.T) {
+	t.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
+
+	p := Provider()
+	err := p.Configure(context.Background(), sdkterraform.NewResourceConfigRaw(nil))
+	if err != nil {
+		t.Fatalf("unexpected configure error: %v", err)
+	}
+
+	providerConfig := p.Meta().(ProviderConfig)
+	if got, want := providerConfig.config.Address, "http://127.0.0.1:4646"; got != want {
+		t.Fatalf("expected address %q, got %q", want, got)
+	}
+}
+
+func TestProviderConfigure_AddressRequired(t *testing.T) {
+	t.Setenv("NOMAD_ADDR", "")
+
+	p := Provider()
+	diags := p.Configure(context.Background(), sdkterraform.NewResourceConfigRaw(nil))
+	if diags == nil || !diags.HasError() {
+		t.Fatal("expected configure error, got nil")
+	}
+
+	if !strings.Contains(diags[0].Summary, "address must be provided either in provider configuration or via NOMAD_ADDR") {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
 }

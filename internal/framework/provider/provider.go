@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/acl"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/variables"
 )
 
 // Ensure NomadProvider satisfies various provider interfaces.
@@ -151,5 +152,6 @@ func (p *NomadProvider) EphemeralResources(_ context.Context) []func() ephemeral
 	return []func() ephemeral.EphemeralResource{
 		acl.NewIntroTokenEphemeralResource,
 		acl.NewACLTokenEphemeralResource,
+		variables.NewVariableEphemeralResource,
 	}
 }

@@ -1,11 +1,17 @@
 ## UNRELEASED
 
+BUG FIXES:
+* provider: fix muxed provider schema mismatch for `address` when provider configuration is used without `NOMAD_ADDR` in the environment ([#608](https://github.com/hashicorp/terraform-provider-nomad/pull/608))
+
+## 2.6.0 (April 16, 2026)
+
 IMPROVEMENTS:
 * resource/nomad_acl_auth_method: migrate to Plugin Framework and add write-only attributes `config.oidc_client_secret_wo`, `config.oidc_client_secret_wo_version`, `private_key.pem_key_wo`, and `private_key.pem_key_wo_version` to avoid storing secrets in state ([#599](https://github.com/hashicorp/terraform-provider-nomad/pull/599))
 * resource/nomad_acl_binding_rule: migrate to Plugin Framework ([#599](https://github.com/hashicorp/terraform-provider-nomad/pull/599))
 * provider: add a muxed framework provider alongside the existing SDKv2 provider ([#594](https://github.com/hashicorp/terraform-provider-nomad/pull/594))
 * **New Ephemeral Resource**: `nomad_node_intro_token` creates a temporary Nomad client introduction token ([#595](https://github.com/hashicorp/terraform-provider-nomad/pull/595))
 * **New Ephemeral Resource**: `nomad_acl_token` reads a temporary Nomad ACL token without storing its secret in Terraform state ([#596](https://github.com/hashicorp/terraform-provider-nomad/pull/596))
+* **New Ephemeral Resource**: `nomad_variable` reads a Nomad variable during a Terraform run without storing its items in state ([#598](https://github.com/hashicorp/terraform-provider-nomad/pull/598))
 * data source/nomad_jwks: add EdDSA (Ed25519) key support ([#583](https://github.com/hashicorp/terraform-provider-nomad/pull/583))
 * data source/nomad_job_parser: add `variables` parameter to pass HCL2 variables to the job parser ([#582](https://github.com/hashicorp/terraform-provider-nomad/pull/582))
 * resource/nomad_acl_policy: make `job_id` optional in `job_acl` block to allow policies that apply to all jobs in a namespace ([#580](https://github.com/hashicorp/terraform-provider-nomad/pull/580))
@@ -17,6 +23,7 @@ IMPROVEMENTS:
 * resource/nomad_quota_specification: add support for all `QuotaResources` fields including `secrets_mb`, `devices`, `numa`, and `storage` ([#584](https://github.com/hashicorp/terraform-provider-nomad/pull/584))
 * resource/nomad_job, data source/nomad_job: Added and aligned computed job and task group attributes, including periodic and update strategy fields, to match the `nomad_job` implementation and documentation ([#585](https://github.com/hashicorp/terraform-provider-nomad/pull/585))
 * resource/nomad_job: add `preserve_counts` argument to preserve task group counts during job updates ([#591](https://github.com/hashicorp/terraform-provider-nomad/pull/591))
+* provider: update Go to 1.25.9 ([#601](https://github.com/hashicorp/terraform-provider-nomad/pull/601))
 
 ## 2.5.2 (November 13, 2025)
 
