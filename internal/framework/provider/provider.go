@@ -41,7 +41,7 @@ func (p *NomadProvider) Schema(_ context.Context, _ frameworkprovider.SchemaRequ
 	resp.Schema = providerschema.Schema{
 		Attributes: map[string]providerschema.Attribute{
 			"address": providerschema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "URL of the root of the target Nomad agent.",
 			},
 			"region": providerschema.StringAttribute{
