@@ -18,6 +18,7 @@ import (
 
 func SDKV2ProviderMeta(t *testing.T) func() any {
 	t.Helper()
+	ensureNomadAddrEnv()
 
 	p := nomad.Provider()
 	if err := p.Configure(context.Background(), sdkv2.NewResourceConfigRaw(nil)); err != nil {
@@ -38,19 +39,24 @@ func TestAccProtoV6ProviderFactories() map[string]func() (tfprotov6.ProviderServ
 
 func TestAccPreCheck(t *testing.T) {
 	t.Helper()
-
-	if os.Getenv("NOMAD_ADDR") == "" {
-		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
-	}
+	ensureNomadAddrEnv()
 
 	_ = SDKV2ProviderMeta(t)
 }
 
 func sdkv2ProviderMetaForFactory() func() any {
+	ensureNomadAddrEnv()
+
 	p := nomad.Provider()
 	if err := p.Configure(context.Background(), sdkv2.NewResourceConfigRaw(nil)); err != nil {
 		panic(fmt.Sprintf("failed to configure sdkv2 provider: %v", err))
 	}
 
 	return p.Meta
+}
+
+func ensureNomadAddrEnv() {
+	if os.Getenv("NOMAD_ADDR") == "" {
+		os.Setenv("NOMAD_ADDR", "http://127.0.0.1:4646")
+	}
 }

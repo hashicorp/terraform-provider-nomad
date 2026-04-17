@@ -26,8 +26,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"address": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("NOMAD_ADDR", nil),
+				Optional:    true,
 				Description: "URL of the root of the target Nomad agent.",
 			},
 			"region": {
@@ -215,7 +214,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	conf := api.DefaultConfig()
-	conf.Address = d.Get("address").(string)
+	if address, ok := d.GetOk("address"); ok {
+		conf.Address = address.(string)
+	} else if address := os.Getenv("NOMAD_ADDR"); address != "" {
+		conf.Address = address
+	} else {
+		return nil, fmt.Errorf("address must be provided either in provider configuration or via NOMAD_ADDR")
+	}
 	conf.SecretID = d.Get("secret_id").(string)
 
 	if region, ok := d.GetOk("region"); ok {
