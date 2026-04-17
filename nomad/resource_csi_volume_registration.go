@@ -38,6 +38,8 @@ func resourceCSIVolumeRegistration() *schema.Resource {
 			StateContext: helper.NamespacedImporterContext,
 		},
 
+		Description: "Manages the registration of a CSI volume in Nomad.\n\nThis can be used to register and deregister CSI volumes in a Nomad cluster. The volume must already exist to be registered. Use the `nomad_csi_volume` resource to create a new volume.",
+
 		Schema: map[string]*schema.Schema{
 			// the following cannot be updated without destroying:
 			// - Namespace/ID

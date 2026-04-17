@@ -3,12 +3,12 @@
 page_title: "nomad_node Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Get information about a specific Nomad node by its ID.
 ---
 
 # nomad_node (Data Source)
 
-
+Get information about a specific Nomad node by its ID.
 
 ## Example Usage
 

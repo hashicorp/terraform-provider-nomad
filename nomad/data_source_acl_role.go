@@ -13,7 +13,8 @@ import (
 
 func dataSourceACLRole() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceACLRoleRead,
+		Read:        dataSourceACLRoleRead,
+		Description: "Get information on an ACL Role.",
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Description: "The ACL Role unique identifier.",

@@ -37,6 +37,8 @@ func resourceCSIVolume() *schema.Resource {
 			StateContext: helper.NamespacedImporterContext,
 		},
 
+		Description: "Creates and registers a CSI volume in Nomad.\n\nThis can be used to create and register CSI volumes in a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"namespace": {
 				ForceNew:    true,

@@ -3,12 +3,15 @@
 page_title: "nomad_volume Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages an external volume in Nomad.
+  This can be used to register external volumes in a Nomad cluster.
 ---
 
 # nomad_volume (Resource)
 
+Manages an external volume in Nomad.
 
+This can be used to register external volumes in a Nomad cluster.
 
 ## Example Usage
 

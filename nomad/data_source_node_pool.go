@@ -15,6 +15,8 @@ func dataSourceNodePool() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceNodePoolRead,
 
+		Description: "Get information about a node pool in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this node pool.",

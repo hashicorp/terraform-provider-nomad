@@ -3,12 +3,12 @@
 page_title: "nomad_variable Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Get the information about a Nomad variable.
 ---
 
 # nomad_variable (Data Source)
 
-
+Get the information about a Nomad variable.
 
 ## Example Usage
 

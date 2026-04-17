@@ -3,12 +3,12 @@
 page_title: "nomad_scaling_policies Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of Scaling Policies.
 ---
 
 # nomad_scaling_policies (Data Source)
 
-
+Retrieve a list of Scaling Policies.
 
 ## Example Usage
 

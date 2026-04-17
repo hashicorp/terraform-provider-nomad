@@ -3,12 +3,12 @@
 page_title: "nomad_scheduler_config Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages scheduler configuration of the Nomad cluster.
 ---
 
 # nomad_scheduler_config (Resource)
 
-
+Manages scheduler configuration of the Nomad cluster.
 
 ## Example Usage
 

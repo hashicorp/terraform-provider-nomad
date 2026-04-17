@@ -3,12 +3,12 @@
 page_title: "nomad_dynamic_host_volume_registration Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Registers a dynamic host volume in Nomad that has already been created. Note that Nomad supports two workflows for dynamic host volumes: create and register. Both resources result in the same data source with the same outputs.
 ---
 
 # nomad_dynamic_host_volume_registration (Resource)
 
-
+Registers a dynamic host volume in Nomad that has already been created. Note that Nomad supports two workflows for dynamic host volumes: create and register. Both resources result in the same data source with the same outputs.
 
 
 

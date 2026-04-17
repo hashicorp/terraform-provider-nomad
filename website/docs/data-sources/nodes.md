@@ -3,12 +3,12 @@
 page_title: "nomad_nodes Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of nodes from Nomad.
 ---
 
 # nomad_nodes (Data Source)
 
-
+Retrieve a list of nodes from Nomad.
 
 ## Example Usage
 

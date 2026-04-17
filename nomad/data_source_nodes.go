@@ -16,6 +16,8 @@ func dataSourceNodes() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceNodesRead,
 
+		Description: "Retrieve a list of nodes from Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Description: "Specifies a string to filter nodes based on an ID prefix. Must have an even number of hexadecimal characters (0-9a-f).",

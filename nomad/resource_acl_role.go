@@ -24,6 +24,8 @@ func resourceACLRole() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Manages an ACL Role in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this ACL role.",

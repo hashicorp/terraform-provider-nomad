@@ -12,6 +12,7 @@ func dataSourceVariable() *schema.Resource {
 	return &schema.Resource{
 		Read:               resourceVariableRead,
 		DeprecationMessage: "Use the nomad_variable ephemeral resource to read variable items without storing them in Terraform state. This data source will be removed in a future release.",
+		Description:        "Get the information about a Nomad variable.",
 
 		Schema: map[string]*schema.Schema{
 			"path": {

@@ -3,12 +3,12 @@
 page_title: "nomad_acl_token Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Get information on an ACL token.
 ---
 
 # nomad_acl_token (Data Source)
 
-
+Get information on an ACL token.
 
 ## Example Usage
 

@@ -20,7 +20,8 @@ import (
 
 func dataSourceJWKS() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceJWKSRead,
+		Read:        dataSourceJWKSRead,
+		Description: "Retrieve the cluster JWKS public keys.\n\nThe keys are returned both as a list of maps (`keys`), and as a list of PEM-encoded strings (`pem_keys`), which may be more convenient for use.",
 		Schema: map[string]*schema.Schema{
 			"keys": {
 				Description: "JSON Web Key Set (JWKS) public keys for validating workload identity JWTs",

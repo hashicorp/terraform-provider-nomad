@@ -3,12 +3,12 @@
 page_title: "nomad_dynamic_host_volume Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Get information on a dynamic host volume from Nomad.
 ---
 
 # nomad_dynamic_host_volume (Data Source)
 
-
+Get information on a dynamic host volume from Nomad.
 
 ## Example Usage
 

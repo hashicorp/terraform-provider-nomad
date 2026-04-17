@@ -3,12 +3,12 @@
 page_title: "nomad_acl_roles Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of ACL Roles.
 ---
 
 # nomad_acl_roles (Data Source)
 
-
+Retrieve a list of ACL Roles.
 
 ## Example Usage
 

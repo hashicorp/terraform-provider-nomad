@@ -15,6 +15,8 @@ func dataSourceSchedulerConfig() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceSchedulerConfigRead,
 
+		Description: "Retrieve the cluster's scheduler configuration.",
+
 		Schema: map[string]*schema.Schema{
 			"memory_oversubscription_enabled": {
 				Description: "When true, tasks may exceed their reserved memory limit.",

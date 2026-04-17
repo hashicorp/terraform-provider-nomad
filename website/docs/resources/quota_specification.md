@@ -3,12 +3,12 @@
 page_title: "nomad_quota_specification Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages a quota specification in a Nomad cluster.
 ---
 
 # nomad_quota_specification (Resource)
 
-
+Manages a quota specification in a Nomad cluster.
 
 ## Example Usage
 

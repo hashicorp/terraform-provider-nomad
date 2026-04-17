@@ -3,12 +3,12 @@
 page_title: "nomad_acl_token Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages an ACL token in Nomad.
 ---
 
 # nomad_acl_token (Resource)
 
-
+Manages an ACL token in Nomad.
 
 ## Example Usage
 

@@ -3,12 +3,15 @@
 page_title: "nomad_jwks Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve the cluster JWKS public keys.
+  The keys are returned both as a list of maps (keys), and as a list of PEM-encoded strings (pem_keys), which may be more convenient for use.
 ---
 
 # nomad_jwks (Data Source)
 
+Retrieve the cluster JWKS public keys.
 
+The keys are returned both as a list of maps (`keys`), and as a list of PEM-encoded strings (`pem_keys`), which may be more convenient for use.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "nomad_plugins Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of dynamic plugins in Nomad.
 ---
 
 # nomad_plugins (Data Source)
 
-
+Retrieve a list of dynamic plugins in Nomad.
 
 ## Example Usage
 

@@ -15,6 +15,8 @@ func dataSourceACLTokens() *schema.Resource {
 	return &schema.Resource{
 		Read: aclTokensDataSourceRead,
 
+		Description: "Get a list of ACL tokens.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Type:     schema.TypeString,

@@ -3,12 +3,12 @@
 page_title: "nomad_node_pool Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Get information about a node pool in Nomad.
 ---
 
 # nomad_node_pool (Data Source)
 
-
+Get information about a node pool in Nomad.
 
 ## Example Usage
 

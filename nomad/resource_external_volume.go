@@ -28,6 +28,8 @@ func resourceExternalVolume() *schema.Resource {
 		// normal volume.
 		Read: resourceVolumeRead,
 
+		Description: "Creates and registers an external volume in Nomad.\n\nThis can be used to create and register external volumes in a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"type": {
 				ForceNew:    true,

@@ -3,12 +3,12 @@
 page_title: "nomad_sentinel_policy Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages a Sentinel policy registered in Nomad.
 ---
 
 # nomad_sentinel_policy (Resource)
 
-
+Manages a Sentinel policy registered in Nomad.
 
 ## Example Usage
 

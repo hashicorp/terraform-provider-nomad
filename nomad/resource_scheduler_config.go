@@ -20,6 +20,8 @@ func resourceSchedulerConfig() *schema.Resource {
 		Delete: resourceSchedulerConfigurationDelete,
 		Read:   resourceSchedulerConfigurationRead,
 
+		Description: "Manages scheduler configuration of the Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"memory_oversubscription_enabled": {
 				Description: "When true, tasks may exceed their reserved memory limit.",

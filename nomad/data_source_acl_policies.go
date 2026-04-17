@@ -16,6 +16,8 @@ func dataSourceAclPolicies() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceAclPoliciesRead,
 
+		Description: "Retrieve a list of ACL Policies.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Description: "ACL Policy Name Prefix",

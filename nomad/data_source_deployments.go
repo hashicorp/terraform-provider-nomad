@@ -14,7 +14,8 @@ import (
 
 func dataSourceDeployments() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceDeploymentsRead,
+		Read:        dataSourceDeploymentsRead,
+		Description: "Retrieve a list of deployments in Nomad.",
 		Schema: map[string]*schema.Schema{
 
 			"deployments": {

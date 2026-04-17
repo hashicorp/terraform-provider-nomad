@@ -3,12 +3,12 @@
 page_title: "nomad_acl_policy Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve information on an ACL Policy.
 ---
 
 # nomad_acl_policy (Data Source)
 
-
+Retrieve information on an ACL Policy.
 
 ## Example Usage
 

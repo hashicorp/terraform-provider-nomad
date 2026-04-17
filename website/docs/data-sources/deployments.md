@@ -3,12 +3,12 @@
 page_title: "nomad_deployments Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of deployments in Nomad.
 ---
 
 # nomad_deployments (Data Source)
 
-
+Retrieve a list of deployments in Nomad.
 
 ## Example Usage
 

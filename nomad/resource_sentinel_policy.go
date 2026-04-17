@@ -25,6 +25,8 @@ func resourceSentinelPolicy() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Manages a Sentinel policy registered in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this policy.",

@@ -3,12 +3,12 @@
 page_title: "nomad_volumes Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of volumes in Nomad.
 ---
 
 # nomad_volumes (Data Source)
 
-
+Retrieve a list of volumes in Nomad.
 
 ## Example Usage
 

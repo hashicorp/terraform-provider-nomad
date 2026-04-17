@@ -3,12 +3,12 @@
 page_title: "nomad_namespaces Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of namespaces available in Nomad.
 ---
 
 # nomad_namespaces (Data Source)
 
-
+Retrieve a list of namespaces available in Nomad.
 
 ## Example Usage
 

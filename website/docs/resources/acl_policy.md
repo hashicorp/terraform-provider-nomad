@@ -3,12 +3,12 @@
 page_title: "nomad_acl_policy Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages an ACL policy registered in Nomad.
 ---
 
 # nomad_acl_policy (Resource)
 
-
+Manages an ACL policy registered in Nomad.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "nomad_acl_role Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages an ACL Role in Nomad.
 ---
 
 # nomad_acl_role (Resource)
 
-
+Manages an ACL Role in Nomad.
 
 ## Example Usage
 

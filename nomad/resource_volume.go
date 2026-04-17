@@ -26,6 +26,8 @@ func resourceVolume() *schema.Resource {
 		Delete: resourceVolumeDelete,
 		Read:   resourceVolumeRead,
 
+		Description: "Manages an external volume in Nomad.\n\nThis can be used to register external volumes in a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			// the following cannot be updated without destroying:
 			// - Namespace/ID

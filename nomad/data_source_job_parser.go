@@ -15,7 +15,8 @@ import (
 
 func dataSourceJobParser() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceJobParserRead,
+		Read:        dataSourceJobParserRead,
+		Description: "Parse a HCL jobspec and produce the equivalent JSON encoded job.",
 		Schema: map[string]*schema.Schema{
 			"hcl": {
 				Description: "Specifies the HCL definition of the job encoded in a JSON string.",

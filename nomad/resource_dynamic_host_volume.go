@@ -27,6 +27,8 @@ func resourceDynamicHostVolume() *schema.Resource {
 			StateContext: helper.NamespacedImporterContext,
 		},
 
+		Description: "Creates and registers a dynamic host volume in Nomad. Note that Nomad supports two workflows for dynamic host volumes: create and register. Both resources result in the same data source with the same outputs.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Volume name",

@@ -3,12 +3,12 @@
 page_title: "nomad_scheduler_config Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve the cluster's scheduler configuration.
 ---
 
 # nomad_scheduler_config (Data Source)
 
-
+Retrieve the cluster's scheduler configuration.
 
 ## Example Usage
 

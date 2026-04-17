@@ -16,6 +16,7 @@ func dataSourceACLToken() *schema.Resource {
 	return &schema.Resource{
 		DeprecationMessage: "nomad_acl_token is deprecated and may be removed in a future release. Use the nomad_acl_token ephemeral resource when the token secret is needed during a run without storing it in Terraform state.",
 		Read:               dataSourceACLTokenRead,
+		Description:        "Get information on an ACL token.",
 		Schema: map[string]*schema.Schema{
 			"accessor_id": {
 				Description: "Non-sensitive identifier for this token.",

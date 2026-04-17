@@ -3,12 +3,15 @@
 page_title: "nomad_csi_volume_registration Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Manages the registration of a CSI volume in Nomad.
+  This can be used to register and deregister CSI volumes in a Nomad cluster. The volume must already exist to be registered. Use the nomad_csi_volume resource to create a new volume.
 ---
 
 # nomad_csi_volume_registration (Resource)
 
+Manages the registration of a CSI volume in Nomad.
 
+This can be used to register and deregister CSI volumes in a Nomad cluster. The volume must already exist to be registered. Use the `nomad_csi_volume` resource to create a new volume.
 
 ## Example Usage
 

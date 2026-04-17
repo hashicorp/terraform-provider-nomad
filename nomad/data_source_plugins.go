@@ -16,6 +16,8 @@ func dataSourcePlugins() *schema.Resource {
 	return &schema.Resource{
 		Read: pluginsDataSourceRead,
 
+		Description: "Retrieve a list of dynamic plugins in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"type": {
 				Type:        schema.TypeString,

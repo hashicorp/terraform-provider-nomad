@@ -3,12 +3,12 @@
 page_title: "nomad_regions Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of regions available in Nomad.
 ---
 
 # nomad_regions (Data Source)
 
-
+Retrieve a list of regions available in Nomad.
 
 ## Example Usage
 

@@ -14,6 +14,8 @@ func dataSourceACLRoles() *schema.Resource {
 	return &schema.Resource{
 		Read: aclRolesDataSourceRead,
 
+		Description: "Retrieve a list of ACL Roles.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Type:     schema.TypeString,

@@ -3,12 +3,12 @@
 page_title: "nomad_job_parser Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Parse a HCL jobspec and produce the equivalent JSON encoded job.
 ---
 
 # nomad_job_parser (Data Source)
 
-
+Parse a HCL jobspec and produce the equivalent JSON encoded job.
 
 ## Example Usage
 

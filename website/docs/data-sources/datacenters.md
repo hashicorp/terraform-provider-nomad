@@ -3,12 +3,12 @@
 page_title: "nomad_datacenters Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of datacenters.
 ---
 
 # nomad_datacenters (Data Source)
 
-
+Retrieve a list of datacenters.
 
 ## Example Usage
 

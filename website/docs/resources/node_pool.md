@@ -3,12 +3,12 @@
 page_title: "nomad_node_pool Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Provisions a node pool within a Nomad cluster.
 ---
 
 # nomad_node_pool (Resource)
 
-
+Provisions a node pool within a Nomad cluster.
 
 ## Example Usage
 

@@ -3,12 +3,12 @@
 page_title: "nomad_allocations Data Source - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Retrieve a list of allocations from Nomad.
 ---
 
 # nomad_allocations (Data Source)
 
-
+Retrieve a list of allocations from Nomad.
 
 ## Example Usage
 

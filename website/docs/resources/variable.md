@@ -3,12 +3,12 @@
 page_title: "nomad_variable Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Creates and manages a variable, including its contents, within a Nomad cluster.
 ---
 
 # nomad_variable (Resource)
 
-
+Creates and manages a variable, including its contents, within a Nomad cluster.
 
 ## Example Usage
 

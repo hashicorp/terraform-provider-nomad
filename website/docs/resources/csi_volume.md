@@ -3,12 +3,15 @@
 page_title: "nomad_csi_volume Resource - terraform-provider-nomad"
 subcategory: ""
 description: |-
-  
+  Creates and registers a CSI volume in Nomad.
+  This can be used to create and register CSI volumes in a Nomad cluster.
 ---
 
 # nomad_csi_volume (Resource)
 
+Creates and registers a CSI volume in Nomad.
 
+This can be used to create and register CSI volumes in a Nomad cluster.
 
 ## Example Usage
 
