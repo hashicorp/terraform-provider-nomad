@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+BUG FIXES:
+* provider: fix muxed provider schema mismatch for `address` when provider configuration is used without `NOMAD_ADDR` in the environment ([#608](https://github.com/hashicorp/terraform-provider-nomad/pull/608))
+
 ## 2.6.0 (April 16, 2026)
 
 IMPROVEMENTS:
