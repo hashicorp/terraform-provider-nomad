@@ -91,6 +91,11 @@ func resourceACLToken() *schema.Resource {
 				Default:     "0s",
 				ForceNew:    true,
 				Type:        schema.TypeString,
+				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+					o, _ := time.ParseDuration(oldValue)
+					n, _ := time.ParseDuration(newValue)
+					return o == n
+				},
 			},
 			"expiration_time": {
 				Description: "The point after which a token is considered expired and eligible for destruction.",
