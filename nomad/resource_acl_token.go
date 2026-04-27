@@ -92,8 +92,11 @@ func resourceACLToken() *schema.Resource {
 				ForceNew:    true,
 				Type:        schema.TypeString,
 				DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
-					o, _ := time.ParseDuration(oldValue)
-					n, _ := time.ParseDuration(newValue)
+					o, err1 := time.ParseDuration(oldValue)
+					n, err2 := time.ParseDuration(newValue)
+					if err1 != nil || err2 != nil {
+						return false
+					}
 					return o == n
 				},
 			},

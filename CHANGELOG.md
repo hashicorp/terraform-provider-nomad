@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+BUG FIXES:
+* resource/nomad_acl_token: Fixed perpetual destroy-and-recreate cycle when `expiration_ttl` is set to a duration like `"1h"` or `"30m"`. `Read()` normalizes the value via Go's `time.Duration.String()` (e.g. `"1h"` → `"1h0m0s"`), causing a diff with `ForceNew: true`. Added a `DiffSuppressFunc` that compares durations by value using `time.ParseDuration`. ([#615](https://github.com/hashicorp/terraform-provider-nomad/pull/615))
+
 ## 2.6.1 (April 20, 2026)
 
 BUG FIXES:
