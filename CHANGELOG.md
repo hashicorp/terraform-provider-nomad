@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+BUG FIXES:
+* resource/nomad_acl_token: Fixed perpetual destroy-and-recreate cycle when `expiration_ttl` is set to a duration like `"1h"` or `"30m"`. ([#615](https://github.com/hashicorp/terraform-provider-nomad/pull/615))
+
 ## 2.6.1 (April 20, 2026)
 
 BUG FIXES:
