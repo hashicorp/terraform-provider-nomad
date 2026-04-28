@@ -11,6 +11,8 @@ BUG FIXES:
 ## 2.6.0 (April 16, 2026)
 
 IMPROVEMENTS:
+* resource/nomad_acl_auth_method: migrate to Plugin Framework and add write-only attributes `config.oidc_client_secret_wo`, `config.oidc_client_secret_wo_version`, `private_key.pem_key_wo`, and `private_key.pem_key_wo_version` to avoid storing secrets in state ([#599](https://github.com/hashicorp/terraform-provider-nomad/pull/599))
+* resource/nomad_acl_binding_rule: migrate to Plugin Framework ([#599](https://github.com/hashicorp/terraform-provider-nomad/pull/599))
 * provider: add a muxed framework provider alongside the existing SDKv2 provider ([#594](https://github.com/hashicorp/terraform-provider-nomad/pull/594))
 * **New Ephemeral Resource**: `nomad_node_intro_token` creates a temporary Nomad client introduction token ([#595](https://github.com/hashicorp/terraform-provider-nomad/pull/595))
 * **New Ephemeral Resource**: `nomad_acl_token` reads a temporary Nomad ACL token without storing its secret in Terraform state ([#596](https://github.com/hashicorp/terraform-provider-nomad/pull/596))

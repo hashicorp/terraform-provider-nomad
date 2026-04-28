@@ -81,7 +81,19 @@ The following arguments are supported:
     with the OIDC provider.
 
   - `oidc_client_secret`: `(string: <optional>)` - The OAuth Client Secret
-    configured with the OIDC provider.
+    configured with the OIDC provider. **Deprecated:** use `oidc_client_secret_wo`
+    instead to avoid storing the secret in Terraform state. Mutually exclusive
+    with `oidc_client_secret_wo`.
+
+  - `oidc_client_secret_wo`: `(string: <optional>, write-only)` - The OAuth
+    Client Secret configured with the OIDC provider. This value is write-only
+    and will not be stored in Terraform state. Mutually exclusive with
+    `oidc_client_secret`.
+
+  - `oidc_client_secret_wo_version`: `(int: <optional>)` - Version counter for
+    `oidc_client_secret_wo`. Increment this manually to force Nomad to update
+    the secret when the value of `oidc_client_secret_wo` changes outside of
+    Terraform. Mutually exclusive with `oidc_client_secret`.
 
   - `oidc_client_assertion` `(OIDCClientAssertion: <optional>)` - Optionally
     send a signed JWT ("[private key jwt][]") as a client assertion to the OIDC
@@ -108,7 +120,18 @@ The following arguments are supported:
       to sign the JWT. `key_source` must be "private_key" to enable this.
 
       - `pem_key` `(string: <optional>)` - An RSA private key, in pem format.
-        It is used to sign the JWT. Mutually exclusive with `pem_key`.
+        It is used to sign the JWT. **Deprecated:** use `pem_key_wo` instead to
+        avoid storing the private key in Terraform state. Mutually exclusive
+        with `pem_key_wo`.
+
+      - `pem_key_wo` `(string: <optional>, write-only)` - An RSA private key,
+        in pem format. This value is write-only and will not be stored in
+        Terraform state. Mutually exclusive with `pem_key`.
+
+      - `pem_key_wo_version` `(int: <optional>)` - Version counter for
+        `pem_key_wo`. Increment this manually to force Nomad to update the key
+        when the value of `pem_key_wo` changes outside of Terraform. Mutually
+        exclusive with `pem_key`.
 
       - `pem_key_file` `(string: optional)` - An absolute path to a private key
         on Nomad servers' disk, in pem format. It is used to sign the JWT.

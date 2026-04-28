@@ -138,7 +138,10 @@ func (p *NomadProvider) Configure(_ context.Context, _ frameworkprovider.Configu
 }
 
 func (p *NomadProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		acl.NewACLAuthMethodResource,
+		acl.NewACLBindingRuleResource,
+	}
 }
 
 func (p *NomadProvider) DataSources(_ context.Context) []func() datasource.DataSource {

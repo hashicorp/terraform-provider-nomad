@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
-package nomad
+package acl_test
 
 import (
 	"errors"
@@ -11,10 +11,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/testutil"
+	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
 
 func TestResourceACLBindingRule(t *testing.T) {
-
 	initialDescription := ""
 	updatedDescription := "updated description"
 
@@ -22,35 +23,37 @@ func TestResourceACLBindingRule(t *testing.T) {
 	updatedRoleName := "engineering-ro"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.4-dev") },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceACLBindingRuleConfig(initialDescription, initialRoleName),
-				Check:  testResourceACLBindingRuleCheck(initialDescription, initialRoleName),
+				Check:  testResourceACLBindingRuleCheck(t, initialDescription, initialRoleName),
 			},
 			{
 				Config: testResourceACLBindingRuleConfig(updatedDescription, updatedRoleName),
-				Check:  testResourceACLBindingRuleCheck(updatedDescription, updatedRoleName),
+				Check:  testResourceACLBindingRuleCheck(t, updatedDescription, updatedRoleName),
 			},
 		},
-
-		CheckDestroy: testResourceACLBindingRuleCheckDestroy,
+		CheckDestroy: testResourceACLBindingRuleCheckDestroy(t),
 	})
 }
 
 func TestResourceACLManagementBindingRule(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.4-dev") },
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceACLBindingManagementRuleConfig(),
 				Check:  testResourceACLBindingManagementRuleCheck(),
 			},
 		},
-
-		CheckDestroy: testResourceACLBindingRuleCheckDestroy,
+		CheckDestroy: testResourceACLBindingRuleCheckDestroy(t),
 	})
 }
 
@@ -92,6 +95,32 @@ resource "nomad_acl_binding_rule" "test" {
 `, description, bindingName)
 }
 
+func TestResourceACLManagementBindingRule_upgradeToFramework(t *testing.T) {
+	initialRoleName := "engineering-read-only"
+	initialDescription := ""
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"nomad": {
+						Source:            "hashicorp/nomad",
+						VersionConstraint: "2.5.2",
+					},
+				},
+				Config: testResourceACLBindingRuleConfig(initialDescription, initialRoleName),
+				Check:  testResourceACLBindingRuleCheck(t, initialDescription, initialRoleName),
+			},
+			{
+				ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+				Config:                   testResourceACLBindingRuleConfig(initialDescription, initialRoleName),
+				Check:                    testResourceACLBindingRuleCheck(t, initialDescription, initialRoleName),
+			},
+		},
+	})
+}
+
 func testResourceACLBindingManagementRuleConfig() string {
 	return `
 resource "nomad_acl_auth_method" "test" {
@@ -128,7 +157,8 @@ resource "nomad_acl_binding_rule" "test" {
 `
 }
 
-func testResourceACLBindingRuleCheck(description, bindName string) resource.TestCheckFunc {
+func testResourceACLBindingRuleCheck(t *testing.T, description, bindName string) resource.TestCheckFunc {
+	t.Helper()
 	return func(s *terraform.State) error {
 		const (
 			expectedAuthMethod = "tf-provider-acl-binding-rule-test-auth-method"
@@ -166,7 +196,8 @@ func testResourceACLBindingRuleCheck(description, bindName string) resource.Test
 				instanceState.Attributes["bind_name"])
 		}
 
-		bindingRule, _, err := testProvider.Meta().(ProviderConfig).client.ACLBindingRules().Get(instanceState.ID, nil)
+		client := testutil.SDKV2ProviderMeta(t)().(nomad.ProviderConfig).Client()
+		bindingRule, _, err := client.ACLBindingRules().Get(instanceState.ID, nil)
 		if err != nil {
 			return fmt.Errorf("error reading back binding rule %q: %s", instanceState.ID, err)
 		}
@@ -214,20 +245,23 @@ func testResourceACLBindingManagementRuleCheck() resource.TestCheckFunc {
 	}
 }
 
-func testResourceACLBindingRuleCheckDestroy(s *terraform.State) error {
-	for _, s := range s.Modules[0].Resources {
-		if s.Type != "nomad_acl_binding_rule" {
-			continue
+func testResourceACLBindingRuleCheckDestroy(t *testing.T) resource.TestCheckFunc {
+	t.Helper()
+	return func(s *terraform.State) error {
+		client := testutil.SDKV2ProviderMeta(t)().(nomad.ProviderConfig).Client()
+		for _, s := range s.Modules[0].Resources {
+			if s.Type != "nomad_acl_binding_rule" {
+				continue
+			}
+			if s.Primary == nil {
+				continue
+			}
+			bindingRule, _, err := client.ACLBindingRules().Get(s.Primary.ID, nil)
+			if err != nil && strings.Contains(err.Error(), "404") || bindingRule == nil {
+				continue
+			}
+			return fmt.Errorf("Binding Rule %q has not been deleted.", bindingRule.ID)
 		}
-		if s.Primary == nil {
-			continue
-		}
-		client := testProvider.Meta().(ProviderConfig).client
-		bindingRule, _, err := client.ACLBindingRules().Get(s.Primary.ID, nil)
-		if err != nil && strings.Contains(err.Error(), "404") || bindingRule == nil {
-			continue
-		}
-		return fmt.Errorf("Binding Rule %q has not been deleted.", bindingRule.ID)
+		return nil
 	}
-	return nil
 }
