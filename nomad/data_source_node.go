@@ -16,6 +16,8 @@ func dataSourceNode() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceNodeRead,
 
+		Description: "Get information about a specific Nomad node by its ID.",
+
 		Schema: map[string]*schema.Schema{
 			"node_id": {
 				Description: "The ID of the node.",

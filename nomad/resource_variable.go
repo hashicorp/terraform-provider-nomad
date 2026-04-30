@@ -40,6 +40,8 @@ func resourceVariable() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
+		Description: "Creates and manages a variable, including its contents, within a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Description:      "The path at which the variable items will be stored, must be between 1 and 128 characters in length, be URL safe, and not include '@' or '.' characters",

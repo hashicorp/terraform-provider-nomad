@@ -33,6 +33,8 @@ func resourceNodePool() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
+		Description: "Provisions a node pool within a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this node pool.",

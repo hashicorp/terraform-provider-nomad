@@ -14,6 +14,8 @@ func dataSourceNamespaces() *schema.Resource {
 	return &schema.Resource{
 		Read: namespacesDataSourceRead,
 
+		Description: "Retrieve a list of namespaces available in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"namespaces": {
 				Type:     schema.TypeList,

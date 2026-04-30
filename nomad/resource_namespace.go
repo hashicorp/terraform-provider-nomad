@@ -25,6 +25,8 @@ func resourceNamespace() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Provisions a namespace within a Nomad cluster.\n\nNomad auto-generates a default namespace called `default`. This namespace cannot be removed, so destroying a `nomad_namespace` resource where `name = \"default\"` will cause the namespace to be reset to its default configuration.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this namespace.",

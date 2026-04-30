@@ -14,7 +14,8 @@ import (
 
 func dataSourceDynamicHostVolume() *schema.Resource {
 	return &schema.Resource{
-		Read: dynamicHostVolumeRead,
+		Read:        dynamicHostVolumeRead,
+		Description: "Get information on a dynamic host volume from Nomad.",
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Description: "Volume ID",

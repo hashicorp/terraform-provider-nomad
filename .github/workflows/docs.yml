@@ -1,0 +1,98 @@
+name: Validate Examples
+
+on:
+  push:
+  pull_request:
+    paths:
+      - "examples/**"
+      - "internal/**"
+      - "nomad/**"
+      - ".github/workflows/validate-examples.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Read Go version
+        id: go-version
+        run: echo "version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+      - name: Install Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ steps.go-version.outputs.version }}
+      - name: Build provider
+        run: go build -o /usr/local/bin/terraform-provider-nomad .
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269ef065 # v3.1.2
+        with:
+          terraform_wrapper: false
+      - name: Create dev_overrides config
+        run: |
+          cat > "$HOME/.terraformrc" <<EOF
+          provider_installation {
+            dev_overrides {
+              "hashicorp/nomad" = "/usr/local/bin"
+            }
+            direct {}
+          }
+          EOF
+      - name: Validate resource examples
+        run: |
+          for dir in examples/resources/*/; do
+            echo "Validating $dir"
+            terraform -chdir="$dir" validate
+          done
+      - name: Validate data source examples
+        run: |
+          for dir in examples/data-sources/*/; do
+            echo "Validating $dir"
+            terraform -chdir="$dir" validate
+          done
+      - name: Validate ephemeral resource examples
+        run: |
+          for dir in examples/ephemeral-resources/*/; do
+            echo "Validating $dir"
+            terraform -chdir="$dir" validate
+          done
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Read Go version
+        id: go-version
+        run: echo "version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
+      - name: Install Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version: ${{ steps.go-version.outputs.version }}
+      - name: Install tfplugindocs
+        run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+      - name: Build provider
+        run: go build -o /usr/local/bin/terraform-provider-nomad .
+      - name: Generate docs
+        run: tfplugindocs generate --rendered-website-dir website/docs
+      - name: Check for doc drift
+        run: |
+          if ! git diff --exit-code --quiet website/docs/; then
+            echo "### :warning: Documentation is out of date" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Run the following command locally and commit the result:" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "tfplugindocs generate --rendered-website-dir website/docs" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Changed files:**" >> "$GITHUB_STEP_SUMMARY"
+            git diff --name-only website/docs/ | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>Full diff</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+            git diff website/docs/ >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

@@ -14,6 +14,8 @@ func dataSourceRegions() *schema.Resource {
 	return &schema.Resource{
 		Read: regionsDataSourceRead,
 
+		Description: "Retrieve a list of regions available in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"regions": {
 				Type:     schema.TypeList,

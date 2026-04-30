@@ -15,7 +15,8 @@ import (
 
 func dataSourcePlugin() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourcePluginRead,
+		Read:        dataSourcePluginRead,
+		Description: "Lookup a plugin by ID. The aim of this datasource is to determine whether a particular plugin exists on the cluster, to find information on the health and availability of the plugin, and to optionally wait for the plugin before performing actions the require an available plugin controller.\n\nIf a plugin with the specified ID does not exist and the datasource is not configured to wait, it will result in an error. For simple existence checks, use the `nomad_plugins` listing datasource.",
 		Schema: map[string]*schema.Schema{
 			"plugin_id": {
 				Description: "Plugin ID",

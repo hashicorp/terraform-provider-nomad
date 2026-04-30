@@ -13,6 +13,8 @@ func dataSourceNamespace() *schema.Resource {
 	return &schema.Resource{
 		Read: namespaceDataSourceRead,
 
+		Description: "Get information about a namespace in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,

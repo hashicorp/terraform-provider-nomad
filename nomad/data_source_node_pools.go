@@ -17,6 +17,8 @@ func dataSourceNodePools() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceNodePoolsRead,
 
+		Description: "Retrieve a list of node pools available in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Description: "Specifies a string to filter node pools based on a name prefix.",

@@ -15,7 +15,8 @@ import (
 
 func dataSourceJob() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceJobRead,
+		Read:        dataSourceJobRead,
+		Description: "Get information on a job ID. The aim of this datasource is to enable you to act on various settings and states of a particular job.\n\nAn error is triggered if zero or more than one result is returned by the query.",
 		Schema: map[string]*schema.Schema{
 
 			"job_id": {

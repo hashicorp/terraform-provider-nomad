@@ -14,7 +14,8 @@ import (
 
 func dataSourceAclPolicy() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceAclPolicyRead,
+		Read:        dataSourceAclPolicyRead,
+		Description: "Retrieve information on an ACL Policy.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Name",

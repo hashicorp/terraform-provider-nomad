@@ -17,6 +17,8 @@ func dataSourceVolumes() *schema.Resource {
 	return &schema.Resource{
 		Read: volumesDataSourceRead,
 
+		Description: "Retrieve a list of volumes in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"type": {
 				Type:        schema.TypeString,

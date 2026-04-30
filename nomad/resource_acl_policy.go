@@ -25,6 +25,8 @@ func resourceACLPolicy() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Manages an ACL policy registered in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this policy.",

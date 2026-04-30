@@ -25,6 +25,8 @@ func resourceACLToken() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Manages an ACL token in Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"accessor_id": {
 				Description: "Nomad-generated ID for this token.",

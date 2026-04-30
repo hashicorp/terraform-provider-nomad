@@ -17,6 +17,8 @@ func dataSourceDatacenters() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceDatacentersRead,
 
+		Description: "Retrieve a list of datacenters.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Description: "Prefix value used for filtering results.",

@@ -24,6 +24,8 @@ func resourceQuotaSpecification() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Description: "Manages a quota specification in a Nomad cluster.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "Unique name for this quota specification.",

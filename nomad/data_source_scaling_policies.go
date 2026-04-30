@@ -15,6 +15,8 @@ func dataSourceScalingPolicies() *schema.Resource {
 	return &schema.Resource{
 		Read: scalingPoliciesDataSourceRead,
 
+		Description: "Retrieve a list of Scaling Policies.",
+
 		Schema: map[string]*schema.Schema{
 			"job_id": {
 				Description: "Job ID to use to filter scaling policies.",

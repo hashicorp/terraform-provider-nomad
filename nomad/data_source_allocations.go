@@ -16,6 +16,8 @@ func dataSourceAllocations() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceAllocationsRead,
 
+		Description: "Retrieve a list of allocations from Nomad.",
+
 		Schema: map[string]*schema.Schema{
 			"prefix": {
 				Description: "Specifies a string to filter node pools based on a name prefix.",
