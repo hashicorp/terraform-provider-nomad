@@ -4,6 +4,7 @@
 package nomad
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -2363,7 +2364,7 @@ func testResourceJob_scaleTaskGroup(t *testing.T, jobID, groupName string, count
 		}
 
 		if resp.EvalID != "" {
-			_, err = monitorDeployment(client, 2*time.Minute, namespace, resp.EvalID)
+			_, err = monitorDeployment(context.Background(), client, 2*time.Minute, namespace, resp.EvalID)
 			require.NoError(t, err)
 		}
 
