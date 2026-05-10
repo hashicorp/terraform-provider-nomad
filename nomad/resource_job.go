@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/jobspec2"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"golang.org/x/exp/maps"
@@ -25,10 +26,10 @@ import (
 
 func resourceJob() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceJobRegister,
-		Update: resourceJobRegister,
-		Delete: resourceJobDeregister,
-		Read:   resourceJobRead,
+		CreateContext: resourceJobRegister,
+		UpdateContext: resourceJobRegister,
+		DeleteContext: resourceJobDeregister,
+		Read:          resourceJobRead,
 
 		CustomizeDiff: resourceJobCustomizeDiff,
 
@@ -502,7 +503,7 @@ type ResourceFieldGetter interface {
 	Get(string) interface{}
 }
 
-func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
+func resourceJobRegister(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	timeout := d.Timeout(schema.TimeoutCreate)
 	if !d.IsNewResource() {
 		timeout = d.Timeout(schema.TimeoutUpdate)
@@ -518,12 +519,12 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 	// Read job parsing config.
 	jobParserConfig, err := parseJobParserConfig(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	job, err := parseJobspec(jobspecRaw, jobParserConfig)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if job.Namespace == nil || *job.Namespace == "" {
@@ -557,7 +558,7 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		Namespace: *job.Namespace,
 	})
 	if err != nil {
-		return fmt.Errorf("error applying jobspec: %s", err)
+		return diag.Errorf("error applying jobspec: %s", err)
 	}
 
 	if !d.IsNewResource() {
@@ -572,9 +573,9 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 
 	if d.Get("detach") == false && resp.EvalID != "" {
 		log.Printf("[DEBUG] will monitor scheduling/deployment of job '%s' in namespace '%s'", *job.ID, *job.Namespace)
-		deployment, err := monitorDeployment(client, timeout, *job.Namespace, resp.EvalID)
+		deployment, err := monitorDeployment(ctx, client, timeout, *job.Namespace, resp.EvalID)
 		if err != nil {
-			return fmt.Errorf(
+			return diag.Errorf(
 				"error waiting for job '%s' to schedule/deploy successfully: %s",
 				*job.ID, err)
 		}
@@ -587,12 +588,12 @@ func resourceJobRegister(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	return resourceJobRead(d, meta) // populate other computed attributes
+	return diag.FromErr(resourceJobRead(d, meta)) // populate other computed attributes
 }
 
 // monitorDeployment monitors the evalution(s) from a job create/update and,
 // if they result in a deployment, monitors that deployment until completion.
-func monitorDeployment(client *api.Client, timeout time.Duration, namespace string, initialEvalID string) (*api.Deployment, error) {
+func monitorDeployment(ctx context.Context, client *api.Client, timeout time.Duration, namespace string, initialEvalID string) (*api.Deployment, error) {
 
 	stateConf := &retry.StateChangeConf{
 		Pending:    []string{MonitoringEvaluation},
@@ -603,7 +604,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, namespace stri
 		MinTimeout: 3 * time.Second,
 	}
 
-	state, err := stateConf.WaitForStateContext(context.Background())
+	state, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
 	}
@@ -623,7 +624,7 @@ func monitorDeployment(client *api.Client, timeout time.Duration, namespace stri
 		MinTimeout: 5 * time.Second,
 	}
 
-	state, err = stateConf.WaitForStateContext(context.Background())
+	state, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error waiting for evaluation: %s", err)
 	}
@@ -700,7 +701,7 @@ func deploymentStateRefreshFunc(client *api.Client, namespace string, deployment
 	}
 }
 
-func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
+func resourceJobDeregister(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -724,7 +725,7 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	purge := d.Get("purge_on_destroy").(bool)
 	_, _, err := client.Jobs().Deregister(id, purge, opts)
 	if err != nil {
-		return fmt.Errorf("error deregistering job: %s", err)
+		return diag.Errorf("error deregistering job: %s", err)
 	}
 
 	return nil
