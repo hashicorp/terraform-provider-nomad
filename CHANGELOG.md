@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+IMPROVEMENTS:
+* resource/nomad_sentinel_policy: add `submit-host-volume` and `submit-csi-volume` scope support. ([#624](https://github.com/hashicorp/terraform-provider-nomad/pull/624))
+
 BUG FIXES:
 * resource/nomad_acl_token: Fixed perpetual destroy-and-recreate cycle when `expiration_ttl` is set to a duration like `"1h"` or `"30m"`. ([#615](https://github.com/hashicorp/terraform-provider-nomad/pull/615))
 

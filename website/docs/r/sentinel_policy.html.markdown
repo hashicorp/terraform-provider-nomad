@@ -49,6 +49,7 @@ The following arguments are supported:
 - `enforcement_level` `(strings: <required>)` - The [enforcement level][enforcement-level]
   for this policy.
 - `scope` `(strings: <required>)` - The [scope][scope] for this policy.
+  Supported values are `submit-job`, `submit-host-volume`, and `submit-csi-volume`.
 - `description` `(string: "")` - A description of the policy.
 
 [scope]: https://www.nomadproject.io/guides/sentinel-policy.html#policy-scope
