@@ -40,10 +40,10 @@ func resourceSentinelPolicy() *schema.Resource {
 			},
 
 			"scope": {
-				Description:  "Specifies the scope for this policy. Only 'submit-job' is currently supported.",
+				Description:  "Specifies the scope for this policy. Supported scopes are 'submit-job', 'submit-host-volume', and 'submit-csi-volume'.",
 				Required:     true,
 				Type:         schema.TypeString,
-				ValidateFunc: validation.StringInSlice([]string{"submit-job"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"submit-job", "submit-host-volume", "submit-csi-volume"}, false),
 			},
 
 			"enforcement_level": {
