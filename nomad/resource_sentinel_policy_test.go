@@ -59,6 +59,29 @@ func TestResourceSentinelPolicy_basic(t *testing.T) {
 	})
 }
 
+func TestResourceSentinelPolicy_volumeScopes(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	description := "A terraform acctest policy"
+	policy := `main = rule { true }`
+	enforcementLevel := "advisory"
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceSentinelPolicy_config(name, description, policy, "submit-host-volume", enforcementLevel),
+				Check:  testResourceSentinelPolicy_checkAttrs(name, description, policy, "submit-host-volume", enforcementLevel),
+			},
+			{
+				Config: testResourceSentinelPolicy_config(name, description, policy, "submit-csi-volume", enforcementLevel),
+				Check:  testResourceSentinelPolicy_checkAttrs(name, description, policy, "submit-csi-volume", enforcementLevel),
+			},
+		},
+
+		CheckDestroy: testResourceSentinelPolicy_checkDestroy(name),
+	})
+}
+
 func TestResourceSentinelPolicy_nameChange(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	newName := acctest.RandomWithPrefix("tf-nomad-test")
