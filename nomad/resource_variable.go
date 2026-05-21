@@ -152,7 +152,7 @@ func resourceVariableRead(d *schema.ResourceData, meta any) error {
 
 	d.SetId(variableID)
 
-	if d.Get("items_wo_version").(int) > 0 {
+	if v, ok := d.GetOk("items_wo_version"); ok && v.(int) > 0 {
 		return d.Set("items", nil)
 	}
 
