@@ -28,7 +28,7 @@ func resourceJob() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceJobRegister,
 		UpdateContext: resourceJobRegister,
-		DeleteContext: resourceJobDeregister,
+		Delete:        resourceJobDeregister,
 		Read:          resourceJobRead,
 
 		CustomizeDiff: resourceJobCustomizeDiff,
@@ -701,7 +701,7 @@ func deploymentStateRefreshFunc(client *api.Client, namespace string, deployment
 	}
 }
 
-func resourceJobDeregister(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -725,7 +725,7 @@ func resourceJobDeregister(_ context.Context, d *schema.ResourceData, meta inter
 	purge := d.Get("purge_on_destroy").(bool)
 	_, _, err := client.Jobs().Deregister(id, purge, opts)
 	if err != nil {
-		return diag.Errorf("error deregistering job: %s", err)
+		return fmt.Errorf("error deregistering job: %s", err)
 	}
 
 	return nil
