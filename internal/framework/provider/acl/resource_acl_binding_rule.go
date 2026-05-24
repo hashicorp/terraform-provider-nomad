@@ -267,7 +267,7 @@ func upgradeBindingRuleStateV0toV1(ctx context.Context, req resource.UpgradeStat
 
 	upgraded := aclBindingRuleModel{
 		ID:          types.StringValue(old.ID),
-		Description: types.StringValue(old.Description),
+		Description: optionalStringFromAPI(old.Description),
 		AuthMethod:  types.StringValue(old.AuthMethod),
 		Selector:    types.StringValue(old.Selector),
 		BindType:    types.StringValue(old.BindType),
