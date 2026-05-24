@@ -364,15 +364,36 @@ func TestACLAuthMethod_upgradeToFramework(t *testing.T) {
 						Source:            "hashicorp/nomad",
 						VersionConstraint: "2.5.2",
 					},
+					"tls": {
+						VersionConstraint: ">= 4.0.0",
+						Source:            "hashicorp/tls",
+					},
+					"local": {
+						VersionConstraint: ">= 2.5.0",
+						Source:            "hashicorp/local",
+					},
 				},
-				Config: testACLAuthMethodConfigOIDCWithMaxTTL(methodName, "someclientsecret", "http://localhost:4649/oidc/callback", false, "10m0s"),
+				Config: clientAssertionResourcesHCL(methodName, clientAssertionPrivateKey, true),
 				Check: resource.ComposeTestCheckFunc(
 					testACLAuthMethodExists(t, methodName),
 				),
 			},
 			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"tls": {
+						VersionConstraint: ">= 4.0.0",
+						Source:            "hashicorp/tls",
+					},
+					"local": {
+						VersionConstraint: ">= 2.5.0",
+						Source:            "hashicorp/local",
+					},
+				},
 				ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
-				Config:                   testACLAuthMethodConfigOIDCWithMaxTTL(methodName, "someclientsecret", "http://localhost:4649/oidc/callback", false, "10m0s"),
+				Config:                   clientAssertionResourcesHCL(methodName, clientAssertionPrivateKey, true),
+				Check: resource.ComposeTestCheckFunc(
+					testACLAuthMethodExists(t, methodName),
+				),
 			},
 		},
 	})
