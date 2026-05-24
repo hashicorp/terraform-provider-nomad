@@ -28,8 +28,8 @@ func resourceJob() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceJobRegister,
 		UpdateContext: resourceJobRegister,
-		Delete:        resourceJobDeregister,
-		Read:          resourceJobRead,
+		DeleteContext: resourceJobDeregister,
+		ReadContext:   resourceJobRead,
 
 		CustomizeDiff: resourceJobCustomizeDiff,
 
@@ -588,7 +588,7 @@ func resourceJobRegister(ctx context.Context, d *schema.ResourceData, meta inter
 		}
 	}
 
-	return diag.FromErr(resourceJobRead(d, meta)) // populate other computed attributes
+	return resourceJobRead(ctx, d, meta) // populate other computed attributes
 }
 
 // monitorDeployment monitors the evalution(s) from a job create/update and,
@@ -701,7 +701,7 @@ func deploymentStateRefreshFunc(client *api.Client, namespace string, deployment
 	}
 }
 
-func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
+func resourceJobDeregister(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -725,13 +725,13 @@ func resourceJobDeregister(d *schema.ResourceData, meta interface{}) error {
 	purge := d.Get("purge_on_destroy").(bool)
 	_, _, err := client.Jobs().Deregister(id, purge, opts)
 	if err != nil {
-		return fmt.Errorf("error deregistering job: %s", err)
+		return diag.Errorf("error deregistering job: %s", err)
 	}
 
 	return nil
 }
 
-func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
+func resourceJobRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	providerConfig := meta.(ProviderConfig)
 	client := providerConfig.client
 
@@ -753,7 +753,7 @@ func resourceJobRead(d *schema.ResourceData, meta interface{}) error {
 			return nil
 		}
 
-		return fmt.Errorf("error checking for job: %s", err)
+		return diag.Errorf("error checking for job: %s", err)
 	}
 	log.Printf("[DEBUG] found job %q in namespace %q", *job.Name, *job.Namespace)
 
