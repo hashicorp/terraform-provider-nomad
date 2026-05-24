@@ -269,7 +269,7 @@ func upgradeBindingRuleStateV0toV1(ctx context.Context, req resource.UpgradeStat
 		ID:          types.StringValue(old.ID),
 		Description: optionalStringFromAPI(old.Description),
 		AuthMethod:  types.StringValue(old.AuthMethod),
-		Selector:    types.StringValue(old.Selector),
+		Selector:    optionalStringFromAPI(old.Selector),
 		BindType:    types.StringValue(old.BindType),
 		BindName:    types.StringValue(old.BindName),
 	}
