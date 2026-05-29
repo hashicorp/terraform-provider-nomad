@@ -180,8 +180,6 @@ func Provider() *schema.Provider {
 			"nomad_acl_policy":                       resourceACLPolicy(),
 			"nomad_acl_role":                         resourceACLRole(),
 			"nomad_acl_token":                        resourceACLToken(),
-			"nomad_csi_volume":                       resourceCSIVolume(),
-			"nomad_csi_volume_registration":          resourceCSIVolumeRegistration(),
 			"nomad_dynamic_host_volume":              resourceDynamicHostVolume(),
 			"nomad_dynamic_host_volume_registration": resourceDynamicHostVolumeRegistration(),
 			"nomad_external_volume":                  resourceExternalVolume(),
