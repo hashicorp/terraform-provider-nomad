@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package volumes
@@ -15,12 +15,14 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -73,20 +75,20 @@ type csiVolumeModel struct {
 	TopologyRequest  *topologyRequestModel   `tfsdk:"topology_request"`
 
 	// Computed
-	Capacity              types.Int64             `tfsdk:"capacity"`
-	CapacityMinBytes      types.Int64             `tfsdk:"capacity_min_bytes"`
-	CapacityMaxBytes      types.Int64             `tfsdk:"capacity_max_bytes"`
-	ControllerRequired    types.Bool              `tfsdk:"controller_required"`
-	ControllersExpected   types.Int64             `tfsdk:"controllers_expected"`
-	ControllersHealthy    types.Int64             `tfsdk:"controllers_healthy"`
-	PluginProvider        types.String            `tfsdk:"plugin_provider"`
-	PluginProviderVersion types.String            `tfsdk:"plugin_provider_version"`
-	NodesHealthy          types.Int64             `tfsdk:"nodes_healthy"`
-	NodesExpected         types.Int64             `tfsdk:"nodes_expected"`
-	Schedulable           types.Bool              `tfsdk:"schedulable"`
-	Topologies            []topologyModel         `tfsdk:"topologies"`
-	ExternalID            types.String            `tfsdk:"external_id"`
-	Context               map[string]types.String `tfsdk:"context"`
+	Capacity              types.Int64  `tfsdk:"capacity"`
+	CapacityMinBytes      types.Int64  `tfsdk:"capacity_min_bytes"`
+	CapacityMaxBytes      types.Int64  `tfsdk:"capacity_max_bytes"`
+	ControllerRequired    types.Bool   `tfsdk:"controller_required"`
+	ControllersExpected   types.Int64  `tfsdk:"controllers_expected"`
+	ControllersHealthy    types.Int64  `tfsdk:"controllers_healthy"`
+	PluginProvider        types.String `tfsdk:"plugin_provider"`
+	PluginProviderVersion types.String `tfsdk:"plugin_provider_version"`
+	NodesHealthy          types.Int64  `tfsdk:"nodes_healthy"`
+	NodesExpected         types.Int64  `tfsdk:"nodes_expected"`
+	Schedulable           types.Bool   `tfsdk:"schedulable"`
+	Topologies            types.List   `tfsdk:"topologies"`
+	ExternalID            types.String `tfsdk:"external_id"`
+	Context               types.Map    `tfsdk:"context"`
 }
 
 var (
@@ -214,17 +216,6 @@ func (r *CSIVolumeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Description: "Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.",
 						Blocks: map[string]schema.Block{
 							"topology": topologyBlock(),
-						},
-					},
-				},
-			},
-			"topologies": schema.ListNestedBlock{
-				Description: "The topologies of the volume.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"segments": schema.MapAttribute{
-							ElementType: types.StringType,
-							Computed:    true,
 						},
 					},
 				},
@@ -518,6 +509,8 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		return
 	}
 
+	planModified := false
+
 	stateVersion := types.Int64Null()
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeModel
@@ -528,12 +521,12 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		stateVersion = stateData.SecretsWOVersion
 	}
 
-	planModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
+	secretsModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if planModified {
+	if planModified || secretsModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
@@ -564,12 +557,9 @@ func (r *CSIVolumeResource) readVolumeIntoModel(ctx context.Context, client *api
 	data.CapacityMinBytes = types.Int64Value(volume.RequestedCapacityMin)
 	data.CapacityMaxBytes = types.Int64Value(volume.RequestedCapacityMax)
 
-	if !data.CapacityMin.IsNull() && data.CapacityMin.ValueString() != "" {
-		data.CapacityMin = types.StringValue(humanize.IBytes(uint64(volume.RequestedCapacityMin)))
-	}
-	if !data.CapacityMax.IsNull() && data.CapacityMax.ValueString() != "" {
-		data.CapacityMax = types.StringValue(humanize.IBytes(uint64(volume.RequestedCapacityMax)))
-	}
+	// Don't overwrite capacity_min/capacity_max from API response.
+	// The user-configured string (e.g. "10MiB") must remain unchanged to
+	// avoid plan/apply mismatches with humanize formatting ("10 MiB").
 
 	data.ControllerRequired = types.BoolValue(volume.ControllerRequired)
 	data.ControllersExpected = types.Int64Value(int64(volume.ControllersExpected))
@@ -579,13 +569,21 @@ func (r *CSIVolumeResource) readVolumeIntoModel(ctx context.Context, client *api
 	data.Schedulable = types.BoolValue(volume.Schedulable)
 
 	data.Capability = flattenCapabilities(volume.RequestedCapabilities)
-	data.Topologies = flattenTopologies(volume.Topologies)
+	data.Topologies = flattenTopologiesToList(volume.Topologies)
 
 	if volume.RequestedTopologies != nil {
 		data.TopologyRequest = flattenTopologyRequests(volume.RequestedTopologies)
 	}
 
-	data.Context = fromMapStringString(volume.Context)
+	if volume.Context != nil {
+		ctxElems := make(map[string]attr.Value, len(volume.Context))
+		for k, v := range volume.Context {
+			ctxElems[k] = types.StringValue(v)
+		}
+		data.Context = types.MapValueMust(types.StringType, ctxElems)
+	} else {
+		data.Context = types.MapNull(types.StringType)
+	}
 
 	// The Nomad API redacts mount_options and secrets, so we don't update them
 	// from the response payload; they will remain as is.
@@ -730,6 +728,21 @@ func computedAttributes() map[string]schema.Attribute {
 				boolplanmodifier.UseStateForUnknown(),
 			},
 		},
+		"topologies": schema.ListNestedAttribute{
+			Computed:    true,
+			Description: "The topologies of the volume.",
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"segments": schema.MapAttribute{
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+				},
+			},
+			PlanModifiers: []planmodifier.List{
+				listplanmodifier.UseStateForUnknown(),
+			},
+		},
 	}
 }
 
@@ -836,6 +849,32 @@ func flattenTopologies(topos []*api.CSITopology) []topologyModel {
 		result = append(result, topologyModel{Segments: segments})
 	}
 	return result
+}
+
+var topologyAttrTypes = map[string]attr.Type{
+	"segments": types.MapType{ElemType: types.StringType},
+}
+
+func flattenTopologiesToList(topos []*api.CSITopology) types.List {
+	if len(topos) == 0 {
+		return types.ListValueMust(types.ObjectType{AttrTypes: topologyAttrTypes}, []attr.Value{})
+	}
+	elems := make([]attr.Value, 0, len(topos))
+	for _, t := range topos {
+		if t == nil {
+			continue
+		}
+		segElems := make(map[string]attr.Value, len(t.Segments))
+		for k, v := range t.Segments {
+			segElems[k] = types.StringValue(v)
+		}
+		segMap := types.MapValueMust(types.StringType, segElems)
+		obj := types.ObjectValueMust(topologyAttrTypes, map[string]attr.Value{
+			"segments": segMap,
+		})
+		elems = append(elems, obj)
+	}
+	return types.ListValueMust(types.ObjectType{AttrTypes: topologyAttrTypes}, elems)
 }
 
 func flattenTopologyRequests(req *api.CSITopologyRequest) *topologyRequestModel {

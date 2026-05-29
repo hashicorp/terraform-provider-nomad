@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package volumes
@@ -46,18 +46,18 @@ type csiVolumeRegistrationModel struct {
 	DeregisterOnDestroy types.Bool                        `tfsdk:"deregister_on_destroy"`
 
 	// Computed
-	Capacity              types.Int64     `tfsdk:"capacity"`
-	CapacityMinBytes      types.Int64     `tfsdk:"capacity_min_bytes"`
-	CapacityMaxBytes      types.Int64     `tfsdk:"capacity_max_bytes"`
-	ControllerRequired    types.Bool      `tfsdk:"controller_required"`
-	ControllersExpected   types.Int64     `tfsdk:"controllers_expected"`
-	ControllersHealthy    types.Int64     `tfsdk:"controllers_healthy"`
-	PluginProvider        types.String    `tfsdk:"plugin_provider"`
-	PluginProviderVersion types.String    `tfsdk:"plugin_provider_version"`
-	NodesHealthy          types.Int64     `tfsdk:"nodes_healthy"`
-	NodesExpected         types.Int64     `tfsdk:"nodes_expected"`
-	Schedulable           types.Bool      `tfsdk:"schedulable"`
-	Topologies            []topologyModel `tfsdk:"topologies"`
+	Capacity              types.Int64  `tfsdk:"capacity"`
+	CapacityMinBytes      types.Int64  `tfsdk:"capacity_min_bytes"`
+	CapacityMaxBytes      types.Int64  `tfsdk:"capacity_max_bytes"`
+	ControllerRequired    types.Bool   `tfsdk:"controller_required"`
+	ControllersExpected   types.Int64  `tfsdk:"controllers_expected"`
+	ControllersHealthy    types.Int64  `tfsdk:"controllers_healthy"`
+	PluginProvider        types.String `tfsdk:"plugin_provider"`
+	PluginProviderVersion types.String `tfsdk:"plugin_provider_version"`
+	NodesHealthy          types.Int64  `tfsdk:"nodes_healthy"`
+	NodesExpected         types.Int64  `tfsdk:"nodes_expected"`
+	Schedulable           types.Bool   `tfsdk:"schedulable"`
+	Topologies            types.List   `tfsdk:"topologies"`
 }
 
 var (
@@ -165,17 +165,6 @@ func (r *CSIVolumeRegistrationResource) Schema(_ context.Context, _ resource.Sch
 						Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
 						Blocks: map[string]schema.Block{
 							"topology": topologyBlock(),
-						},
-					},
-				},
-			},
-			"topologies": schema.ListNestedBlock{
-				Description: "The topologies of the volume.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"segments": schema.MapAttribute{
-							ElementType: types.StringType,
-							Computed:    true,
 						},
 					},
 				},
@@ -525,7 +514,7 @@ func (r *CSIVolumeRegistrationResource) readVolumeIntoModel(ctx context.Context,
 	data.Schedulable = types.BoolValue(volume.Schedulable)
 
 	data.Capability = flattenCapabilities(volume.RequestedCapabilities)
-	data.Topologies = flattenTopologies(volume.Topologies)
+	data.Topologies = flattenTopologiesToList(volume.Topologies)
 
 	if volume.RequestedTopologies != nil {
 		data.TopologyRequest = flattenTopologyRequestRequiredOnly(volume.RequestedTopologies)
