@@ -11,39 +11,41 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
 
 type topologyRequestRequiredOnlyModel struct {
-	Required *topologyGroupModel `tfsdk:"required"`
+	Required []topologyGroupModel `tfsdk:"required"`
 }
 
 type csiVolumeRegistrationModel struct {
-	ID                  types.String                      `tfsdk:"id"`
-	Namespace           types.String                      `tfsdk:"namespace"`
-	VolumeID            types.String                      `tfsdk:"volume_id"`
-	Name                types.String                      `tfsdk:"name"`
-	PluginID            types.String                      `tfsdk:"plugin_id"`
-	ExternalID          types.String                      `tfsdk:"external_id"`
-	CapacityMin         types.String                      `tfsdk:"capacity_min"`
-	CapacityMax         types.String                      `tfsdk:"capacity_max"`
-	Capability          []capabilityModel                 `tfsdk:"capability"`
-	MountOptions        *mountOptionsModel                `tfsdk:"mount_options"`
-	Secrets             map[string]types.String           `tfsdk:"secrets"`
-	SecretsWO           types.String                      `tfsdk:"secrets_wo"`
-	SecretsWOVersion    types.Int64                       `tfsdk:"secrets_wo_version"`
-	Parameters          map[string]types.String           `tfsdk:"parameters"`
-	TopologyRequest     *topologyRequestRequiredOnlyModel `tfsdk:"topology_request"`
-	Context             map[string]types.String           `tfsdk:"context"`
-	DeregisterOnDestroy types.Bool                        `tfsdk:"deregister_on_destroy"`
+	ID                  types.String                       `tfsdk:"id"`
+	Namespace           types.String                       `tfsdk:"namespace"`
+	VolumeID            types.String                       `tfsdk:"volume_id"`
+	Name                types.String                       `tfsdk:"name"`
+	PluginID            types.String                       `tfsdk:"plugin_id"`
+	ExternalID          types.String                       `tfsdk:"external_id"`
+	CapacityMin         types.String                       `tfsdk:"capacity_min"`
+	CapacityMax         types.String                       `tfsdk:"capacity_max"`
+	Capability          []capabilityModel                  `tfsdk:"capability"`
+	MountOptions        *mountOptionsModel                 `tfsdk:"mount_options"`
+	Secrets             map[string]types.String            `tfsdk:"secrets"`
+	SecretsWO           types.String                       `tfsdk:"secrets_wo"`
+	SecretsWOVersion    types.Int64                        `tfsdk:"secrets_wo_version"`
+	Parameters          map[string]types.String            `tfsdk:"parameters"`
+	TopologyRequest     []topologyRequestRequiredOnlyModel `tfsdk:"topology_request"`
+	Context             map[string]types.String            `tfsdk:"context"`
+	DeregisterOnDestroy types.Bool                         `tfsdk:"deregister_on_destroy"`
 
 	// Computed
 	Capacity              types.Int64  `tfsdk:"capacity"`
@@ -126,10 +128,14 @@ func (r *CSIVolumeRegistrationResource) Schema(_ context.Context, _ resource.Sch
 	attrs["capacity_min"] = schema.StringAttribute{
 		Optional:    true,
 		Description: "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
+		Validators:  []validator.String{capacityValidator{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["capacity_max"] = schema.StringAttribute{
 		Optional:    true,
 		Description: "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
+		Validators:  []validator.String{capacityValidator{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["parameters"] = schema.MapAttribute{
 		ElementType: types.StringType,
@@ -156,19 +162,9 @@ func (r *CSIVolumeRegistrationResource) Schema(_ context.Context, _ resource.Sch
 		Description: "Manages the registration of a CSI volume in Nomad.",
 		Attributes:  attrs,
 		Blocks: map[string]schema.Block{
-			"capability":    capabilityBlock(),
+			"capability":    capabilityBlock(false),
 			"mount_options": mountOptionsBlock(),
-			"topology_request": schema.SingleNestedBlock{
-				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
-				Blocks: map[string]schema.Block{
-					"required": schema.SingleNestedBlock{
-						Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
-						Blocks: map[string]schema.Block{
-							"topology": topologyBlock(),
-						},
-					},
-				},
-			},
+			"topology_request": topologyRequestBlock(false),
 		},
 	}
 }
@@ -468,6 +464,17 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 			return
 		}
 		stateVersion = stateData.SecretsWOVersion
+
+		// Detect structural changes in topology_request that require replacement.
+		if len(stateData.TopologyRequest) != len(plan.TopologyRequest) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("topology_request"))
+		} else if len(stateData.TopologyRequest) > 0 && len(plan.TopologyRequest) > 0 {
+			state := stateData.TopologyRequest[0]
+			p := plan.TopologyRequest[0]
+			if topologyRequestStructureChanged(state.Required, p.Required) {
+				resp.RequiresReplace = append(resp.RequiresReplace, path.Root("topology_request").AtListIndex(0).AtName("required"))
+			}
+		}
 	}
 
 	planModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
@@ -521,26 +528,27 @@ func (r *CSIVolumeRegistrationResource) readVolumeIntoModel(ctx context.Context,
 	}
 }
 
-func parseTopologyRequestRequiredOnly(req *topologyRequestRequiredOnlyModel) *api.CSITopologyRequest {
-	if req == nil {
+func parseTopologyRequestRequiredOnly(req []topologyRequestRequiredOnlyModel) *api.CSITopologyRequest {
+	if len(req) == 0 {
 		return nil
 	}
+	tr := req[0]
 	result := &api.CSITopologyRequest{}
-	if req.Required != nil {
-		result.Required = parseTopologies(req.Required.Topology)
+	if len(tr.Required) > 0 {
+		result.Required = parseTopologies(tr.Required[0].Topology)
 	}
 	return result
 }
 
-func flattenTopologyRequestRequiredOnly(req *api.CSITopologyRequest) *topologyRequestRequiredOnlyModel {
+func flattenTopologyRequestRequiredOnly(req *api.CSITopologyRequest) []topologyRequestRequiredOnlyModel {
 	if req == nil {
 		return nil
 	}
-	result := &topologyRequestRequiredOnlyModel{}
+	result := topologyRequestRequiredOnlyModel{}
 	if req.Required != nil {
-		result.Required = &topologyGroupModel{
+		result.Required = []topologyGroupModel{{
 			Topology: flattenTopologies(req.Required),
-		}
+		}}
 	}
-	return result
+	return []topologyRequestRequiredOnlyModel{result}
 }

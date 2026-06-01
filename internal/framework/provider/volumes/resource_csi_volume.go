@@ -14,6 +14,8 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -52,8 +54,8 @@ type topologyGroupModel struct {
 }
 
 type topologyRequestModel struct {
-	Required  *topologyGroupModel `tfsdk:"required"`
-	Preferred *topologyGroupModel `tfsdk:"preferred"`
+	Required  []topologyGroupModel `tfsdk:"required"`
+	Preferred []topologyGroupModel `tfsdk:"preferred"`
 }
 
 type csiVolumeModel struct {
@@ -72,7 +74,7 @@ type csiVolumeModel struct {
 	SecretsWO        types.String            `tfsdk:"secrets_wo"`
 	SecretsWOVersion types.Int64             `tfsdk:"secrets_wo_version"`
 	Parameters       map[string]types.String `tfsdk:"parameters"`
-	TopologyRequest  *topologyRequestModel   `tfsdk:"topology_request"`
+	TopologyRequest  []topologyRequestModel  `tfsdk:"topology_request"`
 
 	// Computed
 	Capacity              types.Int64  `tfsdk:"capacity"`
@@ -168,12 +170,16 @@ func (r *CSIVolumeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		},
 	}
 	attrs["capacity_min"] = schema.StringAttribute{
-		Optional:    true,
-		Description: "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
+		Optional:      true,
+		Description:   "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
+		Validators:    []validator.String{capacityValidator{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["capacity_max"] = schema.StringAttribute{
-		Optional:    true,
-		Description: "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
+		Optional:      true,
+		Description:   "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
+		Validators:    []validator.String{capacityValidator{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["parameters"] = schema.MapAttribute{
 		ElementType: types.StringType,
@@ -201,25 +207,9 @@ func (r *CSIVolumeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		Description: "Manages the lifecycle of creating and deleting CSI volumes.",
 		Attributes:  attrs,
 		Blocks: map[string]schema.Block{
-			"capability":    capabilityBlock(),
-			"mount_options": mountOptionsBlock(),
-			"topology_request": schema.SingleNestedBlock{
-				Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
-				Blocks: map[string]schema.Block{
-					"required": schema.SingleNestedBlock{
-						Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
-						Blocks: map[string]schema.Block{
-							"topology": topologyBlock(),
-						},
-					},
-					"preferred": schema.SingleNestedBlock{
-						Description: "Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.",
-						Blocks: map[string]schema.Block{
-							"topology": topologyBlock(),
-						},
-					},
-				},
-			},
+			"capability":       capabilityBlock(true),
+			"mount_options":    mountOptionsBlock(),
+			"topology_request": topologyRequestBlock(true),
 		},
 	}
 }
@@ -519,6 +509,25 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 			return
 		}
 		stateVersion = stateData.SecretsWOVersion
+
+		// Detect structural changes in capability that require replacement.
+		if len(stateData.Capability) != len(plan.Capability) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("capability"))
+		}
+
+		// Detect structural changes in topology_request that require replacement.
+		if len(stateData.TopologyRequest) != len(plan.TopologyRequest) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("topology_request"))
+		} else if len(stateData.TopologyRequest) > 0 && len(plan.TopologyRequest) > 0 {
+			state := stateData.TopologyRequest[0]
+			p := plan.TopologyRequest[0]
+			if topologyRequestStructureChanged(state.Required, p.Required) {
+				resp.RequiresReplace = append(resp.RequiresReplace, path.Root("topology_request").AtListIndex(0).AtName("required"))
+			}
+			if topologyRequestStructureChanged(state.Preferred, p.Preferred) {
+				resp.RequiresReplace = append(resp.RequiresReplace, path.Root("topology_request").AtListIndex(0).AtName("preferred"))
+			}
+		}
 	}
 
 	secretsModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
@@ -589,34 +598,49 @@ func (r *CSIVolumeResource) readVolumeIntoModel(ctx context.Context, client *api
 	// from the response payload; they will remain as is.
 }
 
-func capabilityBlock() schema.ListNestedBlock {
-	return schema.ListNestedBlock{
+func capabilityBlock(requiresReplace bool) schema.SetNestedBlock {
+	accessModeAttr := schema.StringAttribute{
+		Required:    true,
+		Description: "Defines whether a volume should be available concurrently.",
+		Validators: []validator.String{
+			stringvalidator.OneOf(
+				"single-node-reader-only",
+				"single-node-writer",
+				"multi-node-reader-only",
+				"multi-node-single-writer",
+				"multi-node-multi-writer",
+			),
+		},
+	}
+	attachmentModeAttr := schema.StringAttribute{
+		Required:    true,
+		Description: "The storage API that will be used by the volume.",
+		Validators: []validator.String{
+			stringvalidator.OneOf(
+				"block-device",
+				"file-system",
+			),
+		},
+	}
+
+	if requiresReplace {
+		accessModeAttr.PlanModifiers = []planmodifier.String{
+			stringplanmodifier.RequiresReplace(),
+		}
+		attachmentModeAttr.PlanModifiers = []planmodifier.String{
+			stringplanmodifier.RequiresReplace(),
+		}
+	}
+
+	return schema.SetNestedBlock{
 		Description: "Capabilities intended to be used in a job. At least one capability must be provided.",
+		Validators: []validator.Set{
+			setvalidator.SizeAtLeast(1),
+		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"access_mode": schema.StringAttribute{
-					Required:    true,
-					Description: "Defines whether a volume should be available concurrently.",
-					Validators: []validator.String{
-						stringvalidator.OneOf(
-							"single-node-reader-only",
-							"single-node-writer",
-							"multi-node-reader-only",
-							"multi-node-single-writer",
-							"multi-node-multi-writer",
-						),
-					},
-				},
-				"attachment_mode": schema.StringAttribute{
-					Required:    true,
-					Description: "The storage API that will be used by the volume.",
-					Validators: []validator.String{
-						stringvalidator.OneOf(
-							"block-device",
-							"file-system",
-						),
-					},
-				},
+				"access_mode":     accessModeAttr,
+				"attachment_mode": attachmentModeAttr,
 			},
 		},
 	}
@@ -625,6 +649,9 @@ func capabilityBlock() schema.ListNestedBlock {
 func mountOptionsBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		Description: "Options for mounting 'block-device' volumes without a pre-formatted file system.",
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(1),
+		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"fs_type": schema.StringAttribute{
@@ -637,6 +664,62 @@ func mountOptionsBlock() schema.ListNestedBlock {
 					Description: "The flags passed to mount.",
 				},
 			},
+		},
+	}
+}
+
+// topologyRequestStructureChanged detects structural changes in topology_request
+// that should trigger resource replacement (equivalent to SDKv2 ForceNew on blocks).
+// This covers adding/removing blocks or changing the number of topology entries,
+// which RequiresReplace on the segments attribute alone cannot detect.
+func topologyRequestStructureChanged(state, plan []topologyGroupModel) bool {
+	if len(state) != len(plan) {
+		return true
+	}
+	for i := range state {
+		if len(state[i].Topology) != len(plan[i].Topology) {
+			return true
+		}
+	}
+	return false
+}
+
+func topologyRequestBlock(includePreferred bool) schema.ListNestedBlock {
+	blocks := map[string]schema.Block{
+		"required": schema.ListNestedBlock{
+			Description: "Required topologies indicate that the volume must be created in a location accessible from all the listed topologies.",
+			Validators: []validator.List{
+				listvalidator.SizeAtMost(1),
+			},
+			NestedObject: schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{
+					"topology": topologyBlock(),
+				},
+			},
+		},
+	}
+
+	if includePreferred {
+		blocks["preferred"] = schema.ListNestedBlock{
+			Description: "Preferred topologies indicate that the volume should be created in a location accessible from some of the listed topologies.",
+			Validators: []validator.List{
+				listvalidator.SizeAtMost(1),
+			},
+			NestedObject: schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{
+					"topology": topologyBlock(),
+				},
+			},
+		}
+	}
+
+	return schema.ListNestedBlock{
+		Description: "Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.",
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(1),
+		},
+		NestedObject: schema.NestedBlockObject{
+			Blocks: blocks,
 		},
 	}
 }
@@ -810,16 +893,17 @@ func parseMountOptions(m *mountOptionsModel) *api.CSIMountOptions {
 	return opts
 }
 
-func parseTopologyRequest(req *topologyRequestModel) *api.CSITopologyRequest {
-	if req == nil {
+func parseTopologyRequest(req []topologyRequestModel) *api.CSITopologyRequest {
+	if len(req) == 0 {
 		return nil
 	}
+	tr := req[0]
 	result := &api.CSITopologyRequest{}
-	if req.Required != nil {
-		result.Required = parseTopologies(req.Required.Topology)
+	if len(tr.Required) > 0 {
+		result.Required = parseTopologies(tr.Required[0].Topology)
 	}
-	if req.Preferred != nil {
-		result.Preferred = parseTopologies(req.Preferred.Topology)
+	if len(tr.Preferred) > 0 {
+		result.Preferred = parseTopologies(tr.Preferred[0].Topology)
 	}
 	return result
 }
@@ -877,22 +961,22 @@ func flattenTopologiesToList(topos []*api.CSITopology) types.List {
 	return types.ListValueMust(types.ObjectType{AttrTypes: topologyAttrTypes}, elems)
 }
 
-func flattenTopologyRequests(req *api.CSITopologyRequest) *topologyRequestModel {
+func flattenTopologyRequests(req *api.CSITopologyRequest) []topologyRequestModel {
 	if req == nil {
 		return nil
 	}
-	result := &topologyRequestModel{}
+	result := topologyRequestModel{}
 	if req.Required != nil {
-		result.Required = &topologyGroupModel{
+		result.Required = []topologyGroupModel{{
 			Topology: flattenTopologies(req.Required),
-		}
+		}}
 	}
 	if req.Preferred != nil {
-		result.Preferred = &topologyGroupModel{
+		result.Preferred = []topologyGroupModel{{
 			Topology: flattenTopologies(req.Preferred),
-		}
+		}}
 	}
-	return result
+	return []topologyRequestModel{result}
 }
 
 func toMapStringString(m map[string]types.String) map[string]string {
@@ -915,6 +999,67 @@ func fromMapStringString(m map[string]string) map[string]types.String {
 		result[k] = types.StringValue(v)
 	}
 	return result
+}
+
+// capacityValidator validates that a string is parseable as a human-readable byte size.
+type capacityValidator struct{}
+
+func (v capacityValidator) Description(_ context.Context) string {
+	return "value must be a valid human-readable byte size (e.g., \"10 GiB\", \"500MB\")"
+}
+
+func (v capacityValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v capacityValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	s := req.ConfigValue.ValueString()
+	if _, err := humanize.ParseBytes(s); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid capacity value",
+			fmt.Sprintf("unable to parse %q as human-readable capacity: %s", s, err),
+		)
+	}
+}
+
+// capacityPlanModifier normalizes capacity strings and performs semantic equality
+// comparison to suppress false diffs (e.g., "5mb" vs "5.0 MiB" are the same value).
+type capacityPlanModifier struct{}
+
+func (m capacityPlanModifier) Description(_ context.Context) string {
+	return "Normalizes capacity values and suppresses diffs when values are semantically equal."
+}
+
+func (m capacityPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m capacityPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	configBytes, err := humanize.ParseBytes(req.ConfigValue.ValueString())
+	if err != nil {
+		return
+	}
+
+	// If state exists and resolves to the same byte count, preserve state value
+	// to avoid a spurious diff.
+	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
+		stateBytes, err := humanize.ParseBytes(req.StateValue.ValueString())
+		if err == nil && configBytes == stateBytes {
+			resp.PlanValue = req.StateValue
+			return
+		}
+	}
+
+	// Otherwise normalize to canonical form for consistent state storage.
+	resp.PlanValue = types.StringValue(humanize.IBytes(configBytes))
 }
 
 func parseCapacity(capMinAttr, capMaxAttr types.String) (uint64, uint64, diag.Diagnostics) {
