@@ -14,6 +14,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -32,6 +33,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
 )
 
@@ -75,6 +77,7 @@ type csiVolumeModel struct {
 	SecretsWOVersion types.Int64             `tfsdk:"secrets_wo_version"`
 	Parameters       map[string]types.String `tfsdk:"parameters"`
 	TopologyRequest  []topologyRequestModel  `tfsdk:"topology_request"`
+	Timeouts         timeouts.Value          `tfsdk:"timeouts"`
 
 	// Computed
 	Capacity              types.Int64  `tfsdk:"capacity"`
@@ -112,7 +115,7 @@ func (r *CSIVolumeResource) Metadata(_ context.Context, req resource.MetadataReq
 	resp.TypeName = req.ProviderTypeName + "_csi_volume"
 }
 
-func (r *CSIVolumeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *CSIVolumeResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	attrs := computedAttributes()
 
 	attrs["id"] = schema.StringAttribute{
@@ -210,6 +213,10 @@ func (r *CSIVolumeResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"capability":       capabilityBlock(true),
 			"mount_options":    mountOptionsBlock(),
 			"topology_request": topologyRequestBlock(true),
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
 		},
 	}
 }
@@ -253,74 +260,29 @@ func (r *CSIVolumeResource) Create(ctx context.Context, req resource.CreateReque
 
 	client := r.providerConfig.Client()
 
-	capMin, capMax, capDiags := parseCapacity(data.CapacityMin, data.CapacityMax)
-	resp.Diagnostics.Append(capDiags...)
+	r.createVolume(ctx, client, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	secrets, secretDiags := resolveSecrets(data.SecretsWO, data.Secrets)
-	resp.Diagnostics.Append(secretDiags...)
+	// Persist the ID to state immediately so Terraform tracks the resource
+	// even if the subsequent read fails.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	volume := &api.CSIVolume{
-		ID:                    data.VolumeID.ValueString(),
-		PluginID:              data.PluginID.ValueString(),
-		Name:                  data.Name.ValueString(),
-		SnapshotID:            data.SnapshotID.ValueString(),
-		CloneID:               data.CloneID.ValueString(),
-		RequestedCapacityMin:  int64(capMin),
-		RequestedCapacityMax:  int64(capMax),
-		RequestedCapabilities: parseCapabilities(data.Capability),
-		RequestedTopologies:   parseTopologyRequest(data.TopologyRequest),
-		Secrets:               secrets,
-		Parameters:            toMapStringString(data.Parameters),
-	}
-
-	if data.MountOptions != nil {
-		volume.MountOptions = parseMountOptions(data.MountOptions)
 	}
 
 	ns := data.Namespace.ValueString()
 	if ns == "" {
 		ns = "default"
 	}
-	opts := &api.WriteOptions{Namespace: ns}
 
-	tflog.Debug(ctx, "Creating CSI volume", map[string]any{"volume_id": volume.ID, "namespace": ns})
-
-	deadline := time.Now().Add(10 * time.Minute)
-	var lastErr error
-	for time.Now().Before(deadline) {
-		_, _, err := client.CSIVolumes().Create(volume, opts)
-		if err != nil {
-			lastErr = fmt.Errorf("error creating CSI volume: %s", err)
-			if csiErrIsRetryable(lastErr) {
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			resp.Diagnostics.AddError("Error creating CSI volume", lastErr.Error())
-			return
-		}
-		lastErr = nil
-		break
-	}
-	if lastErr != nil {
-		resp.Diagnostics.AddError("Error creating CSI volume", lastErr.Error())
-		return
-	}
-
-	tflog.Debug(ctx, "Created CSI volume", map[string]any{"volume_id": volume.ID, "namespace": ns})
-	data.ID = types.StringValue(volume.ID)
-
-	r.readVolumeIntoModel(ctx, client, ns, volume.ID, &data, &resp.Diagnostics)
+	r.readVolumeIntoModel(ctx, client, ns, data.ID.ValueString(), &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), capMin)...)
+	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
 	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -345,6 +307,12 @@ func (r *CSIVolumeResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	r.readVolumeIntoModel(ctx, client, ns, data.ID.ValueString(), &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If the volume was not found (404), remove it from state.
+	if data.ID.ValueString() == "" {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -374,17 +342,48 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 
 	client := r.providerConfig.Client()
 
-	capMin, capMax, capDiags := parseCapacity(data.CapacityMin, data.CapacityMax)
-	resp.Diagnostics.Append(capDiags...)
+	r.createVolume(ctx, client, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	secrets, secretDiags := resolveSecrets(data.SecretsWO, data.Secrets)
-	resp.Diagnostics.Append(secretDiags...)
+	ns := data.Namespace.ValueString()
+	if ns == "" {
+		ns = "default"
+	}
+
+	r.readVolumeIntoModel(ctx, client, ns, data.ID.ValueString(), &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
+
+	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// createVolume contains the shared create + retry logic used by both
+// Create and Update, mirroring the SDKv2 pattern where Update reuses Create.
+// After success, data.ID is set for use by the caller.
+func (r *CSIVolumeResource) createVolume(ctx context.Context, client *api.Client, data *csiVolumeModel, diags *diag.Diagnostics) {
+	capMin, capMax, capDiags := parseCapacity(data.CapacityMin, data.CapacityMax)
+	diags.Append(capDiags...)
+	if diags.HasError() {
+		return
+	}
+
+	secrets, secretDiags := resolveSecrets(data.SecretsWO, data.Secrets)
+	diags.Append(secretDiags...)
+	if diags.HasError() {
+		return
+	}
+
+	capabilities := parseCapabilities(data.Capability)
 
 	volume := &api.CSIVolume{
 		ID:                    data.VolumeID.ValueString(),
@@ -394,10 +393,15 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 		CloneID:               data.CloneID.ValueString(),
 		RequestedCapacityMin:  int64(capMin),
 		RequestedCapacityMax:  int64(capMax),
-		RequestedCapabilities: parseCapabilities(data.Capability),
+		RequestedCapabilities: capabilities,
 		RequestedTopologies:   parseTopologyRequest(data.TopologyRequest),
 		Secrets:               secrets,
 		Parameters:            toMapStringString(data.Parameters),
+
+		// COMPAT(1.5.0)
+		// Maintain backwards compatibility.
+		AccessMode:     capabilities[0].AccessMode,
+		AttachmentMode: capabilities[0].AttachmentMode,
 	}
 
 	if data.MountOptions != nil {
@@ -410,25 +414,32 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 	opts := &api.WriteOptions{Namespace: ns}
 
-	tflog.Debug(ctx, "Updating CSI volume", map[string]any{"volume_id": volume.ID, "namespace": ns})
+	tflog.Debug(ctx, "Creating CSI volume", map[string]any{"volume_id": volume.ID, "namespace": ns})
 
-	_, _, err := client.CSIVolumes().Create(volume, opts)
+	createTimeout, tDiags := data.Timeouts.Create(ctx, 10*time.Minute)
+	diags.Append(tDiags...)
+	if diags.HasError() {
+		return
+	}
+
+	err := retry.RetryContext(ctx, createTimeout-time.Minute, func() *retry.RetryError {
+		_, _, err := client.CSIVolumes().Create(volume, opts)
+		if err != nil {
+			err = fmt.Errorf("error creating CSI volume: %s", err)
+			if csiErrIsRetryable(err) {
+				return retry.RetryableError(err)
+			}
+			return retry.NonRetryableError(err)
+		}
+		return nil
+	})
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating CSI volume", err.Error())
+		diags.AddError("Error creating CSI volume", err.Error())
 		return
 	}
 
-	r.readVolumeIntoModel(ctx, client, ns, volume.ID, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	tflog.Debug(ctx, "Created CSI volume", map[string]any{"volume_id": volume.ID, "namespace": ns})
+	data.ID = types.StringValue(volume.ID)
 }
 
 func (r *CSIVolumeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -448,17 +459,25 @@ func (r *CSIVolumeResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	tflog.Debug(ctx, "Deleting CSI volume", map[string]any{"volume_id": id, "namespace": ns})
 
-	deadline := time.Now().Add(10 * time.Minute)
-	for time.Now().Before(deadline) {
-		err := client.CSIVolumes().Delete(id, opts)
-		if err != nil {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		tflog.Debug(ctx, "Deleted CSI volume", map[string]any{"volume_id": id})
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.AddError("Error deleting CSI volume", fmt.Sprintf("timed out deleting CSI volume %q", id))
+
+	err := retry.RetryContext(ctx, deleteTimeout-time.Minute, func() *retry.RetryError {
+		err := client.CSIVolumes().Delete(id, opts)
+		if err != nil {
+			return retry.RetryableError(fmt.Errorf("error deleting CSI volume: %s", err))
+		}
+		return nil
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting CSI volume", err.Error())
+		return
+	}
+
+	tflog.Debug(ctx, "Deleted CSI volume", map[string]any{"volume_id": id})
 }
 
 func (r *CSIVolumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
