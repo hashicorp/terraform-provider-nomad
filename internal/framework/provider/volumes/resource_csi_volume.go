@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -521,8 +520,6 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		return
 	}
 
-	planModified := false
-
 	stateVersion := types.Int64Null()
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeModel
@@ -552,12 +549,12 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		}
 	}
 
-	secretsModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
+	planModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if planModified || secretsModified {
+	if planModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
@@ -769,21 +766,12 @@ func computedAttributes() map[string]schema.Attribute {
 		"capacity": schema.Int64Attribute{
 			Computed:    true,
 			Description: "The capacity of the volume in bytes.",
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"capacity_min_bytes": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"capacity_max_bytes": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"controller_required": schema.BoolAttribute{
 			Computed: true,
@@ -793,15 +781,9 @@ func computedAttributes() map[string]schema.Attribute {
 		},
 		"controllers_expected": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"controllers_healthy": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"plugin_provider": schema.StringAttribute{
 			Computed: true,
@@ -811,27 +793,15 @@ func computedAttributes() map[string]schema.Attribute {
 		},
 		"plugin_provider_version": schema.StringAttribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"nodes_healthy": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"nodes_expected": schema.Int64Attribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Int64{
-				int64planmodifier.UseStateForUnknown(),
-			},
 		},
 		"schedulable": schema.BoolAttribute{
 			Computed: true,
-			PlanModifiers: []planmodifier.Bool{
-				boolplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"topologies": schema.ListNestedAttribute{
 			Computed:    true,
