@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package volumes_test
@@ -250,4 +250,99 @@ func testCSIVolumeRegistrationCheckDestroy(t *testing.T) resource.TestCheckFunc 
 		}
 		return nil
 	}
+}
+
+func TestResourceCSIVolumeRegistration_secretsWOExplicitVersion(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testCSIVolumeRegistrationConfigSecretsWOExplicitVersion(`{
+					key1 = "secret_v1"
+				}`, 1),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
+						tfjsonpath.New("secrets_wo_version"),
+						knownvalue.Int64Exact(1),
+					),
+				},
+			},
+			{
+				// Bump version to trigger update
+				Config: testCSIVolumeRegistrationConfigSecretsWOExplicitVersion(`{
+					key1 = "secret_v2"
+				}`, 2),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
+						tfjsonpath.New("secrets_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+		},
+		CheckDestroy: testCSIVolumeRegistrationCheckDestroy(t),
+	})
+}
+
+func testCSIVolumeRegistrationConfigSecretsWOExplicitVersion(secretsMap string, version int) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "prereq_wo_ver" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = "mysql_volume_reg_wo_ver_prereq"
+  name         = "mysql_volume_reg_wo_ver_prereq"
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+
+resource "nomad_csi_volume_registration" "test" {
+  plugin_id   = "hostpath-plugin0"
+  volume_id   = "mysql_volume_reg_wo_ver"
+  name        = "mysql_volume_reg_wo_ver"
+  external_id = nomad_csi_volume.prereq_wo_ver.external_id
+
+  secrets_wo         = %s
+  secrets_wo_version = %d
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type = "ext4"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+`, secretsMap, version)
 }

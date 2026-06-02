@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package volumes_test
@@ -301,6 +301,199 @@ func testCSIVolumeAPICheck(t *testing.T, volumeID string) resource.TestCheckFunc
 		test.Eq(t, volumeID, volume.Name)
 		return nil
 	}
+}
+
+func TestResourceCSIVolume_updateInPlace(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testCSIVolumeConfigUpdate("mysql_volume_update", "10GiB", "20GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "name", "mysql_volume_update"),
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "capacity_min", "10GiB"),
+				),
+			},
+			{
+				// Update capacity (in-place update)
+				Config: testCSIVolumeConfigUpdate("mysql_volume_update", "11GiB", "21GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "capacity_min", "11GiB"),
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "capacity_max", "21GiB"),
+				),
+			},
+		},
+		CheckDestroy: testCSIVolumeCheckDestroy(t),
+	})
+}
+
+func TestResourceCSIVolume_secretsWOExplicitVersion(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				// Create with explicit version
+				Config: testCSIVolumeConfigSecretsWOExplicitVersion(`{
+					key1 = "secret_v1"
+				}`, 1),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume.test",
+						tfjsonpath.New("secrets_wo_version"),
+						knownvalue.Int64Exact(1),
+					),
+				},
+			},
+			{
+				// Change secret AND bump version — should trigger update
+				Config: testCSIVolumeConfigSecretsWOExplicitVersion(`{
+					key1 = "secret_v2"
+				}`, 2),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume.test",
+						tfjsonpath.New("secrets_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+		},
+		CheckDestroy: testCSIVolumeCheckDestroy(t),
+	})
+}
+
+func TestResourceCSIVolume_replacementTopology(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testCSIVolumeConfigTopology("mysql_volume_topo", `{
+					"topology.hostpath.csi/node" = "node-0"
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "volume_id", "mysql_volume_topo"),
+				),
+			},
+			{
+				// Changing topology segments triggers replacement
+				Config: testCSIVolumeConfigTopology("mysql_volume_topo", `{
+					"topology.hostpath.csi/node" = "node-0"
+					rack = "R1"
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("nomad_csi_volume.test", "volume_id", "mysql_volume_topo"),
+				),
+			},
+		},
+		CheckDestroy: testCSIVolumeCheckDestroy(t),
+	})
+}
+
+func testCSIVolumeConfigUpdate(volumeID, capMin, capMax string) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "test" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = %q
+  name         = %q
+  capacity_min = %q
+  capacity_max = %q
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type = "ext4"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+`, volumeID, volumeID, capMin, capMax)
+}
+
+func testCSIVolumeConfigSecretsWOExplicitVersion(secretsMap string, version int) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "test" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = "mysql_volume_wo_ver"
+  name         = "mysql_volume_wo_ver"
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
+
+  secrets_wo         = %s
+  secrets_wo_version = %d
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type = "ext4"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+`, secretsMap, version)
+}
+
+func testCSIVolumeConfigTopology(volumeID, segments string) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "test" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = %q
+  name         = %q
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type = "ext4"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = %s
+      }
+    }
+  }
+}
+`, volumeID, volumeID, segments)
 }
 
 func testCSIVolumeCheckDestroy(t *testing.T) resource.TestCheckFunc {

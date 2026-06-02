@@ -1150,6 +1150,7 @@ func checkCapacity(capacity, reqMin uint64) diag.Diagnostics {
 func csiErrIsRetryable(err error) bool {
 	ignore := []string{
 		"already exist",
+		"already exists",
 		"requested capacity",
 		"LimitBytes cannot be less than",
 	}
