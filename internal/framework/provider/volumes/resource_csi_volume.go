@@ -1082,8 +1082,9 @@ func (m capacityPlanModifier) PlanModifyString(_ context.Context, req planmodifi
 		}
 	}
 
-	// Otherwise normalize to canonical form for consistent state storage.
-	resp.PlanValue = types.StringValue(humanize.IBytes(configBytes))
+	// When the value is changing, pass config through as-is. State will store
+	// the user's exact string; semantic equality handles future no-op diffs.
+	resp.PlanValue = req.ConfigValue
 }
 
 func parseCapacity(capMinAttr, capMaxAttr types.String) (uint64, uint64, diag.Diagnostics) {
