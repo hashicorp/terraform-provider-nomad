@@ -71,7 +71,7 @@ type csiVolumeModel struct {
 	CapacityMin      types.String            `tfsdk:"capacity_min"`
 	CapacityMax      types.String            `tfsdk:"capacity_max"`
 	Capability       []capabilityModel       `tfsdk:"capability"`
-	MountOptions     *mountOptionsModel      `tfsdk:"mount_options"`
+	MountOptions     []mountOptionsModel     `tfsdk:"mount_options"`
 	Secrets          map[string]types.String `tfsdk:"secrets"`
 	SecretsWO        types.String            `tfsdk:"secrets_wo"`
 	SecretsWOVersion types.Int64             `tfsdk:"secrets_wo_version"`
@@ -404,8 +404,8 @@ func (r *CSIVolumeResource) createVolume(ctx context.Context, client *api.Client
 		AttachmentMode: capabilities[0].AttachmentMode,
 	}
 
-	if data.MountOptions != nil {
-		volume.MountOptions = parseMountOptions(data.MountOptions)
+	if len(data.MountOptions) > 0 {
+		volume.MountOptions = parseMountOptions(&data.MountOptions[0])
 	}
 
 	ns := data.Namespace.ValueString()
