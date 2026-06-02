@@ -174,17 +174,15 @@ func (r *CSIVolumeResource) Schema(ctx context.Context, _ resource.SchemaRequest
 	}
 	attrs["capacity_min"] = schema.StringAttribute{
 		Optional:      true,
-		Computed:      true,
 		Description:   "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
 		Validators:    []validator.String{capacityValidator{}},
-		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown(), capacityPlanModifier{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["capacity_max"] = schema.StringAttribute{
 		Optional:      true,
-		Computed:      true,
 		Description:   "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
 		Validators:    []validator.String{capacityValidator{}},
-		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown(), capacityPlanModifier{}},
+		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
 	}
 	attrs["parameters"] = schema.MapAttribute{
 		ElementType: types.StringType,
