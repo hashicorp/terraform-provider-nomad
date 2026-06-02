@@ -63,7 +63,7 @@ resource "nomad_csi_volume_registration" "test" {
   plugin_id   = "hostpath-plugin0"
   volume_id   = "mysql_volume_reg"
   name        = "mysql_volume_reg"
-  external_id = nomad_csi_volume.prereq.volume_id
+  external_id = nomad_csi_volume.prereq.external_id
 
   capability {
     access_mode     = "single-node-writer"
@@ -89,7 +89,7 @@ resource "nomad_csi_volume_registration" "test" {
 					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "name", "mysql_volume_reg"),
 					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "namespace", "default"),
 					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "plugin_id", "hostpath-plugin0"),
-					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "external_id", "mysql_volume_reg_prereq"),
+					resource.TestCheckResourceAttrPair("nomad_csi_volume_registration.test", "external_id", "nomad_csi_volume.prereq", "external_id"),
 					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "mount_options.0.fs_type", "ext4"),
 					resource.TestCheckResourceAttr("nomad_csi_volume_registration.test", "deregister_on_destroy", "true"),
 					testCSIVolumeRegistrationAPICheck(t, "mysql_volume_reg"),
@@ -114,7 +114,7 @@ func testCSIVolumeRegistrationAPICheck(t *testing.T, volumeID string) resource.T
 		test.Eq(t, "mysql_volume_reg", volume.Name)
 		test.Eq(t, "default", volume.Namespace)
 		test.Eq(t, "hostpath-plugin0", volume.PluginID)
-		test.Eq(t, "mysql_volume_reg_prereq", volume.ExternalID)
+		test.NotEq(t, "", volume.ExternalID)
 
 		return nil
 	}
@@ -197,7 +197,7 @@ resource "nomad_csi_volume_registration" "test" {
   plugin_id   = "hostpath-plugin0"
   volume_id   = "mysql_volume_reg_wo"
   name        = "mysql_volume_reg_wo"
-  external_id = nomad_csi_volume.prereq_wo.volume_id
+  external_id = nomad_csi_volume.prereq_wo.external_id
 
   secrets_wo = jsonencode(%s)
 
