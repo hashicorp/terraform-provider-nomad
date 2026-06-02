@@ -1025,6 +1025,28 @@ func fromMapStringString(m map[string]string) map[string]types.String {
 	return result
 }
 
+func mapValueToStringMap(m types.Map) map[string]string {
+	if m.IsNull() || m.IsUnknown() || len(m.Elements()) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(m.Elements()))
+	for k, v := range m.Elements() {
+		result[k] = v.(types.String).ValueString()
+	}
+	return result
+}
+
+func stringMapToMapValue(m map[string]string) types.Map {
+	if m == nil {
+		return types.MapNull(types.StringType)
+	}
+	elems := make(map[string]attr.Value, len(m))
+	for k, v := range m {
+		elems[k] = types.StringValue(v)
+	}
+	return types.MapValueMust(types.StringType, elems)
+}
+
 // capacityValidator validates that a string is parseable as a human-readable byte size.
 type capacityValidator struct{}
 

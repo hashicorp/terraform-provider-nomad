@@ -47,7 +47,7 @@ type csiVolumeRegistrationModel struct {
 	SecretsWOVersion    types.Int64                        `tfsdk:"secrets_wo_version"`
 	Parameters          map[string]types.String            `tfsdk:"parameters"`
 	TopologyRequest     []topologyRequestRequiredOnlyModel `tfsdk:"topology_request"`
-	Context             map[string]types.String            `tfsdk:"context"`
+	Context             types.Map                          `tfsdk:"context"`
 	DeregisterOnDestroy types.Bool                         `tfsdk:"deregister_on_destroy"`
 	Timeouts            timeouts.Value                     `tfsdk:"timeouts"`
 
@@ -357,7 +357,7 @@ func (r *CSIVolumeRegistrationResource) registerVolume(ctx context.Context, clie
 		RequestedTopologies:   parseTopologyRequestRequiredOnly(data.TopologyRequest),
 		Secrets:               secrets,
 		Parameters:            toMapStringString(data.Parameters),
-		Context:               toMapStringString(data.Context),
+		Context:               mapValueToStringMap(data.Context),
 
 		// COMPAT(1.5.0)
 		// Maintain backwards compatibility.
@@ -547,7 +547,7 @@ func (r *CSIVolumeRegistrationResource) readVolumeIntoModel(ctx context.Context,
 
 	data.Capability = flattenCapabilities(volume.RequestedCapabilities)
 	data.Topologies = flattenTopologiesToList(volume.Topologies)
-	data.Context = fromMapStringString(volume.Context)
+	data.Context = stringMapToMapValue(volume.Context)
 
 	if volume.RequestedTopologies != nil {
 		data.TopologyRequest = flattenTopologyRequestRequiredOnly(volume.RequestedTopologies)
