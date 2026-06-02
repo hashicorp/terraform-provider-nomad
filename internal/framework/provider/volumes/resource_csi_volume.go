@@ -202,6 +202,9 @@ func (r *CSIVolumeResource) Schema(ctx context.Context, _ resource.SchemaRequest
 		ElementType: types.StringType,
 		Computed:    true,
 		Description: "The volume context provided by the storage provider.",
+		PlanModifiers: []planmodifier.Map{
+			mapplanmodifier.UseStateForUnknown(),
+		},
 	}
 
 	for k, v := range secretsAttributes() {
