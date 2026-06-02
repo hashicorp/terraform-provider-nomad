@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -133,14 +134,14 @@ func (r *CSIVolumeRegistrationResource) Schema(ctx context.Context, _ resource.S
 		Computed:      true,
 		Description:   "Defines how small the volume can be. The storage provider may return a volume that is larger than this value.",
 		Validators:    []validator.String{capacityValidator{}},
-		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
+		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown(), capacityPlanModifier{}},
 	}
 	attrs["capacity_max"] = schema.StringAttribute{
 		Optional:      true,
 		Computed:      true,
 		Description:   "Defines how large the volume can be. The storage provider may return a volume that is smaller than this value.",
 		Validators:    []validator.String{capacityValidator{}},
-		PlanModifiers: []planmodifier.String{capacityPlanModifier{}},
+		PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown(), capacityPlanModifier{}},
 	}
 	attrs["parameters"] = schema.MapAttribute{
 		ElementType: types.StringType,
@@ -150,7 +151,11 @@ func (r *CSIVolumeRegistrationResource) Schema(ctx context.Context, _ resource.S
 	attrs["context"] = schema.MapAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Computed:    true,
 		Description: "An optional key-value map of strings passed directly to the CSI plugin to validate the volume.",
+		PlanModifiers: []planmodifier.Map{
+			mapplanmodifier.UseStateForUnknown(),
+		},
 	}
 	attrs["deregister_on_destroy"] = schema.BoolAttribute{
 		Optional:    true,
