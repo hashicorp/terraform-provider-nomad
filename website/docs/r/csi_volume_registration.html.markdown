@@ -14,8 +14,9 @@ This can be used to register and deregister CSI volumes in a Nomad cluster. The
 volume must already exist to be registered. Use the `nomad_csi_volume`
 resource to create a new volume.
 
-~> **Warning:** this resource will store any sensitive values placed in
-  `secrets` or `mount_options` in the Terraform's state file. Take care to
+~> **Warning:** The `secrets` attribute will store sensitive values in
+  Terraform's state file. Use `secrets_wo` instead to avoid storing secrets in
+  state. If you must use `secrets`, take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
 ## Example Usage
@@ -81,7 +82,9 @@ The following arguments are supported:
 - `mount_options`: `(block: <optional>)` Options for mounting `block-device` volumes without a pre-formatted file system.
   - `fs_type`: `(string: <optional>)` - The file system type.
   - `mount_flags`: `([]string: <optional>)` - The flags passed to `mount`.
-- `secrets`: `(map[string]string: <optional>)` - An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
+- `secrets`: `(map[string]string: <optional>)` - **Deprecated: use `secrets_wo` instead.** An optional key-value map of strings used as credentials for publishing and unpublishing volumes. This value is stored in Terraform state.
+- `secrets_wo`: `(string: <optional>)` - A JSON-encoded map of secrets used as credentials for publishing and unpublishing volumes. Use `jsonencode()` to set this value. This is a [write-only attribute](https://developer.hashicorp.com/terraform/language/resources/syntax#write-only-attributes) and will not be stored in Terraform state. Requires Terraform >= 1.11.
+- `secrets_wo_version`: `(integer: <optional>)` - Version counter for `secrets_wo`. Increments automatically when the write-only secret changes, or can be set manually to trigger an update.
 - `parameters`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
 - `context`: `(map[string]string: <optional>)` - An optional key-value map of strings passed directly to the CSI plugin to validate the volume.
 - `deregister_on_destroy`: `(boolean: true)` - If true, the volume will be deregistered on destroy.
