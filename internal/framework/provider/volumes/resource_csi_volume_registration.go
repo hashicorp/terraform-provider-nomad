@@ -43,7 +43,7 @@ type csiVolumeRegistrationModel struct {
 	Capability          []capabilityModel                  `tfsdk:"capability"`
 	MountOptions        []mountOptionsModel                `tfsdk:"mount_options"`
 	Secrets             map[string]types.String            `tfsdk:"secrets"`
-	SecretsWO           types.String                       `tfsdk:"secrets_wo"`
+	SecretsWO           types.Map                          `tfsdk:"secrets_wo"`
 	SecretsWOVersion    types.Int64                        `tfsdk:"secrets_wo_version"`
 	Parameters          map[string]types.String            `tfsdk:"parameters"`
 	TopologyRequest     []topologyRequestRequiredOnlyModel `tfsdk:"topology_request"`
@@ -244,7 +244,7 @@ func (r *CSIVolumeRegistrationResource) Create(ctx context.Context, req resource
 
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
-	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
+	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -319,7 +319,7 @@ func (r *CSIVolumeRegistrationResource) Update(ctx context.Context, req resource
 
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
-	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
+	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -479,14 +479,14 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 		return
 	}
 
-	stateVersion := types.Int64Null()
+	stateSecretsVersion := types.Int64Null()
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeRegistrationModel
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		stateVersion = stateData.SecretsWOVersion
+		stateSecretsVersion = stateData.SecretsWOVersion
 
 		// Detect structural changes in topology_request that require replacement.
 		if len(stateData.TopologyRequest) != len(plan.TopologyRequest) {
@@ -500,12 +500,12 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 		}
 	}
 
-	planModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
+	secretsModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateSecretsVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if planModified {
+	if secretsModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }

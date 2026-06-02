@@ -132,7 +132,9 @@ func TestResourceCSIVolumeRegistration_secretsWO(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testCSIVolumeRegistrationConfigSecretsWO(`{"key1":"initial_secret"}`),
+				Config: testCSIVolumeRegistrationConfigSecretsWO(`{
+					key1 = "initial_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -144,7 +146,9 @@ func TestResourceCSIVolumeRegistration_secretsWO(t *testing.T) {
 				),
 			},
 			{
-				Config: testCSIVolumeRegistrationConfigSecretsWO(`{"key1":"updated_secret"}`),
+				Config: testCSIVolumeRegistrationConfigSecretsWO(`{
+					key1 = "updated_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -154,7 +158,9 @@ func TestResourceCSIVolumeRegistration_secretsWO(t *testing.T) {
 			},
 			{
 				// Same secret value — version should NOT bump.
-				Config: testCSIVolumeRegistrationConfigSecretsWO(`{"key1":"updated_secret"}`),
+				Config: testCSIVolumeRegistrationConfigSecretsWO(`{
+					key1 = "updated_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -168,7 +174,7 @@ func TestResourceCSIVolumeRegistration_secretsWO(t *testing.T) {
 	})
 }
 
-func testCSIVolumeRegistrationConfigSecretsWO(secretsJSON string) string {
+func testCSIVolumeRegistrationConfigSecretsWO(secretsMap string) string {
 	return fmt.Sprintf(`
 resource "nomad_csi_volume" "prereq_wo" {
   plugin_id    = "hostpath-plugin0"
@@ -199,7 +205,7 @@ resource "nomad_csi_volume_registration" "test" {
   name        = "mysql_volume_reg_wo"
   external_id = nomad_csi_volume.prereq_wo.external_id
 
-  secrets_wo = jsonencode(%s)
+  secrets_wo = %s
 
   capability {
     access_mode     = "single-node-writer"
@@ -220,7 +226,7 @@ resource "nomad_csi_volume_registration" "test" {
     }
   }
 }
-`, secretsJSON)
+`, secretsMap)
 }
 
 func testCSIVolumeRegistrationCheckDestroy(t *testing.T) resource.TestCheckFunc {

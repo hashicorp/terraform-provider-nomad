@@ -15,7 +15,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -72,7 +74,7 @@ type csiVolumeModel struct {
 	Capability       []capabilityModel       `tfsdk:"capability"`
 	MountOptions     []mountOptionsModel     `tfsdk:"mount_options"`
 	Secrets          map[string]types.String `tfsdk:"secrets"`
-	SecretsWO        types.String            `tfsdk:"secrets_wo"`
+	SecretsWO        types.Map               `tfsdk:"secrets_wo"`
 	SecretsWOVersion types.Int64             `tfsdk:"secrets_wo_version"`
 	Parameters       map[string]types.String `tfsdk:"parameters"`
 	TopologyRequest  []topologyRequestModel  `tfsdk:"topology_request"`
@@ -286,7 +288,7 @@ func (r *CSIVolumeResource) Create(ctx context.Context, req resource.CreateReque
 
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
-	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
+	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -361,7 +363,7 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
-	handleSecretsWOHash(ctx, data.SecretsWO, resp.Private, &resp.Diagnostics)
+	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -520,14 +522,14 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		return
 	}
 
-	stateVersion := types.Int64Null()
+	stateSecretsVersion := types.Int64Null()
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeModel
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		stateVersion = stateData.SecretsWOVersion
+		stateSecretsVersion = stateData.SecretsWOVersion
 
 		// Detect structural changes in capability that require replacement.
 		if len(stateData.Capability) != len(plan.Capability) {
@@ -549,12 +551,12 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		}
 	}
 
-	planModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
+	secretsModified := modifySecretsWOPlan(ctx, req.Private, configData.SecretsWO, configData.SecretsWOVersion, stateSecretsVersion, &plan.SecretsWOVersion, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if planModified {
+	if secretsModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
@@ -680,6 +682,7 @@ func mountOptionsBlock() schema.ListNestedBlock {
 				"mount_flags": schema.ListAttribute{
 					ElementType: types.StringType,
 					Optional:    true,
+					Sensitive:   true,
 					Description: "The flags passed to mount.",
 				},
 			},
@@ -829,16 +832,28 @@ func secretsAttributes() map[string]schema.Attribute {
 			Sensitive:          true,
 			Description:        "An optional key-value map of strings used as credentials for publishing and unpublishing volumes. Deprecated: use secrets_wo instead.",
 			DeprecationMessage: "Use secrets_wo to avoid storing secrets in Terraform state.",
+			Validators: []validator.Map{
+				mapvalidator.PreferWriteOnlyAttribute(path.MatchRoot("secrets_wo")),
+				mapvalidator.ConflictsWith(path.MatchRoot("secrets_wo")),
+			},
 		},
-		"secrets_wo": schema.StringAttribute{
+		"secrets_wo": schema.MapAttribute{
+			ElementType: types.StringType,
 			Optional:    true,
 			WriteOnly:   true,
-			Description: "JSON-encoded map of secrets used as credentials for publishing and unpublishing volumes. Use jsonencode() to set this value. This value is write-only and will not be stored in Terraform state.",
+			Description: "Write-only map of secrets used as credentials for publishing and unpublishing volumes. This value will not be stored in Terraform state.",
+			Validators: []validator.Map{
+				mapvalidator.ConflictsWith(path.MatchRoot("secrets")),
+			},
 		},
 		"secrets_wo_version": schema.Int64Attribute{
 			Optional:    true,
 			Computed:    true,
 			Description: "Version counter for secrets_wo. Increments automatically when the write-only secret changes, or set manually to trigger an update.",
+			Validators: []validator.Int64{
+				int64validator.ConflictsWith(path.MatchRoot("secrets")),
+				int64validator.AlsoRequires(path.MatchRoot("secrets_wo")),
+			},
 		},
 	}
 }
@@ -1102,16 +1117,11 @@ func parseCapacity(capMinAttr, capMaxAttr types.String) (uint64, uint64, diag.Di
 	return capMin, capMax, diags
 }
 
-func resolveSecrets(secretsWO types.String, secretsLegacy map[string]types.String) (map[string]string, diag.Diagnostics) {
+func resolveSecrets(secretsWO types.Map, secretsLegacy map[string]types.String) (map[string]string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if !secretsWO.IsNull() && !secretsWO.IsUnknown() {
-		var result map[string]string
-		if err := json.Unmarshal([]byte(secretsWO.ValueString()), &result); err != nil {
-			diags.AddError("Invalid secrets_wo", fmt.Sprintf("secrets_wo must be a JSON-encoded map of strings: %s", err))
-			return nil, diags
-		}
-		return result, diags
+		return mapValueToStringMap(secretsWO), diags
 	}
 
 	return toMapStringString(secretsLegacy), diags
@@ -1163,12 +1173,18 @@ type privateHashWrapper struct {
 	Hash string `json:"hash"`
 }
 
-func handleSecretsWOHash(ctx context.Context, secretsWO types.String, private privateStateSetter, diags *diag.Diagnostics) {
-	if !secretsWO.IsNull() && !secretsWO.IsUnknown() {
-		h := sha256.New()
-		h.Write([]byte(secretsWO.ValueString()))
-		hash := hex.EncodeToString(h.Sum(nil))
+// hashMapValue produces a deterministic SHA256 hash of a types.Map by sorting
+// keys and encoding as JSON.
+func hashMapValue(m types.Map) string {
+	canonical, _ := json.Marshal(mapValueToStringMap(m))
+	h := sha256.New()
+	h.Write(canonical)
+	return hex.EncodeToString(h.Sum(nil))
+}
 
+func handleSecretsWOHash(ctx context.Context, secretsWO types.Map, private privateStateSetter, diags *diag.Diagnostics) {
+	if !secretsWO.IsNull() && !secretsWO.IsUnknown() {
+		hash := hashMapValue(secretsWO)
 		data, err := json.Marshal(privateHashWrapper{Hash: hash})
 		if err != nil {
 			diags.AddError("Error storing secrets hash", err.Error())
@@ -1179,7 +1195,7 @@ func handleSecretsWOHash(ctx context.Context, secretsWO types.String, private pr
 	}
 }
 
-func modifySecretsWOPlan(ctx context.Context, private privateStateGetter, configSecretsWO types.String, configSecretsWOVersion types.Int64, stateVersion types.Int64, planVersion *types.Int64, diags *diag.Diagnostics) bool {
+func modifySecretsWOPlan(ctx context.Context, private privateStateGetter, configSecretsWO types.Map, configSecretsWOVersion types.Int64, stateVersion types.Int64, planVersion *types.Int64, diags *diag.Diagnostics) bool {
 	versionExplicit := !configSecretsWOVersion.IsNull()
 
 	if configSecretsWO.IsNull() && !versionExplicit {
@@ -1191,9 +1207,7 @@ func modifySecretsWOPlan(ctx context.Context, private privateStateGetter, config
 	}
 
 	if !configSecretsWO.IsNull() && !versionExplicit {
-		h := sha256.New()
-		h.Write([]byte(configSecretsWO.ValueString()))
-		newHash := hex.EncodeToString(h.Sum(nil))
+		newHash := hashMapValue(configSecretsWO)
 
 		oldHash := ""
 		data, d := private.GetKey(ctx, "secrets_wo_hash")

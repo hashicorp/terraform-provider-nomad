@@ -210,7 +210,9 @@ func TestResourceCSIVolume_secretsWO(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testCSIVolumeConfigSecretsWO(`{"key1":"initial_secret"}`),
+				Config: testCSIVolumeConfigSecretsWO(`{
+					key1 = "initial_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -223,7 +225,9 @@ func TestResourceCSIVolume_secretsWO(t *testing.T) {
 				),
 			},
 			{
-				Config: testCSIVolumeConfigSecretsWO(`{"key1":"updated_secret"}`),
+				Config: testCSIVolumeConfigSecretsWO(`{
+					key1 = "updated_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -236,7 +240,9 @@ func TestResourceCSIVolume_secretsWO(t *testing.T) {
 			},
 			{
 				// Same secret value, different unrelated field — version should NOT bump.
-				Config: testCSIVolumeConfigSecretsWO(`{"key1":"updated_secret"}`),
+				Config: testCSIVolumeConfigSecretsWO(`{
+					key1 = "updated_secret"
+				}`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("nomad_csi_volume.test",
 						tfjsonpath.New("secrets_wo_version"),
@@ -250,7 +256,7 @@ func TestResourceCSIVolume_secretsWO(t *testing.T) {
 	})
 }
 
-func testCSIVolumeConfigSecretsWO(secretsJSON string) string {
+func testCSIVolumeConfigSecretsWO(secretsMap string) string {
 	return fmt.Sprintf(`
 resource "nomad_csi_volume" "test" {
   plugin_id    = "hostpath-plugin0"
@@ -259,7 +265,7 @@ resource "nomad_csi_volume" "test" {
   capacity_min = "10GiB"
   capacity_max = "20GiB"
 
-  secrets_wo = jsonencode(%s)
+  secrets_wo = %s
 
   capability {
     access_mode     = "single-node-writer"
@@ -280,7 +286,7 @@ resource "nomad_csi_volume" "test" {
     }
   }
 }
-`, secretsJSON)
+`, secretsMap)
 }
 
 func testCSIVolumeAPICheck(t *testing.T, volumeID string) resource.TestCheckFunc {
