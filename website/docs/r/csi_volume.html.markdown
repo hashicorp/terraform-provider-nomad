@@ -12,8 +12,9 @@ Creates and registers a CSI volume in Nomad.
 
 This can be used to create and register CSI volumes in a Nomad cluster.
 
-~> **Warning:** This resource will store any sensitive values placed in
-  `secrets` or `mount_options` in the Terraform's state file. Take care to
+~> **Warning:** The `secrets` and `mount_flags` attributes will store sensitive values in
+  Terraform's state file. Use `secrets_wo` and `mount_flags_wo` instead to avoid storing secrets in
+  state. If you must use `secrets` or `mount_flags`, take care to
   [protect your state file](/docs/state/sensitive-data.html).
 
 ~> **Warning:** Destroying this resource **will result in data loss**. Use the
@@ -88,8 +89,12 @@ The following arguments are supported:
 - `topology_request`: `(`[`TopologyRequest`](#topology-request)`: <optional>)` - Specify locations (region, zone, rack, etc.) where the provisioned volume is accessible from.
 - `mount_options`: `(block: optional)` Options for mounting `block-device` volumes without a pre-formatted file system.
   - `fs_type`: `(string: optional)` - The file system type.
-  - `mount_flags`: `[]string: optional` - The flags passed to `mount`.
-- `secrets`: `(map[string]string: optional)` An optional key-value map of strings used as credentials for publishing and unpublishing volumes.
+  - `mount_flags`: `([]string: optional)` - **Deprecated: use `mount_flags_wo` instead.** The flags passed to `mount`. This value is stored in Terraform state.
+  - `mount_flags_wo`: `([]string: optional)` - The flags passed to `mount`. This is a [write-only attribute](https://developer.hashicorp.com/terraform/language/resources/syntax#write-only-attributes) and will not be stored in Terraform state. Conflicts with `mount_flags`. Requires Terraform >= 1.11.
+  - `mount_flags_wo_version`: `(integer: optional)` - Version counter for `mount_flags_wo`. Increments automatically when the write-only mount flags change, or can be set manually to trigger an update.
+- `secrets`: `(map[string]string: optional)` - **Deprecated: use `secrets_wo` instead.** An optional key-value map of strings used as credentials for publishing and unpublishing volumes. This value is stored in Terraform state.
+- `secrets_wo`: `(map[string]string: optional)` - A write-only map of secrets used as credentials for publishing and unpublishing volumes. This is a [write-only attribute](https://developer.hashicorp.com/terraform/language/resources/syntax#write-only-attributes) and will not be stored in Terraform state. Conflicts with `secrets`. Requires Terraform >= 1.11.
+- `secrets_wo_version`: `(integer: optional)` - Version counter for `secrets_wo`. Increments automatically when the write-only secret changes, or can be set manually to trigger an update.
 - `parameters`: `(map[string]string: optional)` An optional key-value map of strings passed directly to the CSI plugin to configure the volume.
 
 ### Capability

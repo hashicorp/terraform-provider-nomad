@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/acl"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/variables"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/volumes"
 )
 
 // Ensure NomadProvider satisfies various provider interfaces.
@@ -141,6 +142,8 @@ func (p *NomadProvider) Resources(_ context.Context) []func() resource.Resource 
 	return []func() resource.Resource{
 		acl.NewACLAuthMethodResource,
 		acl.NewACLBindingRuleResource,
+		volumes.NewCSIVolumeResource,
+		volumes.NewCSIVolumeRegistrationResource,
 	}
 }
 
