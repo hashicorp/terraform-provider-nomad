@@ -170,7 +170,7 @@ func (r *CSIVolumeRegistrationResource) Schema(ctx context.Context, _ resource.S
 		Description: "Manages the registration of a CSI volume in Nomad.",
 		Attributes:  attrs,
 		Blocks: map[string]schema.Block{
-			"capability":       capabilityBlock(false),
+			"capability":       capabilityBlock(),
 			"mount_options":    mountOptionsBlock(),
 			"topology_request": topologyRequestBlock(false),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{
@@ -381,6 +381,11 @@ func (r *CSIVolumeRegistrationResource) registerVolume(ctx context.Context, clie
 
 	if len(data.MountOptions) > 0 {
 		volume.MountOptions = parseMountOptions(&data.MountOptions[0])
+	} else {
+		// Send an empty struct rather than nil to match Nomad's internal
+		// representation and avoid a spurious "can not update mount options
+		// while volume is in use" error from CSIVolume.Merge.
+		volume.MountOptions = &api.CSIMountOptions{}
 	}
 
 	ns := data.Namespace.ValueString()

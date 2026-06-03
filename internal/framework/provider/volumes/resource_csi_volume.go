@@ -181,7 +181,7 @@ func (r *CSIVolumeResource) Schema(ctx context.Context, _ resource.SchemaRequest
 		Description: "Manages the lifecycle of creating and deleting CSI volumes.",
 		Attributes:  attrs,
 		Blocks: map[string]schema.Block{
-			"capability":       capabilityBlock(true),
+			"capability":       capabilityBlock(),
 			"mount_options":    mountOptionsBlock(),
 			"topology_request": topologyRequestBlock(true),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{
@@ -393,6 +393,11 @@ func (r *CSIVolumeResource) createVolume(ctx context.Context, client *api.Client
 
 	if len(data.MountOptions) > 0 {
 		volume.MountOptions = parseMountOptions(&data.MountOptions[0])
+	} else {
+		// Send an empty struct rather than nil to match Nomad's internal
+		// representation and avoid a spurious "can not update mount options
+		// while volume is in use" error from CSIVolume.Merge.
+		volume.MountOptions = &api.CSIMountOptions{}
 	}
 
 	ns := data.Namespace.ValueString()
@@ -515,11 +520,6 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		}
 		stateSecretsVersion = stateData.SecretsWOVersion
 		stateMountOpts = stateData.MountOptions
-
-		// Detect structural changes in capability that require replacement.
-		if len(stateData.Capability) != len(plan.Capability) {
-			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("capability"))
-		}
 
 		// Detect structural changes in topology_request that require replacement.
 		if len(stateData.TopologyRequest) != len(plan.TopologyRequest) {

@@ -512,40 +512,7 @@ func (v mountOptionsValidator) ValidateObject(ctx context.Context, req validator
 	}
 }
 
-func capabilityBlock(requiresReplace bool) schema.SetNestedBlock {
-	accessModeAttr := schema.StringAttribute{
-		Required:    true,
-		Description: "Defines whether a volume should be available concurrently.",
-		Validators: []validator.String{
-			stringvalidator.OneOf(
-				"single-node-reader-only",
-				"single-node-writer",
-				"multi-node-reader-only",
-				"multi-node-single-writer",
-				"multi-node-multi-writer",
-			),
-		},
-	}
-	attachmentModeAttr := schema.StringAttribute{
-		Required:    true,
-		Description: "The storage API that will be used by the volume.",
-		Validators: []validator.String{
-			stringvalidator.OneOf(
-				"block-device",
-				"file-system",
-			),
-		},
-	}
-
-	if requiresReplace {
-		accessModeAttr.PlanModifiers = []planmodifier.String{
-			stringplanmodifier.RequiresReplace(),
-		}
-		attachmentModeAttr.PlanModifiers = []planmodifier.String{
-			stringplanmodifier.RequiresReplace(),
-		}
-	}
-
+func capabilityBlock() schema.SetNestedBlock {
 	return schema.SetNestedBlock{
 		Description: "Capabilities intended to be used in a job. At least one capability must be provided.",
 		Validators: []validator.Set{
@@ -553,8 +520,29 @@ func capabilityBlock(requiresReplace bool) schema.SetNestedBlock {
 		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"access_mode":     accessModeAttr,
-				"attachment_mode": attachmentModeAttr,
+				"access_mode": schema.StringAttribute{
+					Required:    true,
+					Description: "Defines whether a volume should be available concurrently.",
+					Validators: []validator.String{
+						stringvalidator.OneOf(
+							"single-node-reader-only",
+							"single-node-writer",
+							"multi-node-reader-only",
+							"multi-node-single-writer",
+							"multi-node-multi-writer",
+						),
+					},
+				},
+				"attachment_mode": schema.StringAttribute{
+					Required:    true,
+					Description: "The storage API that will be used by the volume.",
+					Validators: []validator.String{
+						stringvalidator.OneOf(
+							"block-device",
+							"file-system",
+						),
+					},
+				},
 			},
 		},
 	}
@@ -828,9 +816,15 @@ func parseImportID(importID string) (string, string, diag.Diagnostics) {
 func csiErrIsRetryable(err error) bool {
 	ignore := []string{
 		"already exist",
-		"already exists",
 		"requested capacity",
 		"LimitBytes cannot be less than",
+		"cannot be updated",
+		"not compatible with existing",
+		"can not update mount options while volume is in use",
+		"validation:",
+		"missing volume definition",
+		"plugin has no controller",
+		"does not support creating volumes",
 	}
 	for _, e := range ignore {
 		if strings.Contains(err.Error(), e) {
