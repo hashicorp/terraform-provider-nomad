@@ -252,6 +252,107 @@ func testCSIVolumeRegistrationCheckDestroy(t *testing.T) resource.TestCheckFunc 
 	}
 }
 
+func TestResourceCSIVolumeRegistration_mountFlagsWO(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testCSIVolumeRegistrationConfigMountFlagsWO(`["ro", "noatime"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(1),
+					),
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("nomad_csi_volume_registration.test", "mount_options.0.mount_flags_wo"),
+				),
+			},
+			{
+				Config: testCSIVolumeRegistrationConfigMountFlagsWO(`["ro", "noatime", "nosuid"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+			{
+				// Same flags — version should NOT bump.
+				Config: testCSIVolumeRegistrationConfigMountFlagsWO(`["ro", "noatime", "nosuid"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume_registration.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+		},
+		CheckDestroy: testCSIVolumeRegistrationCheckDestroy(t),
+	})
+}
+
+func testCSIVolumeRegistrationConfigMountFlagsWO(flags string) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "prereq_mfwo" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = "mysql_volume_reg_mfwo_prereq"
+  name         = "mysql_volume_reg_mfwo_prereq"
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+
+resource "nomad_csi_volume_registration" "test" {
+  plugin_id   = "hostpath-plugin0"
+  volume_id   = "mysql_volume_reg_mfwo"
+  name        = "mysql_volume_reg_mfwo"
+  external_id = nomad_csi_volume.prereq_mfwo.external_id
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type        = "ext4"
+    mount_flags_wo = %s
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+`, flags)
+}
+
 func TestResourceCSIVolumeRegistration_secretsWOExplicitVersion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),

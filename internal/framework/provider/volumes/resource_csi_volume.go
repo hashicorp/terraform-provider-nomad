@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
@@ -44,8 +45,10 @@ type capabilityModel struct {
 }
 
 type mountOptionsModel struct {
-	FSType     types.String   `tfsdk:"fs_type"`
-	MountFlags []types.String `tfsdk:"mount_flags"`
+	FSType              types.String   `tfsdk:"fs_type"`
+	MountFlags          []types.String `tfsdk:"mount_flags"`
+	MountFlagsWO        types.List     `tfsdk:"mount_flags_wo"`
+	MountFlagsWOVersion types.Int64    `tfsdk:"mount_flags_wo_version"`
 }
 
 type topologyModel struct {
@@ -261,6 +264,9 @@ func (r *CSIVolumeResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	data.SecretsWO = configData.SecretsWO
+	if len(configData.MountOptions) > 0 && len(data.MountOptions) > 0 {
+		data.MountOptions[0].MountFlagsWO = configData.MountOptions[0].MountFlagsWO
+	}
 
 	client := r.providerConfig.Client()
 
@@ -289,6 +295,11 @@ func (r *CSIVolumeResource) Create(ctx context.Context, req resource.CreateReque
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
 	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	handleMountFlagsWOHash(ctx, configData.MountOptions, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -343,6 +354,9 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	data.SecretsWO = configData.SecretsWO
+	if len(configData.MountOptions) > 0 && len(data.MountOptions) > 0 {
+		data.MountOptions[0].MountFlagsWO = configData.MountOptions[0].MountFlagsWO
+	}
 
 	client := r.providerConfig.Client()
 
@@ -364,6 +378,11 @@ func (r *CSIVolumeResource) Update(ctx context.Context, req resource.UpdateReque
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
 	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	handleMountFlagsWOHash(ctx, configData.MountOptions, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -523,6 +542,7 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 	}
 
 	stateSecretsVersion := types.Int64Null()
+	var stateMountOpts []mountOptionsModel
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeModel
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
@@ -530,6 +550,7 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 			return
 		}
 		stateSecretsVersion = stateData.SecretsWOVersion
+		stateMountOpts = stateData.MountOptions
 
 		// Detect structural changes in capability that require replacement.
 		if len(stateData.Capability) != len(plan.Capability) {
@@ -556,7 +577,16 @@ func (r *CSIVolumeResource) ModifyPlan(ctx context.Context, req resource.ModifyP
 		return
 	}
 
-	if secretsModified {
+	updatedMountOpts, mountFlagsModified, mountDiags := modifyMountFlagsWOPlan(ctx, req.Private, configData.MountOptions, stateMountOpts, plan.MountOptions)
+	resp.Diagnostics.Append(mountDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if mountFlagsModified {
+		plan.MountOptions = updatedMountOpts
+	}
+
+	if secretsModified || mountFlagsModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
@@ -674,19 +704,79 @@ func mountOptionsBlock() schema.ListNestedBlock {
 			listvalidator.SizeAtMost(1),
 		},
 		NestedObject: schema.NestedBlockObject{
+			Validators: []validator.Object{
+				mountOptionsValidator{},
+			},
 			Attributes: map[string]schema.Attribute{
 				"fs_type": schema.StringAttribute{
 					Optional:    true,
 					Description: "The file system type.",
 				},
 				"mount_flags": schema.ListAttribute{
+					ElementType:        types.StringType,
+					Optional:           true,
+					Sensitive:          true,
+					Description:        "The flags passed to mount. Deprecated: use mount_flags_wo instead.",
+					DeprecationMessage: "Use mount_flags_wo to avoid storing mount flags in Terraform state.",
+				},
+				"mount_flags_wo": schema.ListAttribute{
 					ElementType: types.StringType,
 					Optional:    true,
-					Sensitive:   true,
-					Description: "The flags passed to mount.",
+					WriteOnly:   true,
+					Description: "Write-only list of flags passed to mount. This value will not be stored in Terraform state.",
+				},
+				"mount_flags_wo_version": schema.Int64Attribute{
+					Optional:    true,
+					Computed:    true,
+					Description: "Version counter for mount_flags_wo. Increments automatically when the write-only mount flags change, or set manually to trigger an update.",
 				},
 			},
 		},
+	}
+}
+
+// mountOptionsValidator validates cross-attribute constraints within the
+// mount_options block.
+type mountOptionsValidator struct{}
+
+func (v mountOptionsValidator) Description(_ context.Context) string {
+	return "validates mount_flags/mount_flags_wo mutual exclusivity and mount_flags_wo_version dependency"
+}
+
+func (v mountOptionsValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v mountOptionsValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
+	var opts mountOptionsModel
+	resp.Diagnostics.Append(req.ConfigValue.As(ctx, &opts, basetypes.ObjectAsOptions{})...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	hasMountFlags := len(opts.MountFlags) > 0
+	hasMountFlagsWO := !opts.MountFlagsWO.IsNull()
+
+	if hasMountFlags && hasMountFlagsWO {
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("mount_flags"),
+			"Conflicting Attributes",
+			"mount_flags and mount_flags_wo cannot both be set. Use mount_flags_wo to avoid storing mount flags in Terraform state.",
+		)
+	}
+	if hasMountFlags && !hasMountFlagsWO {
+		resp.Diagnostics.AddAttributeWarning(
+			req.Path.AtName("mount_flags"),
+			"Prefer Write-Only Attribute",
+			"Prefer mount_flags_wo over mount_flags to avoid storing sensitive mount flags in Terraform state.",
+		)
+	}
+	if !opts.MountFlagsWOVersion.IsNull() && !hasMountFlagsWO {
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("mount_flags_wo_version"),
+			"Missing Required Attribute",
+			"mount_flags_wo_version requires mount_flags_wo to be set.",
+		)
 	}
 }
 
@@ -891,7 +981,17 @@ func parseMountOptions(m *mountOptionsModel) *api.CSIMountOptions {
 	if !m.FSType.IsNull() && !m.FSType.IsUnknown() {
 		opts.FSType = m.FSType.ValueString()
 	}
-	if len(m.MountFlags) > 0 {
+	// Use mount_flags_wo if set, otherwise fall back to mount_flags.
+	if !m.MountFlagsWO.IsNull() && !m.MountFlagsWO.IsUnknown() {
+		var flags []types.String
+		m.MountFlagsWO.ElementsAs(context.Background(), &flags, false)
+		if len(flags) > 0 {
+			opts.MountFlags = make([]string, len(flags))
+			for i, f := range flags {
+				opts.MountFlags[i] = f.ValueString()
+			}
+		}
+	} else if len(m.MountFlags) > 0 {
 		opts.MountFlags = make([]string, len(m.MountFlags))
 		for i, f := range m.MountFlags {
 			opts.MountFlags[i] = f.ValueString()
@@ -993,17 +1093,6 @@ func toMapStringString(m map[string]types.String) map[string]string {
 	result := make(map[string]string, len(m))
 	for k, v := range m {
 		result[k] = v.ValueString()
-	}
-	return result
-}
-
-func fromMapStringString(m map[string]string) map[string]types.String {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]types.String, len(m))
-	for k, v := range m {
-		result[k] = types.StringValue(v)
 	}
 	return result
 }
@@ -1236,6 +1325,91 @@ func modifySecretsWOPlan(ctx context.Context, private privateStateGetter, config
 	}
 
 	return false
+}
+
+// hashListValue produces a deterministic SHA256 hash of a types.List by
+// encoding its elements as JSON.
+func hashListValue(l types.List) string {
+	var elems []string
+	l.ElementsAs(context.Background(), &elems, false)
+	canonical, _ := json.Marshal(elems)
+	h := sha256.New()
+	h.Write(canonical)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func handleMountFlagsWOHash(ctx context.Context, mountOpts []mountOptionsModel, private privateStateSetter, diags *diag.Diagnostics) {
+	if len(mountOpts) == 0 {
+		return
+	}
+	flagsWO := mountOpts[0].MountFlagsWO
+	if !flagsWO.IsNull() && !flagsWO.IsUnknown() {
+		hash := hashListValue(flagsWO)
+		data, err := json.Marshal(privateHashWrapper{Hash: hash})
+		if err != nil {
+			diags.AddError("Error storing mount_flags hash", err.Error())
+			return
+		}
+		d := private.SetKey(ctx, "mount_flags_wo_hash", data)
+		diags.Append(d...)
+	}
+}
+
+func modifyMountFlagsWOPlan(ctx context.Context, private privateStateGetter, configMountOpts []mountOptionsModel, stateMountOpts []mountOptionsModel, planMountOpts []mountOptionsModel) ([]mountOptionsModel, bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if len(configMountOpts) == 0 || len(planMountOpts) == 0 {
+		return planMountOpts, false, diags
+	}
+
+	configFlagsWO := configMountOpts[0].MountFlagsWO
+	configVersion := configMountOpts[0].MountFlagsWOVersion
+	versionExplicit := !configVersion.IsNull()
+
+	stateVersion := types.Int64Null()
+	if len(stateMountOpts) > 0 {
+		stateVersion = stateMountOpts[0].MountFlagsWOVersion
+	}
+
+	planVersion := &planMountOpts[0].MountFlagsWOVersion
+
+	if configFlagsWO.IsNull() && !versionExplicit {
+		if !planVersion.Equal(stateVersion) {
+			*planVersion = stateVersion
+			return planMountOpts, true, diags
+		}
+		return planMountOpts, false, diags
+	}
+
+	if !configFlagsWO.IsNull() && !versionExplicit {
+		newHash := hashListValue(configFlagsWO)
+
+		oldHash := ""
+		data, d := private.GetKey(ctx, "mount_flags_wo_hash")
+		diags.Append(d...)
+		if diags.HasError() {
+			return planMountOpts, false, diags
+		}
+		if len(data) > 0 {
+			var wrapper privateHashWrapper
+			if err := json.Unmarshal(data, &wrapper); err == nil {
+				oldHash = wrapper.Hash
+			}
+		}
+
+		if newHash != oldHash {
+			oldVer := int64(0)
+			if !stateVersion.IsNull() {
+				oldVer = stateVersion.ValueInt64()
+			}
+			*planVersion = types.Int64Value(oldVer + 1)
+		} else {
+			*planVersion = stateVersion
+		}
+		return planMountOpts, true, diags
+	}
+
+	return planMountOpts, false, diags
 }
 
 func parseImportID(importID string) (string, string, diag.Diagnostics) {

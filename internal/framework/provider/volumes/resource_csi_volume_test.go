@@ -303,6 +303,86 @@ func testCSIVolumeAPICheck(t *testing.T, volumeID string) resource.TestCheckFunc
 	}
 }
 
+func TestResourceCSIVolume_mountFlagsWO(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testCheckCSIPluginAvailable(t, "hostpath-plugin0")
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_11_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testCSIVolumeConfigMountFlagsWO(`["ro", "noatime"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(1),
+					),
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr("nomad_csi_volume.test", "mount_options.0.mount_flags_wo"),
+					testCSIVolumeAPICheck(t, "mysql_volume_mfwo"),
+				),
+			},
+			{
+				Config: testCSIVolumeConfigMountFlagsWO(`["ro", "noatime", "nosuid"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+			{
+				// Same flags — version should NOT bump.
+				Config: testCSIVolumeConfigMountFlagsWO(`["ro", "noatime", "nosuid"]`),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("nomad_csi_volume.test",
+						tfjsonpath.New("mount_options").AtSliceIndex(0).AtMapKey("mount_flags_wo_version"),
+						knownvalue.Int64Exact(2),
+					),
+				},
+			},
+		},
+		CheckDestroy: testCSIVolumeCheckDestroy(t),
+	})
+}
+
+func testCSIVolumeConfigMountFlagsWO(flags string) string {
+	return fmt.Sprintf(`
+resource "nomad_csi_volume" "test" {
+  plugin_id    = "hostpath-plugin0"
+  volume_id    = "mysql_volume_mfwo"
+  name         = "mysql_volume_mfwo"
+  capacity_min = "10GiB"
+  capacity_max = "20GiB"
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  mount_options {
+    fs_type        = "ext4"
+    mount_flags_wo = %s
+  }
+
+  topology_request {
+    required {
+      topology {
+        segments = {
+          "topology.hostpath.csi/node" = "node-0"
+        }
+      }
+    }
+  }
+}
+`, flags)
+}
+
 func TestResourceCSIVolume_updateInPlace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),

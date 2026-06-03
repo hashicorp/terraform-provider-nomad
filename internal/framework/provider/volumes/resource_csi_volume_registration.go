@@ -217,6 +217,9 @@ func (r *CSIVolumeRegistrationResource) Create(ctx context.Context, req resource
 		return
 	}
 	data.SecretsWO = configData.SecretsWO
+	if len(configData.MountOptions) > 0 && len(data.MountOptions) > 0 {
+		data.MountOptions[0].MountFlagsWO = configData.MountOptions[0].MountFlagsWO
+	}
 
 	client := r.providerConfig.Client()
 
@@ -245,6 +248,11 @@ func (r *CSIVolumeRegistrationResource) Create(ctx context.Context, req resource
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
 	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	handleMountFlagsWOHash(ctx, configData.MountOptions, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -299,6 +307,9 @@ func (r *CSIVolumeRegistrationResource) Update(ctx context.Context, req resource
 		return
 	}
 	data.SecretsWO = configData.SecretsWO
+	if len(configData.MountOptions) > 0 && len(data.MountOptions) > 0 {
+		data.MountOptions[0].MountFlagsWO = configData.MountOptions[0].MountFlagsWO
+	}
 
 	client := r.providerConfig.Client()
 
@@ -320,6 +331,11 @@ func (r *CSIVolumeRegistrationResource) Update(ctx context.Context, req resource
 	resp.Diagnostics.Append(checkCapacity(uint64(data.Capacity.ValueInt64()), uint64(data.CapacityMinBytes.ValueInt64()))...)
 
 	handleSecretsWOHash(ctx, configData.SecretsWO, resp.Private, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	handleMountFlagsWOHash(ctx, configData.MountOptions, resp.Private, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -480,6 +496,7 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 	}
 
 	stateSecretsVersion := types.Int64Null()
+	var stateMountOpts []mountOptionsModel
 	if !req.State.Raw.IsNull() {
 		var stateData csiVolumeRegistrationModel
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
@@ -487,6 +504,7 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 			return
 		}
 		stateSecretsVersion = stateData.SecretsWOVersion
+		stateMountOpts = stateData.MountOptions
 
 		// Detect structural changes in topology_request that require replacement.
 		if len(stateData.TopologyRequest) != len(plan.TopologyRequest) {
@@ -505,7 +523,16 @@ func (r *CSIVolumeRegistrationResource) ModifyPlan(ctx context.Context, req reso
 		return
 	}
 
-	if secretsModified {
+	updatedMountOpts, mountFlagsModified, mountDiags := modifyMountFlagsWOPlan(ctx, req.Private, configData.MountOptions, stateMountOpts, plan.MountOptions)
+	resp.Diagnostics.Append(mountDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if mountFlagsModified {
+		plan.MountOptions = updatedMountOpts
+	}
+
+	if secretsModified || mountFlagsModified {
 		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
 }
