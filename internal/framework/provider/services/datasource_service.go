@@ -28,7 +28,6 @@ func NewServiceDataSource() datasource.DataSource {
 }
 
 type serviceModel struct {
-	ID            types.String `tfsdk:"id"`
 	ServiceName   types.String `tfsdk:"service_name"`
 	Namespace     types.String `tfsdk:"namespace"`
 	Filter        types.String `tfsdk:"filter"`
@@ -60,10 +59,6 @@ func (d *ServiceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	resp.Schema = schema.Schema{
 		Description: "Retrieve information about a specific Nomad service and its registrations.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "The ID of this data source.",
-			},
 			"service_name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the service to look up.",
@@ -207,8 +202,6 @@ func (d *ServiceDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if data.Namespace.IsNull() || data.Namespace.IsUnknown() {
 		data.Namespace = types.StringValue("default")
 	}
-
-	data.ID = types.StringValue(data.Namespace.ValueString() + "/" + serviceName)
 
 	regList := make([]attr.Value, 0, len(registrations))
 	for _, reg := range registrations {

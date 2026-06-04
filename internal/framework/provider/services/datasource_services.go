@@ -28,7 +28,6 @@ func NewServicesDataSource() datasource.DataSource {
 }
 
 type servicesModel struct {
-	ID        types.String `tfsdk:"id"`
 	Namespace types.String `tfsdk:"namespace"`
 	Services  types.List   `tfsdk:"services"`
 }
@@ -49,10 +48,6 @@ func (d *ServicesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	resp.Schema = schema.Schema{
 		Description: "Retrieve the list of all registered Nomad services.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "The ID of this data source.",
-			},
 			"namespace": schema.StringAttribute{
 				Optional:    true,
 				Description: "The namespace to filter services. Use \"*\" for all namespaces.",
@@ -135,8 +130,6 @@ func (d *ServicesDataSource) Read(ctx context.Context, req datasource.ReadReques
 		)
 		return
 	}
-
-	data.ID = types.StringValue("nomad-services")
 
 	svcList := make([]attr.Value, 0)
 	for _, nsStub := range serviceStubs {

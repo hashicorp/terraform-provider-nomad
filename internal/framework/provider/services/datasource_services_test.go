@@ -10,10 +10,7 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
-	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/testutil"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
 	"github.com/shoenig/test/must"
@@ -31,13 +28,6 @@ func TestAccDataSourceNomadServices_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.nomad_services.test", "services.#"),
 					testCheckServicesContain(t, "services-list-webapp", "default"),
 				),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(
-						"data.nomad_services.test",
-						tfjsonpath.New("id"),
-						knownvalue.StringExact("nomad-services"),
-					),
-				},
 			},
 		},
 	})
