@@ -159,13 +159,16 @@ func registerTestService(t *testing.T, serviceName, namespace string) {
 
 	// Wait for the service to be registered.
 	deadline := time.Now().Add(30 * time.Second)
+	var found bool
 	for time.Now().Before(deadline) {
 		services, _, err := client.Services().Get(serviceName, &api.QueryOptions{Namespace: namespace})
 		if err == nil && len(services) > 0 {
+			found = true
 			break
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+	must.True(t, found, must.Sprintf("service %q not registered within timeout", serviceName))
 
 	t.Cleanup(func() {
 		client.Jobs().Deregister(*job.ID, true, &api.WriteOptions{Namespace: namespace})
