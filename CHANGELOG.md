@@ -1,6 +1,8 @@
 ## UNRELEASED
 
 IMPROVEMENTS:
+* **New Data Source**: `nomad_service` retrieves registrations for a specific Nomad-native service. ([#629](https://github.com/hashicorp/terraform-provider-nomad/pull/629))
+* **New Data Source**: `nomad_services` lists all services registered with Nomad's native service discovery. ([#629](https://github.com/hashicorp/terraform-provider-nomad/pull/629))
 * resource/nomad_csi_volume: migrate to Plugin Framework and add write-only attributes `secrets_wo` and `secrets_wo_version` to avoid storing secrets in state. ([#628](https://github.com/hashicorp/terraform-provider-nomad/pull/628))
 * resource/nomad_csi_volume_registration: migrate to Plugin Framework and add write-only attributes `secrets_wo` and `secrets_wo_version` to avoid storing secrets in state. ([#628](https://github.com/hashicorp/terraform-provider-nomad/pull/628))
 * resource/nomad_sentinel_policy: add `submit-host-volume` and `submit-csi-volume` scope support. ([#624](https://github.com/hashicorp/terraform-provider-nomad/pull/624))
