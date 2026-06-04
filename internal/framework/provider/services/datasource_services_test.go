@@ -4,6 +4,7 @@
 package services_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,9 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/testutil"
 	"github.com/hashicorp/terraform-provider-nomad/nomad"
+	"github.com/shoenig/test/must"
 )
 
 func TestAccDataSourceNomadServices_basic(t *testing.T) {
@@ -26,6 +29,7 @@ func TestAccDataSourceNomadServices_basic(t *testing.T) {
 				Config:    testAccDataSourceNomadServicesConfig(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.nomad_services.test", "services.#"),
+					testCheckServicesContain(t, "services-list-webapp", "default"),
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -49,7 +53,9 @@ func TestAccDataSourceNomadServices_namespace(t *testing.T) {
 				Config:    testAccDataSourceNomadServicesNamespaceConfig(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.nomad_services.test", "services.#"),
+					testCheckServicesContain(t, "services-ns-webapp", "default"),
 				),
+
 			},
 		},
 	})
@@ -69,14 +75,52 @@ data "nomad_services" "test" {
 `
 }
 
+// testCheckServicesContain verifies that the services list in state contains a
+// service with the given name and namespace, and validates its tags.
+func testCheckServicesContain(t *testing.T, serviceName, namespace string) resource.TestCheckFunc {
+	t.Helper()
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources["data.nomad_services.test"]
+		must.True(t, ok, must.Sprintf("data.nomad_services.test not found in state"))
+
+		attrs := rs.Primary.Attributes
+		numServices := attrs["services.#"]
+		must.NotEq(t, "0", numServices, must.Sprintf("expected at least one service"))
+
+		for i := 0; ; i++ {
+			name, exists := attrs[fmt.Sprintf("services.%d.name", i)]
+			if !exists {
+				break
+			}
+			ns := attrs[fmt.Sprintf("services.%d.namespace", i)]
+			if name == serviceName && ns == namespace {
+				// Verify tags are present.
+				tagsCount := attrs[fmt.Sprintf("services.%d.tags.#", i)]
+				must.Eq(t, "2", tagsCount,
+					must.Sprintf("expected 2 tags for service %s", serviceName))
+				// Collect tags and verify both expected tags exist.
+				tags := make(map[string]struct{})
+				for j := 0; j < 2; j++ {
+					tags[attrs[fmt.Sprintf("services.%d.tags.%d", i, j)]] = struct{}{}
+				}
+				_, hasHTTP := tags["http"]
+				_, hasTest := tags["test"]
+				must.True(t, hasHTTP, must.Sprintf("expected 'http' tag"))
+				must.True(t, hasTest, must.Sprintf("expected 'test' tag"))
+				return nil
+			}
+		}
+		t.Fatalf("service %q in namespace %q not found in services list", serviceName, namespace)
+		return nil
+	}
+}
+
 func registerTestService(t *testing.T, serviceName, namespace string) {
 	t.Helper()
 
 	providerData := testutil.SDKV2ProviderMeta(t)()
 	providerConfig, ok := providerData.(nomad.ProviderConfig)
-	if !ok {
-		t.Fatalf("expected nomad.ProviderConfig, got %T", providerData)
-	}
+	must.True(t, ok, must.Sprintf("expected nomad.ProviderConfig, got %T", providerData))
 
 	client := providerConfig.Client()
 
@@ -122,9 +166,7 @@ func registerTestService(t *testing.T, serviceName, namespace string) {
 	}
 
 	_, _, err := client.Jobs().Register(job, &api.WriteOptions{Namespace: namespace})
-	if err != nil {
-		t.Fatalf("failed to register test job: %v", err)
-	}
+	must.NoError(t, err, must.Sprintf("failed to register test job"))
 
 	// Wait for the service to be registered.
 	deadline := time.Now().Add(30 * time.Second)
