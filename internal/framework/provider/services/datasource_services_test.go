@@ -55,7 +55,6 @@ func TestAccDataSourceNomadServices_namespace(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.nomad_services.test", "services.#"),
 					testCheckServicesContain(t, "services-ns-webapp", "default"),
 				),
-
 			},
 		},
 	})

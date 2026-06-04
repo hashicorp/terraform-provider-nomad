@@ -34,7 +34,7 @@ func TestAccDataSourceNomadService_basic(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.nomad_service.test",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("webapp"),
+						knownvalue.StringExact("default/webapp"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.nomad_service.test",
@@ -86,7 +86,7 @@ func TestAccDataSourceNomadService_choose(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.nomad_service.test",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("webapp-choose"),
+						knownvalue.StringExact("default/webapp-choose"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.nomad_service.test",

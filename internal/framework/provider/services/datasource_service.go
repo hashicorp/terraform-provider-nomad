@@ -204,10 +204,11 @@ func (d *ServiceDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	data.ID = types.StringValue(serviceName)
 	if data.Namespace.IsNull() || data.Namespace.IsUnknown() {
 		data.Namespace = types.StringValue("default")
 	}
+
+	data.ID = types.StringValue(data.Namespace.ValueString() + "/" + serviceName)
 
 	regList := make([]attr.Value, 0, len(registrations))
 	for _, reg := range registrations {
