@@ -40,14 +40,14 @@ data "nomad_services" "everything" {
 
 The following arguments are supported:
 
-- `namespace` `(string: <optional>)` - The namespace to filter services. Use
-  `"*"` to list services across all namespaces.
+- `namespace` `(string: "default")` - The namespace to filter services. If not
+  provided, the Nomad API defaults to the `"default"` namespace. Use `"*"` to
+  list services across all namespaces.
 
 ## Attribute Reference
 
 The following attributes are exported:
 
-- `id` `(string)` - A static ID for this data source.
 - `services` `(list of services)` - A list of services. Each service has the
   following attributes:
   - `namespace` `(string)` - The namespace in which the service is registered.

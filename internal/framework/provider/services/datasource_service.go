@@ -83,7 +83,7 @@ func (d *ServiceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Computed:    true,
-							Description: "The unique identifier of the service registration.",
+							Description: "The unique identifier of the service registration for a specific allocation.",
 						},
 						"address": schema.StringAttribute{
 							Computed:    true,

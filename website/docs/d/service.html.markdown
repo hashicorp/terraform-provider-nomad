@@ -45,8 +45,8 @@ data "nomad_service" "example" {
 The following arguments are supported:
 
 - `service_name` `(string: <required>)` - The name of the service to look up.
-- `namespace` `(string: <optional>)` - The namespace of the service. Defaults
-  to `"default"`.
+- `namespace` `(string: "default")` - The namespace of the service. If not
+  provided, defaults to `"default"` to reflect the Nomad API behavior.
 - `filter` `(string: <optional>)` - Specifies the
   [expression][nomad_api_filter] used to filter the results.
 - `choose` `(string: <optional>)` - Specifies the number of services to return
@@ -57,10 +57,9 @@ The following arguments are supported:
 
 The following attributes are exported:
 
-- `id` `(string)` - The service name used as the data source ID.
 - `registrations` `(list of registrations)` - A list of service registrations
   matching the query. Each registration has the following attributes:
-  - `id` `(string)` - The unique identifier of the service registration.
+  - `id` `(string)` - The unique identifier of the service registration for a specific allocation.
   - `address` `(string)` - The IP address of the service registration.
   - `port` `(int)` - The port number of the service registration.
   - `node_id` `(string)` - The ID of the node where the service is running.

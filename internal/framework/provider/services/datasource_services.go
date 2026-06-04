@@ -50,7 +50,7 @@ func (d *ServicesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"namespace": schema.StringAttribute{
 				Optional:    true,
-				Description: "The namespace to filter services. Use \"*\" for all namespaces.",
+				Description: "The namespace to filter services. If not provided, defaults to \"default\". Use \"*\" for all namespaces.",
 			},
 			"services": schema.ListNestedAttribute{
 				Computed:    true,
