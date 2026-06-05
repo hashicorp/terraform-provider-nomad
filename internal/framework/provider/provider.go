@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/acl"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/services"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/variables"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/volumes"
 )
@@ -148,7 +149,10 @@ func (p *NomadProvider) Resources(_ context.Context) []func() resource.Resource 
 }
 
 func (p *NomadProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		services.NewServiceDataSource,
+		services.NewServicesDataSource,
+	}
 }
 
 func (p *NomadProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
