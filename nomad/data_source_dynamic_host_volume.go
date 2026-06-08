@@ -143,8 +143,9 @@ func dataSourceDynamicHostVolume() *schema.Resource {
 	}
 }
 
-// dynamicHostVolumeRead gets a dynamic host volume from Nomad. Used by the
-// registration resource and as the base for dynamicHostVolumeReadWithCapacity.
+// dynamicHostVolumeRead gets a dynamic host volume from Nomad without setting
+// capacity_min/capacity_max string fields. Used by the registration resource
+// which does not have these fields in its schema.
 func dynamicHostVolumeRead(d *schema.ResourceData, meta any) error {
 	return dynamicHostVolumeReadImpl(d, meta, false)
 }
