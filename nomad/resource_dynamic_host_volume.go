@@ -20,7 +20,7 @@ func resourceDynamicHostVolume() *schema.Resource {
 		Create: resourceDynamicHostVolumeWrite,
 		Update: resourceDynamicHostVolumeWrite,
 		Delete: resourceDynamicHostVolumeDelete,
-		Read:   dynamicHostVolumeRead,
+		Read:   dynamicHostVolumeReadWithCapacity,
 		Exists: resourceDynamicHostVolumeExists,
 
 		Importer: &schema.ResourceImporter{
@@ -75,14 +75,16 @@ func resourceDynamicHostVolume() *schema.Resource {
 				},
 			},
 			"capacity_max": {
-				Description: "Requested maximum capacity",
-				Type:        schema.TypeString,
-				Optional:    true,
+				Description:      "Requested maximum capacity",
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: dynamicHostVolumeCapacityDiffSuppress,
 			},
 			"capacity_min": {
-				Description: "Requested minimum capacity",
-				Type:        schema.TypeString,
-				Optional:    true,
+				Description:      "Requested minimum capacity",
+				Type:             schema.TypeString,
+				Optional:         true,
+				DiffSuppressFunc: dynamicHostVolumeCapacityDiffSuppress,
 			},
 			"constraint": {
 				Description: "Constraints",
@@ -239,7 +241,7 @@ func resourceDynamicHostVolumeWrite(d *schema.ResourceData, meta any) error {
 		return fmt.Errorf("error polling for dynamic host volume readiness: %w", err)
 	}
 
-	return dynamicHostVolumeRead(d, meta)
+	return dynamicHostVolumeReadWithCapacity(d, meta)
 }
 
 func dynamicHostVolumeWaitForReady(client *api.Client, ns, id string) error {
@@ -287,6 +289,22 @@ func resourceDynamicHostVolumeExists(d *schema.ResourceData, meta any) (bool, er
 		return false, fmt.Errorf("error checking for dynamic host volume %q: %w", id, err)
 	}
 	return vol != nil, nil
+}
+
+// dynamicHostVolumeCapacityDiffSuppress suppresses diffs for capacity_min and capacity_max
+// when their textual representations differ but the byte values are equivalent.
+func dynamicHostVolumeCapacityDiffSuppress(_ string, oldValue, newValue string, _ *schema.ResourceData) bool {
+	if oldValue == newValue {
+		return true
+	}
+
+	oldBytes, oldErr := humanize.ParseBytes(oldValue)
+	newBytes, newErr := humanize.ParseBytes(newValue)
+	if oldErr != nil || newErr != nil {
+		return false
+	}
+
+	return oldBytes == newBytes
 }
 
 // getDynamicHostVolume is a helper function for the main resource methods

@@ -14,7 +14,7 @@ import (
 
 func dataSourceDynamicHostVolume() *schema.Resource {
 	return &schema.Resource{
-		Read: dynamicHostVolumeRead,
+		Read: dynamicHostVolumeReadWithCapacity,
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Description: "Volume ID",
@@ -143,9 +143,20 @@ func dataSourceDynamicHostVolume() *schema.Resource {
 	}
 }
 
-// dynamicHostVolumeRead gets a dynamic host volume from Nomad. This same
-// function is used for the data source and the create/register resources
+// dynamicHostVolumeRead gets a dynamic host volume from Nomad. Used by the
+// registration resource and as the base for dynamicHostVolumeReadWithCapacity.
 func dynamicHostVolumeRead(d *schema.ResourceData, meta any) error {
+	return dynamicHostVolumeReadImpl(d, meta, false)
+}
+
+// dynamicHostVolumeReadWithCapacity reads a dynamic host volume and also sets
+// the capacity_min and capacity_max string fields. Used by the create resource
+// and the data source which have these fields in their schema.
+func dynamicHostVolumeReadWithCapacity(d *schema.ResourceData, meta any) error {
+	return dynamicHostVolumeReadImpl(d, meta, true)
+}
+
+func dynamicHostVolumeReadImpl(d *schema.ResourceData, meta any, setCapacityStrings bool) error {
 	client := meta.(ProviderConfig).client
 
 	ns, id := getDynamicHostVolumeNamespacedID(d)
@@ -175,16 +186,13 @@ func dynamicHostVolumeRead(d *schema.ResourceData, meta any) error {
 		sw.Set(k, v)
 	}
 
-	// TODO: these fields may have been set by the config but if not, we want to
-	// get them from the API. But right now these are getting changed anyways,
-	// so we detect mutations from ex. "1GiB" => "1.0 GiB"
-	if d.Get("capacity") == "" && vol.CapacityBytes > 0 {
-		sw.Set("capacity", humanize.IBytes(uint64(vol.CapacityBytes)))
-	}
-	if d.Get("capacity_min") == "" && vol.RequestedCapacityMinBytes > 0 {
+	// Always set capacity from the API so state reflects reality.
+	sw.Set("capacity", humanize.IBytes(uint64(vol.CapacityBytes)))
+
+	// capacity_min and capacity_max only exist on the create resource and data
+	// source schemas, not on the registration resource.
+	if setCapacityStrings {
 		sw.Set("capacity_min", humanize.IBytes(uint64(vol.RequestedCapacityMinBytes)))
-	}
-	if d.Get("capacity_max") == "" && vol.RequestedCapacityMaxBytes > 0 {
 		sw.Set("capacity_max", humanize.IBytes(uint64(vol.RequestedCapacityMaxBytes)))
 	}
 
