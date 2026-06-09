@@ -20,6 +20,29 @@ import (
 const testResourceNameDynamicHostVolume = "nomad_dynamic_host_volume.test"
 const minVersionDHV = "1.10.0"
 
+func TestDynamicHostVolumeCapacityDiffSuppress(t *testing.T) {
+	testCases := []struct {
+		name     string
+		oldValue string
+		newValue string
+		expect   bool
+	}{
+		{name: "identical strings", oldValue: "1GiB", newValue: "1GiB", expect: true},
+		{name: "equivalent representations", oldValue: "1GiB", newValue: "1.0 GiB", expect: true},
+		{name: "equivalent binary/decimal formatting", oldValue: "2048MiB", newValue: "2.0 GiB", expect: true},
+		{name: "different byte values", oldValue: "1GiB", newValue: "2GiB", expect: false},
+		{name: "invalid new value", oldValue: "1GiB", newValue: "bogus", expect: false},
+		{name: "empty values", oldValue: "", newValue: "", expect: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := dynamicHostVolumeCapacityDiffSuppress("", tc.oldValue, tc.newValue, nil)
+			must.Eq(t, tc.expect, actual)
+		})
+	}
+}
+
 func TestResourceDynamicHostVolume_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
@@ -91,6 +114,74 @@ func TestResourceDynamicHostVolume_update(t *testing.T) {
 	})
 }
 
+// TestResourceDynamicHostVolume_updateSameCapacityDifferentFormat verifies that
+// changing only the string representation of capacity (e.g. "1.0 GiB" -> "1GiB")
+// does not trigger an update when the byte values are equivalent.
+func TestResourceDynamicHostVolume_updateSameCapacityDifferentFormat(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, minVersionDHV) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceDynamicHostVolume_capacityConfig(name, "1.0 GiB", "12 GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "name", name),
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_min_bytes", "1073741824"),
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_max_bytes", "12884901888"),
+				),
+			},
+			{
+				// Same bytes, different string format — should be a no-op
+				Config:   testResourceDynamicHostVolume_capacityConfig(name, "1GiB", "12GiB"),
+				PlanOnly: true,
+			},
+			{
+				// Another equivalent format — should also be a no-op
+				Config:   testResourceDynamicHostVolume_capacityConfig(name, "1024MiB", "12288MiB"),
+				PlanOnly: true,
+			},
+		},
+		CheckDestroy: testResourceDynamicHostVolume_checkDestroy(
+			testResourceNameDynamicHostVolume),
+	})
+}
+
+func TestResourceDynamicHostVolume_updateCapacityChange(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, minVersionDHV) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceDynamicHostVolume_capacityConfig(name, "1GiB", "10GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_min_bytes", "1073741824"),
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_max_bytes", "10737418240"),
+				),
+			},
+			{
+				// Increase capacity
+				Config: testResourceDynamicHostVolume_capacityConfig(name, "2GiB", "20GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_min_bytes", "2147483648"),
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_max_bytes", "21474836480"),
+				),
+			},
+			{
+				// Revert capacity back to original
+				Config: testResourceDynamicHostVolume_capacityConfig(name, "1GiB", "10GiB"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_min_bytes", "1073741824"),
+					resource.TestCheckResourceAttr(testResourceNameDynamicHostVolume, "capacity_max_bytes", "10737418240"),
+				),
+			},
+		},
+		CheckDestroy: testResourceDynamicHostVolume_checkDestroy(
+			testResourceNameDynamicHostVolume),
+	})
+}
+
 func testResourceDynamicHostVolume_config(name string) string {
 	return fmt.Sprintf(`
 resource "nomad_dynamic_host_volume" "test" {
@@ -121,6 +212,28 @@ resource "nomad_dynamic_host_volume" "test" {
 
 }
 `, name)
+}
+
+func testResourceDynamicHostVolume_capacityConfig(name, capacityMin, capacityMax string) string {
+	return fmt.Sprintf(`
+resource "nomad_dynamic_host_volume" "test" {
+  name      = "%s"
+  plugin_id = "mkdir"
+
+  capacity_min = "%s"
+  capacity_max = "%s"
+
+  capability {
+    access_mode     = "single-node-writer"
+    attachment_mode = "file-system"
+  }
+
+  constraint {
+    attribute = "$${attr.kernel.name}"
+    value     = "linux"
+  }
+}
+`, name, capacityMin, capacityMax)
 }
 
 func testResourceDynamicHostVolume_update(name string) string {

@@ -10,6 +10,7 @@ IMPROVEMENTS:
 BUG FIXES:
 * data source/nomad_variable: Fix panic when reading a variable due to `items_wo_version` not being in the data source schema. ([#625](https://github.com/hashicorp/terraform-provider-nomad/pull/625))
 * resource/nomad_acl_token: Fixed perpetual destroy-and-recreate cycle when `expiration_ttl` is set to a duration like `"1h"` or `"30m"`. ([#615](https://github.com/hashicorp/terraform-provider-nomad/pull/615))
+* resource/nomad_dynamic_host_volume: Fix `capacity_min` and `capacity_max` being incorrectly persisted to state after a failed update, and suppress spurious diffs from equivalent capacity representations (e.g. `"1GiB"` vs `"1.0 GiB"`). ([#630](https://github.com/hashicorp/terraform-provider-nomad/pull/630))
 
 ## 2.6.1 (April 20, 2026)
 
