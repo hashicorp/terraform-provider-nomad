@@ -114,6 +114,11 @@ func resourceJob() *schema.Resource {
 							Type:        schema.TypeMap,
 							Optional:    true,
 						},
+						"vars_content": {
+							Description: "Additional variables to use when templating the job with HCL2, formatted like a variables file",
+							Type:        schema.TypeString,
+							Optional:    true,
+						},
 					},
 				},
 			},
@@ -488,8 +493,9 @@ type JSONJobParserConfig struct {
 
 // HCL2JobParserConfig stores configuration options for the HCL2 jobspec parser.
 type HCL2JobParserConfig struct {
-	AllowFS bool
-	Vars    map[string]string
+	AllowFS     bool
+	Vars        map[string]string
+	VarsContent string
 
 	// Deprecated: Starting in v2.0.0 the provider assumes HCL2 parsing by
 	// default. This field should only be used to update the `hcl2` attribute
@@ -522,7 +528,7 @@ func resourceJobRegister(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	job, err := parseJobspec(jobspecRaw, jobParserConfig)
+	job, sub, err := parseJobspec(jobspecRaw, jobParserConfig)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -539,13 +545,7 @@ func resourceJobRegister(ctx context.Context, d *schema.ResourceData, meta inter
 		wantModifyIndex = 0
 	}
 
-	sub := &api.JobSubmission{
-		Source:        jobspecRaw,
-		Format:        "hcl2",
-		VariableFlags: jobParserConfig.HCL2.Vars,
-	}
-	switch {
-	case jobParserConfig.JSON.Enabled:
+	if sub != nil && jobParserConfig.JSON.Enabled {
 		sub.Format = "json"
 	}
 
@@ -846,8 +846,9 @@ func resourceJobReadSubmission(sub *api.JobSubmission, d *schema.ResourceData, m
 
 		// Only update hcl2 if there are changes to variables to avoid
 		// unnecessary updates if hcl2 is not set.
-		if !maps.Equal(sub.VariableFlags, hcl2Config.Vars) {
+		if !maps.Equal(sub.VariableFlags, hcl2Config.Vars) || sub.Variables != sub.Variables {
 			hcl2Config.Vars = sub.VariableFlags
+			hcl2Config.VarsContent = sub.Variables
 			d.Set("hcl2", flattenHCL2JobParserConfig(hcl2Config))
 		}
 	}
@@ -906,7 +907,7 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 
 	// Parse jobspec
 	// Catch syntax errors client-side during plan
-	job, err := parseJobspec(newSpecRaw.(string), jobParserConfig)
+	job, _, err := parseJobspec(newSpecRaw.(string), jobParserConfig)
 	if err != nil {
 		return err
 	}
@@ -1132,39 +1133,44 @@ func parseHCL2JobParserConfig(raw interface{}) (HCL2JobParserConfig, error) {
 			config.Vars[k] = v.(string)
 		}
 	}
+	if varsContent, ok := hcl2Map["vars_content"].(string); ok {
+		config.VarsContent = varsContent
+	}
 
 	return config, nil
 }
 
 func flattenHCL2JobParserConfig(c HCL2JobParserConfig) []any {
 	return []any{map[string]any{
-		"allow_fs": c.AllowFS,
-		"enabled":  c.Enabled,
-		"vars":     c.Vars,
+		"allow_fs":     c.AllowFS,
+		"enabled":      c.Enabled,
+		"vars":         c.Vars,
+		"vars_content": c.VarsContent,
 	}}
 }
 
-func parseJobspec(raw string, config JobParserConfig) (*api.Job, error) {
+func parseJobspec(raw string, config JobParserConfig) (*api.Job, *api.JobSubmission, error) {
 	var job *api.Job
+	var sub *api.JobSubmission
 	var err error
 
 	switch {
 	case config.JSON.Enabled:
 		job, err = parseJSONJobspec(raw)
 	default:
-		job, err = parseHCL2Jobspec(raw, config.HCL2)
+		job, sub, err = parseHCL2Jobspec(raw, config.HCL2)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("error parsing jobspec: %s", err)
+		return nil, nil, fmt.Errorf("error parsing jobspec: %s", err)
 	}
 
 	// If job is empty after parsing, the input is not a valid Nomad job.
 	if job == nil || reflect.DeepEqual(job, &api.Job{}) {
-		return nil, fmt.Errorf("error parsing jobspec: input JSON is not a valid Nomad jobspec")
+		return nil, nil, fmt.Errorf("error parsing jobspec: input JSON is not a valid Nomad jobspec")
 	}
 
-	return job, nil
+	return job, sub, nil
 }
 
 func parseJSONJobspec(raw string) (*api.Job, error) {
@@ -1193,19 +1199,24 @@ func parseJSONJobspec(raw string) (*api.Job, error) {
 	return &job, nil
 }
 
-func parseHCL2Jobspec(raw string, config HCL2JobParserConfig) (*api.Job, error) {
+func parseHCL2Jobspec(raw string, config HCL2JobParserConfig) (*api.Job, *api.JobSubmission, error) {
 	argVars := []string{}
 	for k, v := range config.Vars {
 		argVars = append(argVars, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	return jobspec2.ParseWithConfig(&jobspec2.ParseConfig{
-		Path:    "",
-		Body:    []byte(raw),
-		AllowFS: config.AllowFS,
-		ArgVars: argVars,
-		Strict:  true,
+	result, err := jobspec2.ParseWithConfigEx(&jobspec2.ParseConfig{
+		Path:       "",
+		Body:       []byte(raw),
+		AllowFS:    config.AllowFS,
+		ArgVars:    argVars,
+		VarContent: config.VarsContent,
+		Strict:     true,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return result.Job, result.Submission, nil
 }
 
 func jobTaskGroupsRaw(tgs []*api.TaskGroup) []interface{} {
@@ -1352,8 +1363,8 @@ func jobspecEqual(k, old, new string, d ResourceFieldGetter) bool {
 		oldJob, oldErr = parseJSONJobspec(old)
 		newJob, newErr = parseJSONJobspec(new)
 	default:
-		oldJob, oldErr = parseHCL2Jobspec(old, jobParserConfig.HCL2)
-		newJob, newErr = parseHCL2Jobspec(new, jobParserConfig.HCL2)
+		oldJob, _, oldErr = parseHCL2Jobspec(old, jobParserConfig.HCL2)
+		newJob, _, newErr = parseHCL2Jobspec(new, jobParserConfig.HCL2)
 	}
 	if oldErr != nil {
 		log.Println("error parsing old jobspec")
