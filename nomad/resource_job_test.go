@@ -651,7 +651,7 @@ func testResourceJob_hcl2Check(s *terraform.State) error {
 	}
 
 	if got, want := *tg.RestartPolicy.Attempts, 5; got != want {
-		return fmt.Errorf("reschedule -> attempts is %q; want %q", got, want)
+		return fmt.Errorf("reschedule -> attempts is %d; want %d", got, want)
 	}
 
 	task := tg.Tasks[0]
