@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2024, 2025
 # SPDX-License-Identifier: MPL-2.0
 
 
