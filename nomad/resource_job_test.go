@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/shoenig/test/must"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -97,6 +98,43 @@ func TestResourceJob_preserveCounts(t *testing.T) {
 					resource.TestCheckResourceAttr(resourcePath, "task_groups.0.count", "3"),
 					resource.TestCheckResourceAttr(resourcePath, "priority", "75"),
 					testResourceJob_checkTaskGroupCount(jobID, groupName, 3),
+				),
+			},
+		},
+
+		CheckDestroy: testResourceJob_checkDestroy(jobID),
+	})
+}
+
+func TestResourceJob_preserveResources(t *testing.T) {
+	const resourcePath = "nomad_job.test"
+	const jobID = "foo-preserve-resources"
+	const groupName = "foo"
+	const taskName = "server"
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				// Initial apply with preserve_resources = false registers the
+				// jobspec resources (cpu = 100, memory = 32).
+				Config: testResourceJob_preserveResourcesConfig(jobID, false, 50),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "priority", "50"),
+					testResourceJob_checkTaskResources(t, jobID, groupName, taskName, 100, 32),
+				),
+			},
+			{
+				// Simulate an external actor (e.g. the autoscaler) bumping the
+				// running task's resources out-of-band, then re-apply with
+				// preserve_resources = true. Nomad must keep the out-of-band
+				// resources (250/64) instead of resetting to the jobspec (100/32).
+				PreConfig: testResourceJob_updateTaskResources(t, jobID, groupName, taskName, 250, 64),
+				Config:    testResourceJob_preserveResourcesConfig(jobID, true, 75),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourcePath, "priority", "75"),
+					testResourceJob_checkTaskResources(t, jobID, groupName, taskName, 250, 64),
 				),
 			},
 		},
@@ -2383,6 +2421,88 @@ func testResourceJob_scaleTaskGroup(t *testing.T, jobID, groupName string, count
 	}
 }
 
+// testResourceJob_updateTaskResources re-registers the job out-of-band with new
+// task resources, simulating a change made by an external actor such as the
+// Nomad autoscaler.
+func testResourceJob_updateTaskResources(t *testing.T, jobID, groupName, taskName string, cpu, memory int) func() {
+	return func() {
+		t.Helper()
+
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		job, _, err := client.Jobs().Info(jobID, nil)
+		must.NoError(t, err)
+		must.NotNil(t, job)
+
+		var task *api.Task
+		for _, tg := range job.TaskGroups {
+			if tg == nil || tg.Name == nil || *tg.Name != groupName {
+				continue
+			}
+			for _, tk := range tg.Tasks {
+				if tk.Name == taskName {
+					task = tk
+					break
+				}
+			}
+		}
+		must.NotNil(t, task, must.Sprintf("task %q not found in group %q", taskName, groupName))
+
+		if task.Resources == nil {
+			task.Resources = &api.Resources{}
+		}
+		task.Resources.CPU = pointer.Of(cpu)
+		task.Resources.MemoryMB = pointer.Of(memory)
+
+		namespace := "default"
+		if job.Namespace != nil && *job.Namespace != "" {
+			namespace = *job.Namespace
+		}
+
+		resp, _, err := client.Jobs().Register(job, &api.WriteOptions{Namespace: namespace})
+		must.NoError(t, err)
+		must.NotNil(t, resp)
+
+		if resp.EvalID != "" {
+			_, err = monitorDeployment(context.Background(), client, 2*time.Minute, namespace, resp.EvalID)
+			must.NoError(t, err)
+		}
+	}
+}
+
+// testResourceJob_checkTaskResources queries Nomad directly and asserts the
+// running task has the expected cpu and memory resources.
+func testResourceJob_checkTaskResources(t *testing.T, jobID, groupName, taskName string, expectedCPU, expectedMemory int) r.TestCheckFunc {
+	return func(*terraform.State) error {
+		providerConfig := testProvider.Meta().(ProviderConfig)
+		client := providerConfig.client
+
+		job, _, err := client.Jobs().Info(jobID, nil)
+		must.NoError(t, err, must.Sprint("error reading back job"))
+
+		for _, tg := range job.TaskGroups {
+			if tg == nil || tg.Name == nil || *tg.Name != groupName {
+				continue
+			}
+			for _, tk := range tg.Tasks {
+				if tk.Name != taskName {
+					continue
+				}
+				must.NotNil(t, tk.Resources, must.Sprintf("task %q has nil resources", taskName))
+				must.NotNil(t, tk.Resources.CPU, must.Sprintf("task %q has nil cpu", taskName))
+				must.Eq(t, expectedCPU, *tk.Resources.CPU, must.Sprintf("task %q cpu mismatch", taskName))
+				must.NotNil(t, tk.Resources.MemoryMB, must.Sprintf("task %q has nil memory", taskName))
+				must.Eq(t, expectedMemory, *tk.Resources.MemoryMB, must.Sprintf("task %q memory mismatch", taskName))
+				return nil
+			}
+		}
+
+		t.Fatalf("task %q not found in group %q", taskName, groupName)
+		return nil
+	}
+}
+
 func testResourceJob_checkDestroy(jobID string) r.TestCheckFunc {
 	return testResourceJob_checkDestroyNS(jobID, "default")
 }
@@ -2573,6 +2693,42 @@ EOT
 	preserve_counts = %t
 }
 `, jobID, priority, groupName, preserveCounts)
+}
+
+func testResourceJob_preserveResourcesConfig(jobID string, preserveResources bool, priority int) string {
+	const groupName = "foo"
+
+	return fmt.Sprintf(`
+resource "nomad_job" "test" {
+	jobspec = <<EOT
+job %q {
+	datacenters = ["dc1"]
+	type        = "service"
+	priority    = %d
+
+	group %q {
+		count = 1
+
+		task "server" {
+			driver = "raw_exec"
+
+			config {
+				command = "/bin/sleep"
+				args    = ["60"]
+			}
+
+			resources {
+				cpu    = 100
+				memory = 32
+			}
+		}
+	}
+}
+EOT
+	detach = false
+	preserve_resources = %t
+}
+`, jobID, priority, groupName, preserveResources)
 }
 
 func testResourceJob_policyOverrideConfig() string {
