@@ -6,6 +6,7 @@ IMPROVEMENTS:
 * resource/nomad_csi_volume: migrate to Plugin Framework and add write-only attributes `secrets_wo` and `secrets_wo_version` to avoid storing secrets in state. ([#628](https://github.com/hashicorp/terraform-provider-nomad/pull/628))
 * resource/nomad_csi_volume_registration: migrate to Plugin Framework and add write-only attributes `secrets_wo` and `secrets_wo_version` to avoid storing secrets in state. ([#628](https://github.com/hashicorp/terraform-provider-nomad/pull/628))
 * resource/nomad_sentinel_policy: add `submit-host-volume` and `submit-csi-volume` scope support. ([#624](https://github.com/hashicorp/terraform-provider-nomad/pull/624))
+* resource/nomad_job: add `preserve_resources` argument to preserve task resources during job updates. ([#632](https://github.com/hashicorp/terraform-provider-nomad/pull/632))
 
 BUG FIXES:
 * data source/nomad_variable: Fix panic when reading a variable due to `items_wo_version` not being in the data source schema. ([#625](https://github.com/hashicorp/terraform-provider-nomad/pull/625))

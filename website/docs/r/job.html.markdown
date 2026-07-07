@@ -261,6 +261,10 @@ The following arguments are supported:
   group counts already stored in Nomad during job registration instead of
   applying the counts from the submitted jobspec.
 
+- `preserve_resources` `(boolean: false)` - If true, preserves the current task
+  resources already stored in Nomad during job registration instead of
+  applying the resources from the submitted jobspec.
+
 - `json` `(boolean: false)` - Set this to `true` if your jobspec is structured with
   JSON instead of the default HCL.
 

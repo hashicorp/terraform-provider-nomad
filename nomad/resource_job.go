@@ -63,6 +63,13 @@ func resourceJob() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 
+			"preserve_resources": {
+				Description: "If true, preserve the current task resources during job registration instead of using the resources from the jobspec.",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+
 			"deregister_on_destroy": {
 				Description: "If true, the job will be deregistered on destroy.",
 				Optional:    true,
@@ -550,10 +557,11 @@ func resourceJobRegister(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	resp, _, err := client.Jobs().RegisterOpts(job, &api.RegisterOptions{
-		PolicyOverride: d.Get("policy_override").(bool),
-		PreserveCounts: d.Get("preserve_counts").(bool),
-		ModifyIndex:    wantModifyIndex,
-		Submission:     sub,
+		PolicyOverride:    d.Get("policy_override").(bool),
+		PreserveCounts:    d.Get("preserve_counts").(bool),
+		PreserveResources: d.Get("preserve_resources").(bool),
+		ModifyIndex:       wantModifyIndex,
+		Submission:        sub,
 	}, &api.WriteOptions{
 		Namespace: *job.Namespace,
 	})
