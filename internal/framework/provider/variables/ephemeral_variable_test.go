@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2017, 2026
+// Copyright IBM Corp. 2024, 2026
 
 package variables_test
 
