@@ -183,7 +183,6 @@ func Provider() *schema.Provider {
 			"nomad_dynamic_host_volume":              resourceDynamicHostVolume(),
 			"nomad_dynamic_host_volume_registration": resourceDynamicHostVolumeRegistration(),
 			"nomad_external_volume":                  resourceExternalVolume(),
-			"nomad_job":                              resourceJob(),
 			"nomad_namespace":                        resourceNamespace(),
 			"nomad_node_pool":                        resourceNodePool(),
 			"nomad_quota_specification":              resourceQuotaSpecification(),
