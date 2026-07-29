@@ -114,7 +114,7 @@ func updateTaskResourcesExternally(t *testing.T, jobID, groupName, taskName stri
 	}
 }
 
-// waitForEval waits until an evaluation is complete and returns it.
+// waitForEval waits until an evaluation is complete.
 func waitForEval(ctx context.Context, client *api.Client, namespace, evalID string) (*api.Evaluation, error) {
 	for {
 		select {
@@ -212,7 +212,7 @@ func checkNomadJobDestroyed(t *testing.T, jobID string) r.TestCheckFunc {
 	}
 }
 
-// checkNomadJobDestroyedNS checks that a job in a given namespace is stopped or absent.
+// checkNomadJobDestroyedNS checks that a namespaced job is stopped or absent.
 func checkNomadJobDestroyedNS(t *testing.T, jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		t.Helper()
@@ -244,7 +244,7 @@ func checkNomadJobExistsNS(t *testing.T, jobID, ns string) r.TestCheckFunc {
 	}
 }
 
-// forceDestroyWithPurge purges a job; used in CheckDestroy after deregister_on_destroy = false tests.
+// forceDestroyWithPurge purges a job; used in CheckDestroy after deregister_on_destroy=false tests.
 func forceDestroyWithPurge(t *testing.T, jobID, namespace string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		t.Helper()
@@ -263,7 +263,7 @@ func isNotFound(err error) bool {
 
 func pointerOf[T any](v T) *T { return &v }
 
-// Tests: drift detection & preserve-* (new framework resource)
+// Tests: drift detection & preserve-*
 
 func TestJobResource_ExternalStop(t *testing.T) {
 	jobID := "framework-job-external-stop"
@@ -272,7 +272,7 @@ func TestJobResource_ExternalStop(t *testing.T) {
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
-				Config: testJobConfig(jobID, false, 50),
+				Config: testJobConfig(jobID, 50),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("nomad_job.test", "status", "running"),
 					resource.TestCheckResourceAttr("nomad_job.test", "stop", "false"),
@@ -280,11 +280,11 @@ func TestJobResource_ExternalStop(t *testing.T) {
 			},
 			{
 				PreConfig:          stopJobExternally(t, jobID),
-				Config:             testJobConfig(jobID, false, 50),
+				Config:             testJobConfig(jobID, 50),
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				Config: testJobConfig(jobID, false, 50),
+				Config: testJobConfig(jobID, 50),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("nomad_job.test", "stop", "false"),
 					resource.TestCheckResourceAttr("nomad_job.test", "status", "running"),
@@ -426,7 +426,7 @@ func TestJobResource_FormattingOnlyChange(t *testing.T) {
 	})
 }
 
-// ── Tests migrated from nomad/resource_job_test.go ────────────────────────────
+// Migrated from nomad/resource_job_test.go
 
 func TestJobResource_Basic(t *testing.T) {
 	r.Test(t, r.TestCase{
@@ -446,9 +446,10 @@ func TestJobResource_Service(t *testing.T) {
 	})
 }
 
+// TestJobResource_Namespace uses the muxed provider so nomad_namespace is available.
 func TestJobResource_Namespace(t *testing.T) {
 	r.Test(t, r.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		ProtoV6ProviderFactories: testutil.TestAccMuxedProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps:                    []r.TestStep{{Config: testJobInitialConfigNamespace, Check: checkJobInitialNS(t, "jobresource-test-namespace")}},
 		CheckDestroy:             checkNomadJobDestroyedNS(t, "foo", "jobresource-test-namespace"),
@@ -651,6 +652,8 @@ func TestJobResource_PeriodicConfig(t *testing.T) {
 	})
 }
 
+// TestJobResource_Multiregion uses the muxed provider (Enterprise feature check
+// calls nomad_sentinel_policy indirectly via the SDKv2 provider).
 func TestJobResource_Multiregion(t *testing.T) {
 	r.Test(t, r.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
@@ -685,7 +688,7 @@ func TestJobResource_UI(t *testing.T) {
 			testutil.CheckMinVersion(t, "1.8.0-rc.1")
 		},
 		Steps:        []r.TestStep{{Config: testJobUIBlock, Check: checkJobUI(t)}},
-		CheckDestroy: checkNomadJobDestroyed(t, "foo-schedule"),
+		CheckDestroy: checkNomadJobDestroyed(t, "foo-ui"),
 	})
 }
 
@@ -715,6 +718,7 @@ func TestJobResource_CPUCores(t *testing.T) {
 func TestJobResource_JSON(t *testing.T) {
 	re := regexp.MustCompile("error parsing jobspec")
 
+	// Invalid JSON inputs must be rejected at plan time.
 	r.Test(t, r.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -727,14 +731,14 @@ func TestJobResource_JSON(t *testing.T) {
 	r.Test(t, r.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		Steps:                    []r.TestStep{{Config: testJobJSONConfigWithRoot, Check: checkJobInitial(t)}},
+		Steps:                    []r.TestStep{{Config: testJobJSONConfigWithRoot, Check: checkJobInitialJSON(t)}},
 		CheckDestroy:             checkNomadJobDestroyed(t, "foo-json"),
 	})
 
 	r.Test(t, r.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		Steps:                    []r.TestStep{{Config: testJobJSONConfig, Check: checkJobInitial(t)}},
+		Steps:                    []r.TestStep{{Config: testJobJSONConfig, Check: checkJobInitialJSON(t)}},
 		CheckDestroy:             checkNomadJobDestroyed(t, "foo-json"),
 	})
 }
@@ -795,9 +799,10 @@ func TestJobResource_Rename(t *testing.T) {
 	})
 }
 
+// TestJobResource_ChangeNamespace uses the muxed provider so nomad_namespace is available.
 func TestJobResource_ChangeNamespace(t *testing.T) {
 	r.Test(t, r.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		ProtoV6ProviderFactories: testutil.TestAccMuxedProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{Config: testJobInitialConfigNamespace, Check: checkJobInitialNS(t, "jobresource-test-namespace")},
@@ -816,9 +821,10 @@ func TestJobResource_ChangeNamespace(t *testing.T) {
 	})
 }
 
+// TestJobResource_PolicyOverride uses the muxed provider so nomad_sentinel_policy is available.
 func TestJobResource_PolicyOverride(t *testing.T) {
 	r.Test(t, r.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
+		ProtoV6ProviderFactories: testutil.TestAccMuxedProviderFactories(t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.CheckEnt(t)
@@ -979,6 +985,26 @@ func checkJobInitialNS(t *testing.T, expectedNamespace string) r.TestCheckFunc {
 	}
 }
 
+// checkJobInitialJSON is a lighter check for JSON-jobspec tests (no namespace attr present).
+func checkJobInitialJSON(t *testing.T) r.TestCheckFunc {
+	return func(s *terraform.State) error {
+		t.Helper()
+		rs := s.Modules[0].Resources["nomad_job.test"]
+		if rs == nil {
+			return errors.New("resource nomad_job.test not found in state")
+		}
+		if rs.Primary == nil {
+			return errors.New("resource has no primary instance")
+		}
+		client := nomadClient(t)
+		_, _, err := client.Jobs().Info(rs.Primary.ID, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back job: %s", err)
+		}
+		return nil
+	}
+}
+
 func checkJobV086(t *testing.T) r.TestCheckFunc {
 	return func(s *terraform.State) error {
 		t.Helper()
@@ -1001,19 +1027,16 @@ func checkJobV086(t *testing.T) r.TestCheckFunc {
 		if !reflect.DeepEqual(tg.Update, &expUpdate) {
 			return fmt.Errorf("job update strategy not as expected: %+v", tg.Update)
 		}
-
 		expMigrate := api.MigrateStrategy{}
 		json.Unmarshal([]byte(`{"MaxParallel":2,"HealthCheck":"checks","MinHealthyTime":12000000000,"HealthyDeadline":360000000000}`), &expMigrate)
 		if !reflect.DeepEqual(tg.Migrate, &expMigrate) {
 			return fmt.Errorf("job migrate strategy not as expected: %+v", tg.Migrate)
 		}
-
 		expReschedule := api.ReschedulePolicy{}
 		json.Unmarshal([]byte(`{"Attempts":0,"Interval":7200000000000,"Delay":12000000000,"DelayFunction":"exponential","MaxDelay":100000000000,"Unlimited":true}`), &expReschedule)
 		if !reflect.DeepEqual(tg.ReschedulePolicy, &expReschedule) {
 			return fmt.Errorf("job reschedule policy not as expected: %+v", tg.ReschedulePolicy)
 		}
-
 		if len(tg.Tasks) != 1 {
 			return fmt.Errorf("expected a single task")
 		}
@@ -1121,9 +1144,6 @@ func checkJobScalingPolicy(t *testing.T) r.TestCheckFunc {
 		if tg == nil || tg.Scaling == nil {
 			return fmt.Errorf("task group foo with scaling not found")
 		}
-		tg.Scaling.ID = ""
-		tg.Scaling.ModifyIndex = 0
-		tg.Scaling.CreateIndex = 0
 		if tg.Scaling.Type != "horizontal" {
 			return fmt.Errorf("scaling type = %q, want horizontal", tg.Scaling.Type)
 		}
@@ -1167,17 +1187,12 @@ func checkJobScalingPolicyDAS(t *testing.T) r.TestCheckFunc {
 		if task == nil {
 			return fmt.Errorf("task foo not found")
 		}
-		var policy *api.ScalingPolicy
 		for _, p := range task.ScalingPolicies {
 			if p.Type == "vertical_cpu" {
-				policy = p
-				break
+				return nil
 			}
 		}
-		if policy == nil {
-			return fmt.Errorf("vertical_cpu scaling policy not found")
-		}
-		return nil
+		return fmt.Errorf("vertical_cpu scaling policy not found")
 	}
 }
 
@@ -1287,11 +1302,8 @@ func checkJobCSIController(t *testing.T) r.TestCheckFunc {
 				break
 			}
 		}
-		if tg == nil {
-			return fmt.Errorf("task group foo-controller not found")
-		}
-		if tg.Tasks[0].CSIPluginConfig == nil {
-			return fmt.Errorf("CSIPluginConfig was nil")
+		if tg == nil || tg.Tasks[0].CSIPluginConfig == nil {
+			return fmt.Errorf("task group foo-controller or CSIPluginConfig not found")
 		}
 		exp := api.TaskCSIPluginConfig{
 			ID:                  "aws-ebs0",
@@ -1480,8 +1492,8 @@ func deregisterJobExternally(t *testing.T, jobID string) func() {
 	}
 }
 
-// mutateJobConstraintExternally re-registers the job with a mutated constraint value,
-// simulating an out-of-band change with no submission record.
+// mutateJobConstraintExternally re-registers the job with a mutated constraint
+// value, simulating an out-of-band change with no submission record.
 func mutateJobConstraintExternally(t *testing.T, jobID string) func() {
 	return func() {
 		t.Helper()
@@ -1513,7 +1525,8 @@ func mutateJobConstraintExternally(t *testing.T, jobID string) func() {
 
 // Terraform config generators
 
-func testJobConfig(jobID string, _ bool, priority int) string {
+// testJobConfig renders a minimal service job; used by ExternalStop tests.
+func testJobConfig(jobID string, priority int) string {
 	return fmt.Sprintf(`
 resource "nomad_job" "test" {
   jobspec = <<EOT
@@ -1521,12 +1534,22 @@ job %q {
   datacenters = ["dc1"]
   type        = "service"
   priority    = %d
+
   group "foo" {
     count = 1
+
     task "server" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["300"] }
-      resources { cpu = 100 memory = 32 }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["300"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
     }
   }
 }
@@ -1544,12 +1567,22 @@ job %q {
   datacenters = ["dc1"]
   type        = "service"
   priority    = %d
+
   group "foo" {
     count = 1
+
     task "server" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["60"] }
-      resources { cpu = 100 memory = 32 }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["60"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
     }
   }
 }
@@ -1568,12 +1601,22 @@ job %q {
   datacenters = ["dc1"]
   type        = "service"
   priority    = %d
+
   group "foo" {
     count = 1
+
     task "server" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["60"] }
-      resources { cpu = 100 memory = 32 }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["60"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
     }
   }
 }
@@ -1585,7 +1628,31 @@ EOT
 }
 
 func testJobConfigCompact(jobID string) string {
-	return fmt.Sprintf("resource \"nomad_job\" \"test\" { jobspec = <<EOT\njob %q { datacenters = [\"dc1\"] type = \"batch\" group \"foo\" { task \"foo\" { driver = \"raw_exec\" config { command = \"/bin/true\" } resources { cpu = 100 memory = 32 } } } }\nEOT\n}", jobID)
+	return fmt.Sprintf(`
+resource "nomad_job" "test" {
+  jobspec = <<EOT
+job %q {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/true"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
+    }
+  }
+}
+EOT
+}
+`, jobID)
 }
 
 func testJobConfigSpacious(jobID string) string {
@@ -1597,11 +1664,20 @@ job %q {
   datacenters = ["dc1"]
   type        = "batch"
 
+
   group "foo" {
+
     task "foo" {
       driver = "raw_exec"
-      config { command = "/bin/true" }
-      resources { cpu = 100 memory = 32 }
+
+      config {
+        command = "/bin/true"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
     }
   }
 }
@@ -1618,7 +1694,11 @@ job %q {
   group "foo" {
     task "foo" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["300"] }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["300"]
+      }
     }
   }
 }
@@ -1636,15 +1716,24 @@ resource "nomad_job" "test" {
 job %q {
   datacenters = ["dc1"]
   type        = "batch"
+
   constraint {
     attribute = "$${attr.kernel.name}"
     value     = "linux"
   }
+
   group "foo" {
     task "foo" {
       driver = "raw_exec"
-      config { command = "/bin/true" }
-      resources { cpu = 100 memory = 32 }
+
+      config {
+        command = "/bin/true"
+      }
+
+      resources {
+        cpu    = 100
+        memory = 32
+      }
     }
   }
 }
@@ -1663,18 +1752,36 @@ resource "nomad_sentinel_policy" "policy" {
   enforcement_level = "soft-mandatory"
   description       = "Fail all jobs for testing policy overrides in terraform acctests"
 }
+
 resource "nomad_job" "test" {
   depends_on      = [nomad_sentinel_policy.policy]
   policy_override = true
+
   jobspec = <<EOT
 job "foo" {
   datacenters = ["dc1"]
-  type = "service"
+  type        = "service"
+
   group "foo" {
     task "foo" {
+      leader = true
+
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["1"] }
-      resources { cpu = 100 memory = 10 }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
+      }
     }
   }
 }
@@ -1683,25 +1790,39 @@ EOT
 `, acctest.RandomWithPrefix("tf-nomad-test"))
 }
 
-// Static config vars
+// ── Static config vars ────────────────────────────────────────────────────────
 
 var testJobInitialConfig = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foo" {
-      datacenters = ["dc1"]
-      type = "service"
-      group "foo" {
-        task "foo" {
-          leader = true
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["10"] }
-          resources { cpu = 100 memory = 10 }
-          logs { max_files = 3 max_file_size = 10 }
-        }
+job "foo" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "foo" {
+    task "foo" {
+      leader = true
+
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
@@ -1709,62 +1830,101 @@ var testJobInitialConfigNamespace = `
 resource "nomad_namespace" "test-namespace" {
   name = "jobresource-test-namespace"
 }
+
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foo" {
-      datacenters = ["dc1"]
-      type      = "batch"
-      namespace = "${nomad_namespace.test-namespace.name}"
-      group "foo" {
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["10"] }
-          resources { cpu = 100 memory = 10 }
-          logs { max_files = 3 max_file_size = 10 }
-        }
+job "foo" {
+  datacenters = ["dc1"]
+  type        = "batch"
+  namespace   = "${nomad_namespace.test-namespace.name}"
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobInitialConfigService = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foo-service" {
-      datacenters = ["dc1"]
-      type = "service"
-      group "foo" {
-        service {
-          name         = "foo-service"
-          port         = "8080"
-          address_mode = "host"
-          tags         = ["foor", "test", "tf"]
-          canary_tags  = ["canary"]
-          enable_tag_override = false
-          meta        { key = "value" }
-          canary_meta { canary = "true" }
-          check {
-            type     = "http"
-            interval = "10s"
-            timeout  = "2s"
-            method   = "GET"
-            path     = "/health"
-            protocol = "https"
-            tls_skip_verify = true
-            header { Authorization = ["Basic ZWxhc3RpYzpjaGFuZ2VtZQ=="] }
-          }
-        }
-        task "foo" {
-          leader = true
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["10"] }
-          resources { cpu = 100 memory = 10 }
-          logs { max_files = 3 max_file_size = 10 }
+job "foo-service" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "foo" {
+    service {
+      name         = "foo-service"
+      port         = "8080"
+      address_mode = "host"
+      tags         = ["foor", "test", "tf"]
+      canary_tags  = ["canary"]
+      enable_tag_override = false
+
+      meta {
+        key = "value"
+      }
+
+      canary_meta {
+        canary = "true"
+      }
+
+      check {
+        type     = "http"
+        interval = "10s"
+        timeout  = "2s"
+        method   = "GET"
+        path     = "/health"
+        protocol = "https"
+        tls_skip_verify = true
+
+        header {
+          Authorization = ["Basic ZWxhc3RpYzpjaGFuZ2VtZQ=="]
         }
       }
     }
-  EOT
+
+    task "foo" {
+      leader = true
+
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
+      }
+    }
+  }
+}
+EOT
 }
 `
 
@@ -1772,81 +1932,122 @@ var testJobChangeNamespaceConfig = `
 resource "nomad_namespace" "test-namespace" {
   name = "jobresource-test-namespace"
 }
+
 resource "nomad_namespace" "new-namespace" {
   name = "jobresource-updated-namespace"
 }
+
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foo" {
-      datacenters = ["dc1"]
-      type      = "batch"
-      namespace = "${nomad_namespace.new-namespace.name}"
-      group "foo" {
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["10"] }
-          resources { cpu = 100 memory = 10 }
-        }
+job "foo" {
+  datacenters = ["dc1"]
+  type        = "batch"
+  namespace   = "${nomad_namespace.new-namespace.name}"
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobRenameConfig = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "bar" {
-      datacenters = ["dc1"]
-      type = "service"
-      group "foo" {
-        task "foo" {
-          leader = true
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["1"] }
-          resources { cpu = 100 memory = 10 }
-        }
+job "bar" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "foo" {
+    task "foo" {
+      leader = true
+
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobNoDestroy = `
 resource "nomad_job" "test" {
   deregister_on_destroy = false
+
   jobspec = <<EOT
-    job "foo-nodestroy" {
-      datacenters = ["dc1"]
-      type = "service"
-      group "foo" {
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["30"] }
-          resources { cpu = 100 memory = 10 }
-        }
+job "foo-nodestroy" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["30"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobPurgeOnDestroy = `
 resource "nomad_job" "test" {
   purge_on_destroy = true
+
   jobspec = <<EOT
-    job "purge-test" {
-      datacenters = ["dc1"]
-      type = "service"
-      group "foo" {
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["30"] }
-          resources { cpu = 100 memory = 10 }
-        }
+job "purge-test" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["30"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
@@ -1866,14 +2067,30 @@ EOT
 }
 `
 
+// JSON configs use detach=false so deployment_id/deployment_status are fully resolved.
 var testJobJSONConfigWithRoot = `
 resource "nomad_job" "test" {
-  json = true
+  json   = true
+  detach = false
+
   jobspec = <<EOT
 {
   "Job": {
-    "Datacenters": ["dc1"], "ID": "foo-json", "Name": "foo-json", "Type": "service",
-    "TaskGroups": [{"Name":"foo","Tasks":[{"Config":{"command":"/bin/sleep","args":["1"]},"Driver":"raw_exec","Leader":true,"LogConfig":{"MaxFileSizeMB":10,"MaxFiles":3},"Name":"foo","Resources":{"CPU":100,"MemoryMB":10}}]}]
+    "Datacenters": ["dc1"],
+    "ID":   "foo-json",
+    "Name": "foo-json",
+    "Type": "service",
+    "TaskGroups": [{
+      "Name": "foo",
+      "Tasks": [{
+        "Name":      "foo",
+        "Driver":    "raw_exec",
+        "Leader":    true,
+        "Config":    {"command": "/bin/sleep", "args": ["1"]},
+        "LogConfig": {"MaxFileSizeMB": 10, "MaxFiles": 3},
+        "Resources": {"CPU": 100, "MemoryMB": 10}
+      }]
+    }]
   }
 }
 EOT
@@ -1882,11 +2099,26 @@ EOT
 
 var testJobJSONConfig = `
 resource "nomad_job" "test" {
-  json = true
+  json   = true
+  detach = false
+
   jobspec = <<EOT
 {
-  "Datacenters": ["dc1"], "ID": "foo-json", "Name": "foo-json", "Type": "service",
-  "TaskGroups": [{"Name":"foo","Tasks":[{"Config":{"command":"/bin/sleep","args":["1"]},"Driver":"raw_exec","Leader":true,"LogConfig":{"MaxFileSizeMB":10,"MaxFiles":3},"Name":"foo","Resources":{"CPU":100,"MemoryMB":10}}]}]
+  "Datacenters": ["dc1"],
+  "ID":   "foo-json",
+  "Name": "foo-json",
+  "Type": "service",
+  "TaskGroups": [{
+    "Name": "foo",
+    "Tasks": [{
+      "Name":      "foo",
+      "Driver":    "raw_exec",
+      "Leader":    true,
+      "Config":    {"command": "/bin/sleep", "args": ["1"]},
+      "LogConfig": {"MaxFileSizeMB": 10, "MaxFiles": 3},
+      "Resources": {"CPU": 100, "MemoryMB": 10}
+    }]
+  }]
 }
 EOT
 }
@@ -1895,120 +2127,291 @@ EOT
 var testJobV086Config = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foov086" {
-      datacenters = ["dc1"]
-      type = "service"
-      migrate { max_parallel = 2 health_check = "checks" min_healthy_time = "11s" healthy_deadline = "6m" }
-      update  { max_parallel = 2 min_healthy_time = "11s" healthy_deadline = "6m" progress_deadline = "11m" auto_revert = true canary = 1 }
-      reschedule { attempts = 11 interval = "2h" delay = "11s" delay_function = "exponential" max_delay = "100s" unlimited = false }
-      group "foo" {
-        migrate    { min_healthy_time = "12s" }
-        update     { min_healthy_time = "12s" progress_deadline = "12m" }
-        reschedule { attempts = 0 delay = "12s" unlimited = true }
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["1"] }
-          resources { cpu = 100 memory = 10 }
-          service   { canary_tags = ["canary-tag-a"] }
-          logs      { max_files = 3 max_file_size = 10 }
-        }
+job "foov086" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  migrate {
+    max_parallel     = 2
+    health_check     = "checks"
+    min_healthy_time = "11s"
+    healthy_deadline = "6m"
+  }
+
+  update {
+    max_parallel      = 2
+    min_healthy_time  = "11s"
+    healthy_deadline  = "6m"
+    progress_deadline = "11m"
+    auto_revert       = true
+    canary            = 1
+  }
+
+  reschedule {
+    attempts       = 11
+    interval       = "2h"
+    delay          = "11s"
+    delay_function = "exponential"
+    max_delay      = "100s"
+    unlimited      = false
+  }
+
+  group "foo" {
+    migrate {
+      min_healthy_time = "12s"
+    }
+
+    update {
+      min_healthy_time  = "12s"
+      progress_deadline = "12m"
+    }
+
+    reschedule {
+      attempts  = 0
+      delay     = "12s"
+      unlimited = true
+    }
+
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      service {
+        canary_tags = ["canary-tag-a"]
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobV090Config = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-    job "foov090" {
-      datacenters = ["dc1"]
-      type = "service"
-      update { max_parallel = 2 min_healthy_time = "11s" healthy_deadline = "6m" progress_deadline = "11m" auto_revert = true auto_promote = true canary = 1 }
-      affinity { attribute = "$${node.datacenter}" value = "dc1" weight = 50 }
-      affinity { attribute = "$${meta.tag}"        value = "foo" weight = 50 }
-      spread   { attribute = "$${node.datacenter}" target "dc1" { percent = 35 } target "dc2" { percent = 65 } weight = 80 }
-      group "foo" {
-        update     { min_healthy_time = "12s" progress_deadline = "12m" }
-        reschedule { attempts = 0 delay = "12s" unlimited = true }
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["1"] }
-          resources { cpu = 100 memory = 10 }
-          service   { canary_tags = ["canary-tag-a"] }
-          logs      { max_files = 3 max_file_size = 10 }
-        }
+job "foov090" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+  update {
+    max_parallel      = 2
+    min_healthy_time  = "11s"
+    healthy_deadline  = "6m"
+    progress_deadline = "11m"
+    auto_revert       = true
+    auto_promote      = true
+    canary            = 1
+  }
+
+  affinity {
+    attribute = "$${node.datacenter}"
+    value     = "dc1"
+    weight    = 50
+  }
+
+  affinity {
+    attribute = "$${meta.tag}"
+    value     = "foo"
+    weight    = 50
+  }
+
+  spread {
+    attribute = "$${node.datacenter}"
+    weight    = 80
+
+    target "dc1" {
+      percent = 35
+    }
+
+    target "dc2" {
+      percent = 65
+    }
+  }
+
+  group "foo" {
+    update {
+      min_healthy_time  = "12s"
+      progress_deadline = "12m"
+    }
+
+    reschedule {
+      attempts  = 0
+      delay     = "12s"
+      unlimited = true
+    }
+
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      service {
+        canary_tags = ["canary-tag-a"]
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
 var testJobVolumesConfig = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-  job "foo-volumes" {
-    datacenters = ["dc1"]
-    group "foo" {
-      volume "data" { type = "host" read_only = true source = "data" }
-      task "foo" {
-        driver = "raw_exec"
-        config { command = "/bin/sleep" args = ["10"] }
-        volume_mount { volume = "data" destination = "/var/lib/data" read_only = true propagation_mode = "private" }
+job "foo-volumes" {
+  datacenters = ["dc1"]
+
+  group "foo" {
+    volume "data" {
+      type      = "host"
+      read_only = true
+      source    = "data"
+    }
+
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      volume_mount {
+        volume           = "data"
+        destination      = "/var/lib/data"
+        read_only        = true
+        propagation_mode = "private"
       }
     }
   }
-  EOT
+}
+EOT
 }
 `
 
 var testJobScalingPolicyConfig = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-  job "foo-scaling" {
-    datacenters = ["dc1"]
-    group "foo" {
-      scaling { min = 10 max = 20 enabled = false policy { opaque = true } }
-      task "foo" { driver = "raw_exec" config { command = "/bin/sleep" args = ["10"] } }
+job "foo-scaling" {
+  datacenters = ["dc1"]
+
+  group "foo" {
+    scaling {
+      min     = 10
+      max     = 20
+      enabled = false
+
+      policy {
+        opaque = true
+      }
+    }
+
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
     }
   }
-  EOT
+}
+EOT
 }
 `
 
 var testJobScalingPolicyDASConfig = `
 resource "nomad_job" "test_das" {
   jobspec = <<EOT
-  job "foo-scaling-das" {
-    datacenters = ["dc1"]
-    group "foo" {
-      task "foo" {
-        driver = "raw_exec"
-        config { command = "/bin/sleep" args = ["10"] }
-        scaling "cpu" { min = 10 max = 20 enabled = false policy { opaque = true } }
+job "foo-scaling-das" {
+  datacenters = ["dc1"]
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      scaling "cpu" {
+        min     = 10
+        max     = 20
+        enabled = false
+
+        policy {
+          opaque = true
+        }
       }
     }
   }
-  EOT
+}
+EOT
 }
 `
 
 var testJobLifecycleConfig = `
 resource "nomad_job" "test" {
   jobspec = <<EOT
-  job "foo-lifecycle" {
-    datacenters = ["dc1"]
-    group "foo" {
-      restart { attempts = 5 interval = "10m" delay = "15s" mode = "delay" }
-      task "sidecar" {
-        driver = "raw_exec"
-        config { command = "/bin/sleep" args = ["10"] }
-        restart   { attempts = 10 }
-        lifecycle { hook = "prestart" sidecar = true }
+job "foo-lifecycle" {
+  datacenters = ["dc1"]
+
+  group "foo" {
+    restart {
+      attempts = 5
+      interval = "10m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
+    task "sidecar" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      restart {
+        attempts = 10
+      }
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = true
       }
     }
   }
-  EOT
+}
+EOT
 }
 `
 
@@ -2019,8 +2422,16 @@ job "actions" {
   group "foo" {
     task "sidecar" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["10"] }
-      action "echo" { command = "/bin/echo" args = ["hi"] }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      action "echo" {
+        command = "/bin/echo"
+        args    = ["hi"]
+      }
     }
   }
 }
@@ -2031,47 +2442,108 @@ EOT
 var testJobServiceDeploymentInfo = `
 resource "nomad_job" "service" {
   detach = false
+
   jobspec = <<EOT
 job "foo-service-with-deployment" {
-  type = "service" datacenters = ["dc1"]
+  type        = "service"
+  datacenters = ["dc1"]
+
   group "service" {
-    update { min_healthy_time = "1s" healthy_deadline = "2s" progress_deadline = "3s" }
-    task "sleep" { driver = "raw_exec" config { command = "sleep" args = ["3600"] } }
+    update {
+      min_healthy_time  = "1s"
+      healthy_deadline  = "2s"
+      progress_deadline = "3s"
+    }
+
+    task "sleep" {
+      driver = "raw_exec"
+
+      config {
+        command = "sleep"
+        args    = ["3600"]
+      }
+    }
   }
 }
 EOT
-}`
+}
+`
 
 var testJobBatchNoDetach = `
 resource "nomad_job" "batch_no_detach" {
   detach = false
+
   jobspec = <<EOT
 job "foo-batch" {
-  type = "batch" datacenters = ["dc1"]
-  group "service" { task "env" { driver = "raw_exec" config { command = "env" } } }
+  type        = "batch"
+  datacenters = ["dc1"]
+
+  group "service" {
+    task "env" {
+      driver = "raw_exec"
+
+      config {
+        command = "env"
+      }
+    }
+  }
 }
 EOT
-}`
+}
+`
 
 var testJobServiceNoDeployment = `
 resource "nomad_job" "service" {
   detach = false
+
   jobspec = <<EOT
 job "foo-service-without-deployment" {
-  type = "service" datacenters = ["dc1"]
-  update { max_parallel = 0 }
-  group "service" { task "sleep" { driver = "raw_exec" config { command = "sleep" args = ["3600"] } } }
+  type        = "service"
+  datacenters = ["dc1"]
+
+  update {
+    max_parallel = 0
+  }
+
+  group "service" {
+    task "sleep" {
+      driver = "raw_exec"
+
+      config {
+        command = "sleep"
+        args    = ["3600"]
+      }
+    }
+  }
 }
 EOT
-}`
+}
+`
 
 var testJobPeriodicConfig = `
 resource "nomad_job" "periodic" {
   jobspec = <<EOT
 job "foo-periodic" {
-  type = "batch" datacenters = ["dc1"]
-  periodic { enabled = true cron = "*/1 * * * * *" prohibit_overlap = true time_zone = "UTC" }
-  group "periodic" { task "sleep" { driver = "raw_exec" config { command = "/bin/sleep" args = ["1"] } } }
+  type        = "batch"
+  datacenters = ["dc1"]
+
+  periodic {
+    enabled          = true
+    cron             = "*/1 * * * * *"
+    prohibit_overlap = true
+    time_zone        = "UTC"
+  }
+
+  group "periodic" {
+    task "sleep" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+    }
+  }
 }
 EOT
 }
@@ -2081,10 +2553,29 @@ var testJobMultiregion = `
 resource "nomad_job" "multiregion" {
   jobspec = <<EOT
 job "foo-multiregion" {
-  multiregion { region "global" { datacenters = ["dc1"] count = 2 } }
-  group "foo" { task "foo" { driver = "docker" config { image = "nginx:alpine" } resources { cpu = 500 memory = 256 } } }
+  multiregion {
+    region "global" {
+      datacenters = ["dc1"]
+      count       = 2
+    }
+  }
+
+  group "foo" {
+    task "foo" {
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
 }
-  EOT
+EOT
 }
 `
 
@@ -2094,10 +2585,24 @@ resource "nomad_job" "schedule" {
 job "foo-schedule" {
   group "foo" {
     task "foo" {
-      schedule { cron { start = "0 12 * * * *" end = "0 16" timezone = "EST" } }
+      schedule {
+        cron {
+          start    = "0 12 * * * *"
+          end      = "0 16"
+          timezone = "EST"
+        }
+      }
+
       driver = "docker"
-      config { image = "nginx:alpine" }
-      resources { cpu = 500 memory = 256 }
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
     }
   }
 }
@@ -2108,9 +2613,25 @@ EOT
 var testJobUIBlock = `
 resource "nomad_job" "ui" {
   jobspec = <<EOT
-job "foo-schedule" {
-  ui { description = "A job that includes a UI block" }
-  group "foo" { task "foo" { driver = "docker" config { image = "nginx:alpine" } resources { cpu = 500 memory = 256 } } }
+job "foo-ui" {
+  ui {
+    description = "A job that includes a UI block"
+  }
+
+  group "foo" {
+    task "foo" {
+      driver = "docker"
+
+      config {
+        image = "nginx:alpine"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
 }
 EOT
 }
@@ -2121,31 +2642,60 @@ resource "nomad_job" "test" {
   jobspec = <<EOT
 job "foo-csi-controller" {
   datacenters = ["dc1"]
+
   group "foo-controller" {
     stop_after_client_disconnect = "90s"
+
     task "plugin" {
       driver = "docker"
-      config { image = "amazon/aws-ebs-csi-driver:latest" args = ["controller","--endpoint=unix://csi/csi.sock","--logtostderr","--v=5"] }
-      csi_plugin { id = "aws-ebs0" type = "controller" mount_dir = "/csi" }
-      resources { cpu = 500 memory = 256 }
+
+      config {
+        image = "amazon/aws-ebs-csi-driver:latest"
+        args  = [
+          "controller",
+          "--endpoint=unix://csi/csi.sock",
+          "--logtostderr",
+          "--v=5",
+        ]
+      }
+
+      csi_plugin {
+        id        = "aws-ebs0"
+        type      = "controller"
+        mount_dir = "/csi"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
     }
   }
 }
-  EOT
+EOT
 }
 `
 
 var testJobCPUCoresConfig = `
 resource "nomad_job" "test_cpu_cores" {
   hcl2 {}
+
   jobspec = <<EOT
 job "test-cpu-cores" {
   datacenters = ["dc1"]
+
   group "test" {
     task "test" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = ["10"] }
-      resources { cores = 1 }
+
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
+
+      resources {
+        cores = 1
+      }
     }
   }
 }
@@ -2156,20 +2706,36 @@ EOT
 var testJobParameterizedJob = `
 resource "nomad_job" "parameterized" {
   jobspec = <<EOT
-    job "parameterized" {
-      datacenters = ["dc1"]
-      type = "batch"
-      parameterized { payload = "required" }
-      group "foo" {
-        task "foo" {
-          driver = "raw_exec"
-          config { command = "/bin/sleep" args = ["1"] }
-          resources { cpu = 100 memory = 10 }
-          logs { max_files = 3 max_file_size = 10 }
-        }
+job "parameterized" {
+  datacenters = ["dc1"]
+  type        = "batch"
+
+  parameterized {
+    payload = "required"
+  }
+
+  group "foo" {
+    task "foo" {
+      driver = "raw_exec"
+
+      config {
+        command = "/bin/sleep"
+        args    = ["1"]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 10
+      }
+
+      logs {
+        max_files     = 3
+        max_file_size = 10
       }
     }
-  EOT
+  }
+}
+EOT
 }
 `
 
@@ -2182,19 +2748,47 @@ resource "nomad_job" "hcl2" {
       "datacenters"      = "[\"dc1\", \"dc2\"]",
     }
   }
+
   jobspec = <<EOT
-variables { args = ["10"] }
-variable "datacenters"      { type = list(string) }
-variable "restart_attempts" { type = number }
+variables {
+  args = ["10"]
+}
+
+variable "datacenters" {
+  type = list(string)
+}
+
+variable "restart_attempts" {
+  type = number
+}
+
 job "foo-hcl2" {
   datacenters = var.datacenters
+
   group "hcl2" {
-    restart { attempts = var.restart_attempts interval = "10m" delay = "15s" mode = "delay" }
+    restart {
+      attempts = var.restart_attempts
+      interval = "10m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     task "sleep" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = var.args }
-      restart { attempts = 10 }
-      template { data = file("../../../nomad/test-fixtures/hello.txt") destination = "local/hello.txt" }
+
+      config {
+        command = "/bin/sleep"
+        args    = var.args
+      }
+
+      restart {
+        attempts = 10
+      }
+
+      template {
+        data        = file("../../../nomad/test-fixtures/hello.txt")
+        destination = "local/hello.txt"
+      }
     }
   }
 }
@@ -2205,17 +2799,39 @@ EOT
 var testJobHCL2NoFS = `
 resource "nomad_job" "hcl2" {
   hcl2 {}
+
   jobspec = <<EOT
-variables { args = ["10"] }
+variables {
+  args = ["10"]
+}
+
 job "foo-hcl2" {
   datacenters = ["dc1"]
+
   group "hcl2" {
-    restart { attempts = 5 interval = "10m" delay = "15s" mode = "delay" }
+    restart {
+      attempts = 5
+      interval = "10m"
+      delay    = "15s"
+      mode     = "delay"
+    }
+
     task "sleep" {
       driver = "raw_exec"
-      config { command = "/bin/sleep" args = var.args }
-      restart { attempts = 10 }
-      template { data = file("../../../nomad/test-fixtures/hello.txt") destination = "local/hello.txt" }
+
+      config {
+        command = "/bin/sleep"
+        args    = var.args
+      }
+
+      restart {
+        attempts = 10
+      }
+
+      template {
+        data        = file("../../../nomad/test-fixtures/hello.txt")
+        destination = "local/hello.txt"
+      }
     }
   }
 }

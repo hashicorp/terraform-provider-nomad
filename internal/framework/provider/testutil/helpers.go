@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
+	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
+	sdkv2helper "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	frameworkprovider "github.com/hashicorp/terraform-provider-nomad/internal/framework/provider"
@@ -29,6 +32,9 @@ func SDKV2ProviderMeta(t *testing.T) func() any {
 	return p.Meta
 }
 
+// TestAccProtoV6ProviderFactories returns a factory map that serves only the
+// framework provider. Use this for tests that don't need SDKv2-only resources
+// like nomad_namespace or nomad_sentinel_policy.
 func TestAccProtoV6ProviderFactories(t *testing.T) map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"nomad": func() (tfprotov6.ProviderServer, error) {
@@ -37,6 +43,41 @@ func TestAccProtoV6ProviderFactories(t *testing.T) map[string]func() (tfprotov6.
 		"echo": echoprovider.NewProviderServer(),
 	}
 }
+
+// TestAccMuxedProviderFactories returns a factory map that muxes the SDKv2
+// provider and the framework provider under the same "nomad" provider name.
+// Use this for tests that reference SDKv2-only resource types such as
+// nomad_namespace or nomad_sentinel_policy alongside nomad_job.
+func TestAccMuxedProviderFactories(t *testing.T) map[string]func() (tfprotov6.ProviderServer, error) {
+	metaFn := sdkv2ProviderMetaForFactory(t)
+	return map[string]func() (tfprotov6.ProviderServer, error){
+		"nomad": func() (tfprotov6.ProviderServer, error) {
+			sdkv2Provider := nomad.Provider()
+			sdkv2Server, err := tf5to6server.UpgradeServer(
+				context.Background(),
+				sdkv2Provider.GRPCProvider,
+			)
+			if err != nil {
+				return nil, err
+			}
+			frameworkServer, err := providerserver.NewProtocol6WithError(
+				frameworkprovider.New(metaFn),
+			)()
+			if err != nil {
+				return nil, err
+			}
+			return tf6muxserver.NewMuxServer(context.Background(), func() tfprotov6.ProviderServer {
+				return sdkv2Server
+			}, func() tfprotov6.ProviderServer {
+				return frameworkServer
+			})
+		},
+		"echo": echoprovider.NewProviderServer(),
+	}
+}
+
+// sdkv2SchemaProvider is used only to satisfy GRPCProvider interface lookup.
+var _ = (*sdkv2helper.Provider)(nil)
 
 func TestAccPreCheck(t *testing.T) {
 	t.Helper()
