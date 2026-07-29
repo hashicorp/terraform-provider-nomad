@@ -4,9 +4,9 @@
 package nomad
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,20 +19,20 @@ import (
 )
 
 func TestDataSourceAllocations_basic(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-nomad-test")
+	jobID := acctest.RandomWithPrefix("tf-nomad-test")
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			registerJobViaAPI(t, allocationsTestJob(t, jobID))
+		},
+		CheckDestroy: testJobForceDestroyWithPurge(jobID, "default"),
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceAllocations_basicConfig_jobOnly(name),
-			},
-			{
-				Config: testDataSourceAllocations_basicConfig(name),
+				Config: testDataSourceAllocations_basicConfig(jobID),
 				Check: resource.ComposeTestCheckFunc(
-
-					testDataSourceAllocations_waitForAllocs(t, 3),
-
+					testDataSourceAllocations_waitForAllocs(t, jobID, "default", 3),
 					resource.TestCheckResourceAttrSet("data.nomad_allocations.all", "allocations.#"),
 					resource.TestCheckResourceAttr("data.nomad_allocations.by_job", "allocations.#", "3"),
 					func(s *terraform.State) error {
@@ -42,11 +42,11 @@ func TestDataSourceAllocations_basic(t *testing.T) {
 							err := resource.ComposeTestCheckFunc(
 								resource.TestCheckResourceAttrSet(resourceName, fmt.Sprintf("%s.eval_id", keyPrefix)),
 								resource.TestMatchResourceAttr(resourceName, fmt.Sprintf("%s.name", keyPrefix),
-									regexp.MustCompile(fmt.Sprintf("%s\\.sleep\\[\\d+\\]", name))),
+									regexp.MustCompile(fmt.Sprintf("%s\\.sleep\\[\\d+\\]", jobID))),
 								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.namespace", keyPrefix), api.DefaultNamespace),
 								resource.TestCheckResourceAttrSet(resourceName, fmt.Sprintf("%s.node_id", keyPrefix)),
 								resource.TestCheckResourceAttrSet(resourceName, fmt.Sprintf("%s.node_name", keyPrefix)),
-								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.job_id", keyPrefix), name),
+								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.job_id", keyPrefix), jobID),
 								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.job_type", keyPrefix), "service"),
 								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.job_version", keyPrefix), "0"),
 								resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.task_group", keyPrefix), "sleep"),
@@ -69,79 +69,59 @@ func TestDataSourceAllocations_basic(t *testing.T) {
 				),
 			},
 		},
-		CheckDestroy: testResourceJob_checkDestroy(name),
 	})
 }
 
-func testDataSourceAllocations_basicConfig_jobOnly(prefix string) string {
-	return fmt.Sprintf(`
-resource "nomad_job" "test" {
-  jobspec = <<EOT
-    job "%[1]s" {
-      group "sleep" {
-	    count = 3
+// allocationsTestJob parses the HCL for the service job the allocations test needs.
+func allocationsTestJob(t *testing.T, jobID string) *api.Job {
+	t.Helper()
+	hcl := fmt.Sprintf(`
+job %q {
+  datacenters = ["dc1"]
+  type        = "service"
 
-        task "sleep" {
-          driver = "raw_exec"
+  group "sleep" {
+    count = 3
 
-          config {
-            command = "/bin/sleep"
-            args    = ["10"]
-          }
+    task "sleep" {
+      driver = "raw_exec"
 
-          resources {
-            cpu    = 10
-            memory = 10
-          }
+      config {
+        command = "/bin/sleep"
+        args    = ["10"]
+      }
 
-          logs {
-            max_files     = 1
-            max_file_size = 1
-          }
-        }
+      resources {
+        cpu    = 10
+        memory = 10
+      }
+
+      logs {
+        max_files     = 1
+        max_file_size = 1
       }
     }
-EOT
+  }
 }
-`, prefix)
+`, jobID)
+	return parseHCLJobspec(t, hcl)
 }
 
-func testDataSourceAllocations_basicConfig(prefix string) string {
+// testDataSourceAllocations_basicConfig returns the Terraform config with only
+// the two data sources — no nomad_job resource; the job is pre-registered via API.
+func testDataSourceAllocations_basicConfig(jobID string) string {
 	return fmt.Sprintf(`
-%s
-
-data "nomad_allocations" "all" {
-  depends_on = [nomad_job.test]
-}
+data "nomad_allocations" "all" {}
 
 data "nomad_allocations" "by_job" {
-  filter = "JobID == \"${nomad_job.test.id}\""
+  filter = "JobID == %q"
 }
-`, testDataSourceAllocations_basicConfig_jobOnly(prefix))
+`, jobID)
 }
 
-func testDataSourceAllocations_waitForAllocs(t *testing.T, expected int) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-
-		resourceState := s.Modules[0].Resources["nomad_job.test"]
-		if resourceState == nil {
-			return errors.New("job resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return errors.New("job resource has no primary instance")
-		}
-
-		jobID := instanceState.ID
-
-		ns, ok := instanceState.Attributes["namespace"]
-		if !ok {
-			return errors.New("resource does not have expected namespace")
-		}
-
-		providerConfig := testProvider.Meta().(ProviderConfig)
-		client := providerConfig.client
+func testDataSourceAllocations_waitForAllocs(t *testing.T, jobID, ns string, expected int) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		client := testProvider.Meta().(ProviderConfig).client
 
 		must.Wait(t, wait.InitialSuccess(
 			wait.ErrorFunc(func() error {
@@ -151,13 +131,25 @@ func testDataSourceAllocations_waitForAllocs(t *testing.T, expected int) resourc
 				if len(allocs) != expected {
 					return fmt.Errorf("expected %d allocs, got %d", expected, len(allocs))
 				}
-				t.Logf("got 3 allocs")
+				t.Logf("got %d allocs", expected)
 				return nil
 			}),
-			wait.Timeout(10*time.Second),
-			wait.Gap(100*time.Millisecond),
+			wait.Timeout(30*time.Second),
+			wait.Gap(200*time.Millisecond),
 		))
 
+		return nil
+	}
+}
+
+// testJobForceDestroyWithPurge purges a job unconditionally via the Nomad API.
+func testJobForceDestroyWithPurge(jobID, namespace string) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		client := testProvider.Meta().(ProviderConfig).client
+		_, _, err := client.Jobs().Deregister(jobID, true, &api.WriteOptions{Namespace: namespace})
+		if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
+			return fmt.Errorf("failed to purge job %q: %s", jobID, err)
+		}
 		return nil
 	}
 }

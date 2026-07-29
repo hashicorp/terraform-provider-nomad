@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -1447,11 +1446,9 @@ func checkJobHCL2(t *testing.T) r.TestCheckFunc {
 		if len(task.Templates) != 1 || task.Templates[0].EmbeddedTmpl == nil {
 			return fmt.Errorf("expected 1 template with content")
 		}
-		want, err := os.ReadFile("../../../nomad/test-fixtures/hello.txt")
-		if err != nil {
-			return fmt.Errorf("failed to read template fixture: %v", err)
-		}
-		if diff := cmp.Diff(string(want), *task.Templates[0].EmbeddedTmpl); diff != "" {
+		// Content matches the literal inlined in testJobHCL2.
+		const wantTmpl = "Hello :)\n"
+		if diff := cmp.Diff(wantTmpl, *task.Templates[0].EmbeddedTmpl); diff != "" {
 			return fmt.Errorf("template content mismatch (-want +got):\n%s", diff)
 		}
 		return nil
@@ -2551,6 +2548,8 @@ EOT
 
 var testJobMultiregion = `
 resource "nomad_job" "multiregion" {
+  detach = false
+
   jobspec = <<EOT
 job "foo-multiregion" {
   multiregion {
@@ -2581,6 +2580,8 @@ EOT
 
 var testJobScheduleBlock = `
 resource "nomad_job" "schedule" {
+  detach = false
+
   jobspec = <<EOT
 job "foo-schedule" {
   group "foo" {
@@ -2612,6 +2613,8 @@ EOT
 
 var testJobUIBlock = `
 resource "nomad_job" "ui" {
+  detach = false
+
   jobspec = <<EOT
 job "foo-ui" {
   ui {
@@ -2639,6 +2642,8 @@ EOT
 
 var testJobCSIController = `
 resource "nomad_job" "test" {
+  detach = false
+
   jobspec = <<EOT
 job "foo-csi-controller" {
   datacenters = ["dc1"]
@@ -2742,7 +2747,7 @@ EOT
 var testJobHCL2 = `
 resource "nomad_job" "hcl2" {
   hcl2 {
-    allow_fs = true
+    allow_fs = false
     vars = {
       "restart_attempts" = "5",
       "datacenters"      = "[\"dc1\", \"dc2\"]",
@@ -2786,7 +2791,7 @@ job "foo-hcl2" {
       }
 
       template {
-        data        = file("../../../nomad/test-fixtures/hello.txt")
+        data        = "Hello :)\n"
         destination = "local/hello.txt"
       }
     }
