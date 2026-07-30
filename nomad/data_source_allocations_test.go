@@ -114,7 +114,7 @@ func testDataSourceAllocations_basicConfig(jobID string) string {
 data "nomad_allocations" "all" {}
 
 data "nomad_allocations" "by_job" {
-  filter = "JobID == %q"
+  filter = "JobID == \"%s\""
 }
 `, jobID)
 }

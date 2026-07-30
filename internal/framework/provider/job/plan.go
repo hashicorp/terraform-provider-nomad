@@ -68,7 +68,10 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 		if state.Namespace.ValueString() != namespace {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("namespace"))
 		} else if state.Name.ValueString() != pointerValue(job.ID) && config.DeregisterOnIDChange.ValueBool() {
-			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("name"))
+			resp.RequiresReplace = append(resp.RequiresReplace,
+				path.Root("name"),
+				path.Root("id"),
+			)
 		}
 
 		if state.Status.ValueString() == "dead" && config.RerunIfDead.ValueBool() {
@@ -166,8 +169,12 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 	}
 
 	if configChanged || serverDrift {
+		// The job will be re-registered: all server-assigned fields will get new
+		// values that are not known until after apply.
 		plan.ModifyIndex = types.StringUnknown()
 		plan.AllocationIDs = types.ListUnknown(types.StringType)
+		plan.DeploymentID = types.StringUnknown()
+		plan.DeploymentStatus = types.StringUnknown()
 		plan.Version = types.Int64Unknown()
 		plan.SubmitTime = types.StringUnknown()
 		plan.Status = types.StringUnknown()
@@ -177,14 +184,6 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 		plan.ParentID = types.StringUnknown()
 		plan.AllAtOnce = types.BoolUnknown()
 		plan.CreateIndex = types.Int64Unknown()
-
-		if config.Detach.ValueBool() {
-			plan.DeploymentID = types.StringNull()
-			plan.DeploymentStatus = types.StringNull()
-		} else {
-			plan.DeploymentID = types.StringUnknown()
-			plan.DeploymentStatus = types.StringUnknown()
-		}
 	}
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }

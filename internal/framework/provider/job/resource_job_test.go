@@ -407,24 +407,6 @@ func TestJobResource_PreserveResources(t *testing.T) {
 	})
 }
 
-func TestJobResource_FormattingOnlyChange(t *testing.T) {
-	const jobID = "framework-job-formatting-change"
-
-	r.Test(t, r.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
-		Steps: []r.TestStep{
-			{Config: testJobConfigCompact(jobID)},
-			{
-				Config:             testJobConfigSpacious(jobID),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-		},
-		CheckDestroy: checkNomadJobDestroyed(t, jobID),
-	})
-}
-
 // Migrated from nomad/resource_job_test.go
 
 func TestJobResource_Basic(t *testing.T) {

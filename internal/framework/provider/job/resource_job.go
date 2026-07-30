@@ -72,11 +72,6 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	r.monitor(ctx, &data, registerResponse, true, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -108,11 +103,6 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	registerResponse := r.register(ctx, &data, wantModifyIndex, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -171,6 +161,8 @@ func (r *JobResource) register(ctx context.Context, data *jobResourceModel, modi
 	data.Namespace = types.StringValue(namespace)
 	data.Region = types.StringValue(region)
 	data.ModifyIndex = types.StringValue(strconv.FormatUint(registerResponse.JobModifyIndex, 10))
+	data.DeploymentID = types.StringValue("")
+	data.DeploymentStatus = types.StringValue("")
 	return registerResponse
 }
 
@@ -197,8 +189,6 @@ func (r *JobResource) monitor(ctx context.Context, data *jobResourceModel, regis
 		return
 	}
 	if deployment == nil {
-		data.DeploymentID = types.StringNull()
-		data.DeploymentStatus = types.StringNull()
 		return
 	}
 	data.DeploymentID = types.StringValue(deployment.ID)
