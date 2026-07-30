@@ -267,7 +267,7 @@ func flattenJob(ctx context.Context, job *api.Job, data *jobResourceModel) diag.
 	data.Constraints, valueDiags = flattenConstraints(ctx, job.Constraints)
 	diags.Append(valueDiags...)
 
-	data.UpdateStrategy, valueDiags = flattenJobLevelUpdateStrategy(ctx, job.Update)
+	data.UpdateStrategy, valueDiags = flattenUpdateStrategy(ctx, job.Update)
 	diags.Append(valueDiags...)
 	data.PeriodicConfig, valueDiags = flattenPeriodicConfig(ctx, job.Periodic)
 	diags.Append(valueDiags...)
@@ -323,21 +323,34 @@ func flattenUpdateStrategy(ctx context.Context, update *api.UpdateStrategy) (typ
 }
 
 func flattenJobLevelUpdateStrategy(ctx context.Context, update *api.UpdateStrategy) (types.List, diag.Diagnostics) {
-	if update == nil || update.MaxParallel == nil || *update.MaxParallel == 0 {
-		return types.ListNull(updateStrategyObjectType), nil
+	if update == nil || update.MaxParallel == nil {
+		model := updateStrategyModel{
+			MaxParallel:     types.Int64Value(0),
+			Stagger:         types.StringValue("0s"),
+			HealthCheck:     types.StringValue(""),
+			MinHealthyTime:  types.StringValue("0s"),
+			HealthyDeadline: types.StringValue("0s"),
+			AutoRevert:      types.BoolValue(false),
+			Canary:          types.Int64Value(0),
+		}
+		return types.ListValueFrom(ctx, updateStrategyObjectType, []updateStrategyModel{model})
 	}
 	model := updateStrategyModel{
 		MaxParallel:     intPointerValue(update.MaxParallel),
-		HealthCheck:     types.StringNull(),
-		MinHealthyTime:  types.StringNull(),
-		HealthyDeadline: types.StringNull(),
-		AutoRevert:      types.BoolNull(),
-		Canary:          types.Int64Null(),
+		HealthCheck:     types.StringValue(""),
+		MinHealthyTime:  types.StringValue("0s"),
+		HealthyDeadline: types.StringValue("0s"),
+		AutoRevert:      types.BoolValue(false),
+		Canary:          types.Int64Value(0),
 	}
 	if update.Stagger == nil {
 		model.Stagger = types.StringNull()
 	} else {
-		model.Stagger = types.StringValue(update.Stagger.String())
+		if *update.MaxParallel == 0 {
+			model.Stagger = types.StringValue("0s")
+		} else {
+			model.Stagger = types.StringValue(update.Stagger.String())
+		}
 	}
 	return types.ListValueFrom(ctx, updateStrategyObjectType, []updateStrategyModel{model})
 }

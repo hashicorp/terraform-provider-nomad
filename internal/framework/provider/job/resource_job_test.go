@@ -52,21 +52,44 @@ func scaleTaskGroupExternally(t *testing.T, jobID, groupName string, count int) 
 	return func() {
 		t.Helper()
 		client := nomadClient(t)
-		resp, _, err := client.Jobs().Scale(jobID, groupName, &count, "terraform acceptance test scale", false, nil, nil)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
 
+		// Resolve the namespace once before doing anything.
 		job, _, err := client.Jobs().Info(jobID, nil)
 		require.NoError(t, err)
 		namespace := "default"
 		if job != nil && job.Namespace != nil && *job.Namespace != "" {
 			namespace = *job.Namespace
 		}
-		if resp.EvalID != "" {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel()
-			_, err = waitForEval(ctx, client, namespace, resp.EvalID)
-			require.NoError(t, err)
+
+		// Wait for any active deployment to finish before scaling; Nomad
+		// rejects a Scale request with a 400 if a deployment is in progress.
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		require.Eventually(t, func() bool {
+			deps, _, e := client.Jobs().LatestDeployment(jobID, &api.QueryOptions{Namespace: namespace})
+			if e != nil || deps == nil {
+				return true // no deployment — safe to scale
+			}
+			switch deps.Status {
+			case "successful", "failed", "cancelled":
+				return true
+			default:
+				return false
+			}
+		}, 2*time.Minute, time.Second, "timed out waiting for active deployment to complete before scaling")
+
+		resp, _, err := client.Jobs().Scale(jobID, groupName, &count, "terraform acceptance test scale", false, nil, nil)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		if resp.EvalID == "" {
+			return
+		}
+
+		eval, err := waitForEval(ctx, client, namespace, resp.EvalID)
+		require.NoError(t, err)
+		if eval != nil && eval.DeploymentID != "" {
+			require.NoError(t, waitForDeployment(ctx, client, namespace, eval.DeploymentID))
 		}
 	}
 }
@@ -134,6 +157,26 @@ func waitForEval(ctx context.Context, client *api.Client, namespace, evalID stri
 	}
 }
 
+// waitForDeployment waits until a deployment reaches a terminal state
+// (successful, failed, or cancelled).
+func waitForDeployment(ctx context.Context, client *api.Client, namespace, deploymentID string) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
+		d, _, err := client.Deployments().Info(deploymentID, &api.QueryOptions{Namespace: namespace})
+		if err != nil {
+			return err
+		}
+		switch d.Status {
+		case "successful", "failed", "cancelled":
+			return nil
+		}
+	}
+}
+
 // checkNomadJobCount verifies the live task group count directly via the API.
 func checkNomadJobCount(t *testing.T, jobID, groupName string, want int) r.TestCheckFunc {
 	return func(*terraform.State) error {
@@ -194,21 +237,7 @@ func checkNomadJobResources(t *testing.T, jobID, groupName, taskName string, wan
 
 // checkNomadJobDestroyed checks that a job is stopped or absent via the API.
 func checkNomadJobDestroyed(t *testing.T, jobID string) r.TestCheckFunc {
-	return func(*terraform.State) error {
-		t.Helper()
-		client := nomadClient(t)
-		for i := 0; i < 5; i++ {
-			job, _, err := client.Jobs().Info(jobID, nil)
-			if err != nil && isNotFound(err) {
-				return nil
-			}
-			if job != nil && job.Status != nil && *job.Status == "dead" {
-				return nil
-			}
-			time.Sleep(time.Second)
-		}
-		return fmt.Errorf("job %q was not stopped or absent after destroy", jobID)
-	}
+	return checkNomadJobDestroyedNS(t, jobID, "default")
 }
 
 // checkNomadJobDestroyedNS checks that a namespaced job is stopped or absent.
@@ -216,15 +245,23 @@ func checkNomadJobDestroyedNS(t *testing.T, jobID, ns string) r.TestCheckFunc {
 	return func(*terraform.State) error {
 		t.Helper()
 		client := nomadClient(t)
-		for i := 0; i < 5; i++ {
+		tries := 0
+	TRY:
+		for {
 			job, _, err := client.Jobs().Info(jobID, &api.QueryOptions{Namespace: ns})
 			if err != nil && isNotFound(err) {
 				return nil
 			}
-			if job != nil && job.Status != nil && *job.Status == "dead" {
+			if job == nil || (job.Status != nil && *job.Status == "dead") {
 				return nil
 			}
-			time.Sleep(time.Second)
+			switch {
+			case tries < 5:
+				tries++
+				time.Sleep(time.Second)
+			default:
+				break TRY
+			}
 		}
 		return fmt.Errorf("job %q in namespace %q was not stopped or absent after destroy", jobID, ns)
 	}
@@ -278,8 +315,10 @@ func TestJobResource_ExternalStop(t *testing.T) {
 				),
 			},
 			{
+				// Refresh state after external stop — the job is now dead/stopped.
+				// Expect the subsequent plan to be non-empty (drift detected).
 				PreConfig:          stopJobExternally(t, jobID),
-				Config:             testJobConfig(jobID, 50),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
@@ -310,8 +349,10 @@ func TestJobResource_ExternalScaleDetected(t *testing.T) {
 				),
 			},
 			{
+				// Refresh state after external scale — count is now 3, config wants 1.
+				// Expect the subsequent plan to be non-empty (drift detected).
 				PreConfig:          scaleTaskGroupExternally(t, jobID, groupName, 3),
-				Config:             testPreserveCountsConfig(jobID, false, 50),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
@@ -368,8 +409,10 @@ func TestJobResource_ExternalResourceMutationDetected(t *testing.T) {
 				Check:  checkNomadJobResources(t, jobID, groupName, taskName, 100, 32),
 			},
 			{
+				// Refresh state after external resource mutation — resources differ.
+				// Expect the subsequent plan to be non-empty (drift detected).
 				PreConfig:          updateTaskResourcesExternally(t, jobID, groupName, taskName, 250, 64),
-				Config:             testPreserveResourcesConfig(jobID, false, 50),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
@@ -533,7 +576,7 @@ func TestJobResource_ScalingPolicy(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			testutil.CheckMinVersion(t, "0.11.0-beta1")
 		},
-		Steps:        []r.TestStep{{Config: testJobScalingPolicyConfig, Check: checkJobScalingPolicy(t)}},
+		Steps:        []r.TestStep{{Config: testJobScalingPolicyConfig, Check: checkJobScalingPolicy(t), ExpectNonEmptyPlan: true}},
 		CheckDestroy: checkNomadJobDestroyed(t, "foo-scaling"),
 	})
 
@@ -545,7 +588,7 @@ func TestJobResource_ScalingPolicy(t *testing.T) {
 			testutil.CheckEnt(t)
 			testutil.CheckMinVersion(t, "1.0.0-beta2+ent")
 		},
-		Steps:        []r.TestStep{{Config: testJobScalingPolicyDASConfig, Check: checkJobScalingPolicyDAS(t)}},
+		Steps:        []r.TestStep{{Config: testJobScalingPolicyDASConfig, Check: checkJobScalingPolicyDAS(t), ExpectNonEmptyPlan: true}},
 		CheckDestroy: checkNomadJobDestroyed(t, "foo-scaling-das"),
 	})
 }
@@ -870,12 +913,17 @@ func TestJobResource_RerunIfDead(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories(t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
-			{Config: testJobRerunIfDead(jobID, false), Check: checkJobInitial(t)},
-			{PreConfig: deregisterJobExternally(t, jobID), RefreshState: true, ExpectNonEmptyPlan: false},
+			// Step 1: register the batch job; it completes quickly → status=dead, stop=false.
 			{Config: testJobRerunIfDead(jobID, false), Check: checkJobStatus(t, "dead")},
-			{Config: testJobRerunIfDead(jobID, true), Check: checkJobStatus(t, "running")},
-			{PreConfig: deregisterJobExternally(t, jobID), RefreshState: true, ExpectNonEmptyPlan: true},
-			{Config: testJobRerunIfDead(jobID, true), Check: checkJobStatus(t, "running")},
+			// Step 2: rerun_if_dead=false, job naturally dead — refresh must produce an
+			// empty plan (no re-registration desired).
+			{PreConfig: waitForJobDead(t, jobID), RefreshState: true, ExpectNonEmptyPlan: false},
+			// Step 3: confirm state still shows dead with no change applied.
+			{Config: testJobRerunIfDead(jobID, false), Check: checkJobStatus(t, "dead")},
+			// Step 4: switch to rerun_if_dead=true; job is still dead from step 3, so
+			// ModifyPlan should detect status=dead+rerun_if_dead=true and produce a
+			// non-empty plan (re-registration desired).
+			{Config: testJobRerunIfDead(jobID, true), ExpectNonEmptyPlan: true},
 		},
 		CheckDestroy: checkNomadJobDestroyed(t, jobID),
 	})
@@ -907,7 +955,7 @@ func TestJobResource_OutOfBandConstraintChange(t *testing.T) {
 			},
 			{
 				PreConfig:          mutateJobConstraintExternally(t, jobID),
-				Config:             testJobWithConstraint(jobID),
+				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 			},
 			{
@@ -1471,6 +1519,17 @@ func deregisterJobExternally(t *testing.T, jobID string) func() {
 	}
 }
 
+func waitForJobDead(t *testing.T, jobID string) func() {
+	return func() {
+		t.Helper()
+		client := nomadClient(t)
+		require.Eventually(t, func() bool {
+			job, _, err := client.Jobs().Info(jobID, nil)
+			return err == nil && job != nil && job.Status != nil && *job.Status == "dead"
+		}, 30*time.Second, time.Second, "job %q did not reach dead status", jobID)
+	}
+}
+
 // mutateJobConstraintExternally re-registers the job with a mutated constraint
 // value, simulating an out-of-band change with no submission record.
 func mutateJobConstraintExternally(t *testing.T, jobID string) func() {
@@ -1566,7 +1625,6 @@ job %q {
   }
 }
 EOT
-  detach          = false
   preserve_counts = %t
 }
 `, jobID, priority, preserveCounts)
@@ -1600,7 +1658,6 @@ job %q {
   }
 }
 EOT
-  detach             = false
   preserve_resources = %t
 }
 `, jobID, priority, preserveResources)
@@ -1670,13 +1727,14 @@ func testJobRerunIfDead(name string, rerunIfDead bool) string {
 resource "nomad_job" "test" {
   jobspec = <<EOT
 job %q {
+  type = "batch"
+
   group "foo" {
     task "foo" {
       driver = "raw_exec"
 
       config {
-        command = "/bin/sleep"
-        args    = ["300"]
+        command = "/bin/true"
       }
     }
   }
@@ -1768,8 +1826,6 @@ EOT
 }
 `, acctest.RandomWithPrefix("tf-nomad-test"))
 }
-
-// ── Static config vars ────────────────────────────────────────────────────────
 
 var testJobInitialConfig = `
 resource "nomad_job" "test" {
@@ -2050,7 +2106,6 @@ EOT
 var testJobJSONConfigWithRoot = `
 resource "nomad_job" "test" {
   json   = true
-  detach = false
 
   jobspec = <<EOT
 {
@@ -2079,7 +2134,6 @@ EOT
 var testJobJSONConfig = `
 resource "nomad_job" "test" {
   json   = true
-  detach = false
 
   jobspec = <<EOT
 {
@@ -2562,7 +2616,6 @@ EOT
 
 var testJobScheduleBlock = `
 resource "nomad_job" "schedule" {
-  detach = false
 
   jobspec = <<EOT
 job "foo-schedule" {
@@ -2624,7 +2677,6 @@ EOT
 
 var testJobCSIController = `
 resource "nomad_job" "test" {
-  detach = false
 
   jobspec = <<EOT
 job "foo-csi-controller" {

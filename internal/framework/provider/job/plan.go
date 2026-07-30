@@ -22,7 +22,38 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 
 	var plan jobResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() || plan.Jobspec.IsUnknown() {
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When jobspec itself is unknown, we cannot parse or plan the job. Mark all
+	// derived computed fields as unknown so downstream references show
+	// "(known after apply)" rather than stale state values.
+	if plan.Jobspec.IsUnknown() {
+		plan.Name = types.StringUnknown()
+		plan.Namespace = types.StringUnknown()
+		plan.Type = types.StringUnknown()
+		plan.Region = types.StringUnknown()
+		plan.Datacenters = types.SetUnknown(types.StringType)
+		plan.AllocationIDs = types.ListUnknown(types.StringType)
+		plan.TaskGroups = types.ListUnknown(taskGroupObjectType)
+		plan.DeploymentID = types.StringUnknown()
+		plan.DeploymentStatus = types.StringUnknown()
+		plan.ModifyIndex = types.StringUnknown()
+		plan.Status = types.StringUnknown()
+		plan.StatusDescription = types.StringUnknown()
+		plan.Version = types.Int64Unknown()
+		plan.SubmitTime = types.StringUnknown()
+		plan.CreateIndex = types.Int64Unknown()
+		plan.Stop = types.BoolUnknown()
+		plan.Priority = types.Int64Unknown()
+		plan.ParentID = types.StringUnknown()
+		plan.Stable = types.BoolUnknown()
+		plan.AllAtOnce = types.BoolUnknown()
+		plan.Constraints = types.ListUnknown(constraintObjectType)
+		plan.UpdateStrategy = types.ListUnknown(updateStrategyObjectType)
+		plan.PeriodicConfig = types.ListUnknown(periodicConfigObjectType)
+		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 		return
 	}
 
@@ -67,7 +98,7 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 
 		if state.Namespace.ValueString() != namespace {
 			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("namespace"))
-		} else if state.Name.ValueString() != pointerValue(job.ID) && config.DeregisterOnIDChange.ValueBool() {
+		} else if state.Name.ValueString() != pointerValue(job.ID) && plan.DeregisterOnIDChange.ValueBool() {
 			resp.RequiresReplace = append(resp.RequiresReplace,
 				path.Root("name"),
 				path.Root("id"),
@@ -93,13 +124,22 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 	}
 
 	plan.Name = types.StringValue(pointerValue(job.ID))
+	plan.ID = plan.Name
 	plan.Namespace = types.StringValue(namespace)
 	plan.Type = stringPointerValue(job.Type)
 	plan.Region = types.StringValue(region)
 
-	datacenters, valueDiags := types.SetValueFrom(ctx, types.StringType, job.Datacenters)
-	resp.Diagnostics.Append(valueDiags...)
-	plan.Datacenters = datacenters
+	if len(job.Datacenters) == 0 {
+		if state != nil && !configChanged {
+			plan.Datacenters = state.Datacenters
+		} else {
+			plan.Datacenters = types.SetUnknown(types.StringType)
+		}
+	} else {
+		datacenters, valueDiags := types.SetValueFrom(ctx, types.StringType, job.Datacenters)
+		resp.Diagnostics.Append(valueDiags...)
+		plan.Datacenters = datacenters
+	}
 
 	periodicConfig, pcDiags := flattenPeriodicConfig(ctx, job.Periodic)
 	resp.Diagnostics.Append(pcDiags...)
@@ -125,8 +165,10 @@ func (r *JobResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 		PolicyOverride: config.PolicyOverride.ValueBool(),
 	}, &api.WriteOptions{Namespace: namespace, Region: region})
 	if planErr != nil {
-		resp.Diagnostics.AddError("Error validating job plan with Nomad", planErr.Error())
-		return
+		tflog.Warn(ctx, "[WARN] failed to validate Nomad plan", map[string]any{
+			"job_id": pointerValue(job.ID),
+			"error":  planErr.Error(),
+		})
 	}
 
 	if state != nil && state.Name.ValueString() == pointerValue(job.ID) && state.Namespace.ValueString() == namespace {

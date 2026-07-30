@@ -156,13 +156,14 @@ func (r *JobResource) register(ctx context.Context, data *jobResourceModel, modi
 		return nil
 	}
 
-	data.Name = types.StringValue(*job.ID)
-	data.ID = data.Name
-	data.Namespace = types.StringValue(namespace)
-	data.Region = types.StringValue(region)
+	diags.Append(flattenJob(ctx, job, data)...)
+	if diags.HasError() {
+		return nil
+	}
 	data.ModifyIndex = types.StringValue(strconv.FormatUint(registerResponse.JobModifyIndex, 10))
 	data.DeploymentID = types.StringValue("")
 	data.DeploymentStatus = types.StringValue("")
+	data.AllocationIDs = types.ListNull(types.StringType)
 	return registerResponse
 }
 
@@ -329,18 +330,9 @@ func (r *JobResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		region = "global"
 	}
 
-	// purge_on_destroy: prefer the value carried through private state (written
-	// by ModifyPlan during the destroy plan), which reflects the user's current
-	// config. Fall back to the state value for resources that haven't gone
-	// through a destroy plan with this version of the provider.
-	purge := data.PurgeOnDestroy.ValueBool()
-	if purgeBytes, diags := req.Private.GetKey(ctx, "purge_on_destroy"); !diags.HasError() && len(purgeBytes) > 0 {
-		purge = purgeBytes[0] == 1
-	}
-
 	_, _, err := r.providerConfig.Client().Jobs().Deregister(
 		data.Name.ValueString(),
-		purge,
+		data.PurgeOnDestroy.ValueBool(),
 		&api.WriteOptions{Namespace: namespace, Region: region},
 	)
 	if err != nil {

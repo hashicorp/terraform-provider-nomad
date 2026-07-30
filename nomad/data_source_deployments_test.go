@@ -32,7 +32,7 @@ func TestAccDataSourceDeployments(t *testing.T) {
 		CheckDestroy: testJobForceDestroyWithPurge("foo_deploy", "default"),
 		Steps: []resource.TestStep{
 			{
-				// Step 1: job is running → at least one deployment exists.
+				// Step 1: job is running -> at least one deployment exists.
 				// After checking, deregister the job so its deployment becomes cancelled.
 				Config: testAccCheckDataSourceNomadDeploymentsCfg,
 				Check: resource.ComposeTestCheckFunc(
@@ -64,7 +64,7 @@ func TestAccDataSourceDeployments(t *testing.T) {
 				),
 			},
 			{
-				// Step 2: job is deregistered → deployment should be "cancelled".
+				// Step 2: job is deregistered -> deployment should be "cancelled".
 				Config: testAccCheckDataSourceNomadDeploymentsCfg,
 				Check: func(s *terraform.State) error {
 					re := regexp.MustCompile(`^deployments\.(\d+)\.JobID$`)

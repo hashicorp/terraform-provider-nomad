@@ -54,6 +54,9 @@ func jobSchema(ctx context.Context) schema.Schema {
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "The name of the job, as derived from the jobspec.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"namespace": schema.StringAttribute{
 				Computed:    true,
