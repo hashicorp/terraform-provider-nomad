@@ -40,9 +40,10 @@ func TestDataSourceNamespace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "quota", ""),
 					resource.TestCheckResourceAttr(resourceName, "meta.key", "value"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "capabilities.0.disabled_task_drivers.0", "raw_exec"),
+					resource.TestCheckResourceAttr(resourceName, "capabilities.0.disabled_task_drivers.0", "java"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.0", "docker"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.1", "exec"),
+					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_task_drivers.2", "raw_exec"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.disabled_network_modes.0", "host"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_network_modes.0", "bridge"),
 					resource.TestCheckResourceAttr(resourceName, "capabilities.0.enabled_network_modes.1", "none"),
@@ -251,8 +252,8 @@ resource "nomad_namespace" "test" {
   }
 
   capabilities {
-    enabled_task_drivers  = ["docker", "exec"]
-    disabled_task_drivers = ["raw_exec"]
+    enabled_task_drivers  = ["docker", "exec", "raw_exec"]
+    disabled_task_drivers = ["java"]
     enabled_network_modes = ["bridge", "none"]
     disabled_network_modes = ["host"]
   }

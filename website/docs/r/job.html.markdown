@@ -328,6 +328,28 @@ The following attributes are exported:
     - `name` `(string)` - Task name.
     - `driver` `(string)` - Task driver.
     - `meta` `(map of strings)` - Task metadata.
+    - `resources` `(map)` - Effective resources requested by the task as stored in Nomad state.
+      - `cpu` `(integer)` - CPU in MHz.
+      - `cores` `(integer)` - Number of reserved CPU cores (mutually exclusive with `cpu`).
+      - `memory_mb` `(integer)` - Memory in MB.
+      - `memory_max_mb` `(integer)` - Maximum memory in MB (soft limit).
+      - `disk_mb` `(integer)` - Ephemeral disk in MB.
+      - `networks` `(list of maps)` - Network resources.
+        - `mode` `(string)` - Network mode.
+        - `device` `(string)` - Network device name.
+        - `ip` `(string)` - Allocated IP address.
+        - `mbits` `(integer)` - **Deprecated.** Requested network bandwidth in Mbits.
+        - `reserved_ports` `(list of maps)` - Static port mappings.
+          - `label` `(string)` - Port label.
+          - `value` `(integer)` - Static port number.
+          - `to` `(integer)` - Port to map to inside the task.
+        - `dynamic_ports` `(list of maps)` - Dynamic port mappings.
+          - `label` `(string)` - Port label.
+          - `value` `(integer)` - Assigned port number.
+          - `to` `(integer)` - Port to map to inside the task.
+      - `devices` `(list of maps)` - Device requests.
+        - `name` `(string)` - Device name or type.
+        - `count` `(integer)` - Number of instances requested.
     - `volume_mounts` `(list of maps)` - Task volume mounts.
       - `volume` `(string)` - Volume name.
       - `destination` `(string)` - Destination path inside the task.

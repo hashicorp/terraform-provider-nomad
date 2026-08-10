@@ -10,6 +10,12 @@ if [ ! -e /tmp/nomad-test.pid ]; then
     cat <<EOF > /tmp/nomad-config.hcl
 log_file = "/tmp/nomad.log"
 
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+
 plugin "docker" {
   config {
     allow_privileged = true

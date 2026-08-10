@@ -4,20 +4,28 @@
 package nomad
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestDataSourceScalingPolicy_Basic(t *testing.T) {
 	dataSourceName := "data.nomad_scaling_policy.policy"
+	const jobID = "foo-scaling-policy"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "0.11.0")
+			registerJobViaAPI(t, scalingPolicyTestJob(t, jobID))
+		},
+		CheckDestroy: testJobForceDestroyWithPurge(jobID, "default"),
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceScalingPolicyConfig,
+				Config: testDataSourceScalingPolicyConfig(jobID),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
 					resource.TestCheckResourceAttr(dataSourceName, "enabled", "false"),
@@ -26,7 +34,7 @@ func TestDataSourceScalingPolicy_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr(dataSourceName, "max", "20"),
 					resource.TestCheckResourceAttr(dataSourceName, "policy", `{"cooldown":"20s"}`),
 					resource.TestCheckResourceAttr(dataSourceName, "target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "target.Job", "foo-scaling-policy"),
+					resource.TestCheckResourceAttr(dataSourceName, "target.Job", jobID),
 					resource.TestCheckResourceAttr(dataSourceName, "target.Group", "foo"),
 				),
 			},
@@ -34,20 +42,19 @@ func TestDataSourceScalingPolicy_Basic(t *testing.T) {
 	})
 }
 
-const testDataSourceScalingPolicyConfig = `
-resource "nomad_job" "job" {
-  purge_on_destroy = true
-
-  jobspec = <<EOF
-job "foo-scaling-policy" {
+// scalingPolicyTestJob parses the HCL for the job the scaling policy test needs.
+func scalingPolicyTestJob(t *testing.T, jobID string) *api.Job {
+	t.Helper()
+	hcl := fmt.Sprintf(`
+job %q {
   datacenters = ["dc1"]
-  group "foo" {
 
+  group "foo" {
     scaling {
       enabled = false
       min     = 1
       max     = 20
-	  type    = "horizontal"
+      type    = "horizontal"
 
       policy {
         cooldown = "20s"
@@ -56,6 +63,7 @@ job "foo-scaling-policy" {
 
     task "foo" {
       driver = "raw_exec"
+
       config {
         command = "/bin/sleep"
         args    = ["10"]
@@ -63,15 +71,20 @@ job "foo-scaling-policy" {
     }
   }
 }
-EOF
+`, jobID)
+	return parseHCLJobspec(t, hcl)
 }
 
-
+// testDataSourceScalingPolicyConfig returns the Terraform config that reads the
+// scaling policy for the given job — no nomad_job resource; the job is pre-registered.
+func testDataSourceScalingPolicyConfig(jobID string) string {
+	return fmt.Sprintf(`
 data "nomad_scaling_policies" "policies" {
-  job_id = nomad_job.job.name
+  job_id = %q
 }
 
 data "nomad_scaling_policy" "policy" {
-	id = data.nomad_scaling_policies.policies.policies[0].id
+  id = data.nomad_scaling_policies.policies.policies[0].id
 }
-`
+`, jobID)
+}

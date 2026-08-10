@@ -7,108 +7,119 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestDataSourceScalingPolicies_Basic(t *testing.T) {
 	dataSourceName := "data.nomad_scaling_policies.policies"
 
+	const ossJobID = "foo-scaling-policies"
+	const entJobID = "foo-scaling-policies-ent"
+
+	// OSS test: register the job via API in PreCheck.
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "0.11.0") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckMinVersion(t, "0.11.0")
+			registerJobViaAPI(t, scalingPoliciesOSSJob(t, ossJobID))
+		},
+		CheckDestroy: testJobForceDestroyWithPurge(ossJobID, "default"),
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceScalingPoliciesJobConfig,
-			},
-			{
-				Config: testDataSourceScalingPoliciesJobConfig + testDataSourceScalingPoliciesConfig("foo-scaling-policies", ""),
+				Config: testDataSourceScalingPoliciesConfig(ossJobID, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "policies.0.id"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.enabled", "false"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.type", "horizontal"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", "foo-scaling-policies"),
+					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", ossJobID),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Group", "foo"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfig + testDataSourceScalingPoliciesConfig("", "horizontal"),
+				Config: testDataSourceScalingPoliciesConfig("", "horizontal"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "policies.0.id"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.enabled", "false"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.type", "horizontal"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", "foo-scaling-policies"),
+					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", ossJobID),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Group", "foo"),
 				),
 			},
 		},
 	})
 
+	// Ent test: register the Ent job via API in PreCheck.
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t); testCheckEnt(t); testCheckMinVersion(t, "1.0.0-beta2") },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testCheckEnt(t)
+			testCheckMinVersion(t, "1.0.0-beta2")
+			registerJobViaAPI(t, scalingPoliciesEntJob(t, entJobID))
+		},
+		CheckDestroy: testJobForceDestroyWithPurge(entJobID, "default"),
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt,
-			},
-			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("", ""),
+				Config: testDataSourceScalingPoliciesConfig("", ""),
 				Check: resource.ComposeTestCheckFunc(
 					// We can't guarantee order, so test length only for now.
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "3"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("foo-scaling-policies-ent", ""),
+				Config: testDataSourceScalingPoliciesConfig(entJobID, ""),
 				Check: resource.ComposeTestCheckFunc(
 					// We can't guarantee order, so test length only for now.
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "3"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("", "vertical"),
+				Config: testDataSourceScalingPoliciesConfig("", "vertical"),
 				Check: resource.ComposeTestCheckFunc(
 					// We can't guarantee order, so test length only for now.
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "2"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("", "horizontal"),
+				Config: testDataSourceScalingPoliciesConfig("", "horizontal"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "policies.0.id"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.enabled", "false"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.type", "horizontal"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", "foo-scaling-policies-ent"),
+					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", entJobID),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Group", "foo"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("", "vertical_cpu"),
+				Config: testDataSourceScalingPoliciesConfig("", "vertical_cpu"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "policies.0.id"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.enabled", "true"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.type", "vertical_cpu"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", "foo-scaling-policies-ent"),
+					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", entJobID),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Group", "foo"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Task", "foo"),
 				),
 			},
 			{
-				Config: testDataSourceScalingPoliciesJobConfigEnt + testDataSourceScalingPoliciesConfig("", "vertical_mem"),
+				Config: testDataSourceScalingPoliciesConfig("", "vertical_mem"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "policies.0.id"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.enabled", "true"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.type", "vertical_mem"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Namespace", "default"),
-					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", "foo-scaling-policies-ent"),
+					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Job", entJobID),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Group", "foo"),
 					resource.TestCheckResourceAttr(dataSourceName, "policies.0.target.Task", "foo"),
 				),
@@ -117,15 +128,16 @@ func TestDataSourceScalingPolicies_Basic(t *testing.T) {
 	})
 }
 
-const testDataSourceScalingPoliciesJobConfig = `
-resource "nomad_job" "job" {
-  purge_on_destroy = true
+// API job builders
 
-  jobspec = <<EOF
-job "foo-scaling-policies" {
+// scalingPoliciesOSSJob parses the HCL for the OSS horizontal-scaling job.
+func scalingPoliciesOSSJob(t *testing.T, jobID string) *api.Job {
+	t.Helper()
+	hcl := fmt.Sprintf(`
+job %q {
   datacenters = ["dc1"]
-  group "foo" {
 
+  group "foo" {
     scaling {
       enabled = false
       min     = 1
@@ -134,9 +146,11 @@ job "foo-scaling-policies" {
 
       policy {
         cooldown = "20s"
+
         check "avg_instance_sessions" {
           source = "prometheus"
           query  = "query"
+
           strategy "target-value" {
             target = 5
           }
@@ -146,6 +160,7 @@ job "foo-scaling-policies" {
 
     task "foo" {
       driver = "raw_exec"
+
       config {
         command = "/bin/sleep"
         args    = ["10"]
@@ -153,19 +168,19 @@ job "foo-scaling-policies" {
     }
   }
 }
-EOF
+`, jobID)
+	return parseHCLJobspec(t, hcl)
 }
-`
 
-const testDataSourceScalingPoliciesJobConfigEnt = `
-resource "nomad_job" "job" {
-  purge_on_destroy = true
-
-  jobspec = <<EOF
-job "foo-scaling-policies-ent" {
+// scalingPoliciesEntJob parses the HCL for the Ent job with horizontal +
+// vertical_cpu + vertical_mem scaling policies.
+func scalingPoliciesEntJob(t *testing.T, jobID string) *api.Job {
+	t.Helper()
+	hcl := fmt.Sprintf(`
+job %q {
   datacenters = ["dc1"]
-  group "foo" {
 
+  group "foo" {
     scaling {
       enabled = false
       min     = 1
@@ -174,9 +189,11 @@ job "foo-scaling-policies-ent" {
 
       policy {
         cooldown = "20s"
+
         check "avg_instance_sessions" {
           source = "prometheus"
           query  = "query"
+
           strategy "target-value" {
             target = 5
           }
@@ -186,10 +203,12 @@ job "foo-scaling-policies-ent" {
 
     task "foo" {
       driver = "raw_exec"
+
       config {
         command = "/bin/sleep"
         args    = ["10"]
       }
+
       scaling "cpu" {
         policy {
           check "check" {
@@ -208,24 +227,24 @@ job "foo-scaling-policies-ent" {
     }
   }
 }
-EOF
+`, jobID)
+	return parseHCLJobspec(t, hcl)
 }
-`
+
+// Terraform config (data sources only)
 
 func testDataSourceScalingPoliciesConfig(jobID string, typeQuery string) string {
-	var config string
+	var filters string
 
 	if jobID != "" {
-		config += fmt.Sprintf("job_id = %q\n", jobID)
+		filters += fmt.Sprintf("job_id = %q\n", jobID)
 	}
-
 	if typeQuery != "" {
-		config += fmt.Sprintf("type = %q\n", typeQuery)
+		filters += fmt.Sprintf("type = %q\n", typeQuery)
 	}
 
 	return fmt.Sprintf(`
 data "nomad_scaling_policies" "policies" {
-%s
-}
-`, config)
+%s}
+`, filters)
 }

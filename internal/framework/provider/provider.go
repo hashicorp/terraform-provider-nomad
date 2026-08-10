@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/acl"
+	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/job"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/services"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/variables"
 	"github.com/hashicorp/terraform-provider-nomad/internal/framework/provider/volumes"
@@ -143,6 +144,7 @@ func (p *NomadProvider) Resources(_ context.Context) []func() resource.Resource 
 	return []func() resource.Resource{
 		acl.NewACLAuthMethodResource,
 		acl.NewACLBindingRuleResource,
+		job.NewJobResource,
 		volumes.NewCSIVolumeResource,
 		volumes.NewCSIVolumeRegistrationResource,
 	}

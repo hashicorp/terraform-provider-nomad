@@ -224,8 +224,8 @@ resource "nomad_namespace" "test" {
   }
 
   capabilities {
-    enabled_task_drivers  = ["docker", "exec"]
-    disabled_task_drivers = ["raw_exec"]
+    enabled_task_drivers  = ["docker", "exec", "raw_exec"]
+    disabled_task_drivers = ["java"]
     enabled_network_modes = ["bridge", "none"]
     disabled_network_modes = ["host"]
   }
@@ -262,8 +262,8 @@ resource "nomad_namespace" "test" {
   }
 
   capabilities {
-    enabled_task_drivers  = ["docker", "exec"]
-    disabled_task_drivers = ["raw_exec"]
+    enabled_task_drivers  = ["docker", "exec", "raw_exec"]
+    disabled_task_drivers = ["java"]
     enabled_network_modes = ["bridge", "none"]
     disabled_network_modes = ["host"]
   }
@@ -319,8 +319,8 @@ func testResourceNamespace_initialCheck(name string) resource.TestCheckFunc {
 		}
 
 		expectedCapabilities := &api.NamespaceCapabilities{
-			EnabledTaskDrivers:   []string{"docker", "exec"},
-			DisabledTaskDrivers:  []string{"raw_exec"},
+			EnabledTaskDrivers:   []string{"docker", "exec", "raw_exec"},
+			DisabledTaskDrivers:  []string{"java"},
 			EnabledNetworkModes:  []string{"bridge", "none"},
 			DisabledNetworkModes: []string{"host"},
 		}
