@@ -52,6 +52,39 @@ func TestDataSourceNamespace(t *testing.T) {
 	})
 }
 
+func TestDataSourceNamespace_extraClaims(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "2.0.3") },
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  required_extra_claims = {
+    namespace = "$${job.namespace}"
+  }
+
+  optional_extra_claims = {
+    class = "class:$${node.class}"
+  }
+}
+
+data "nomad_namespace" "test" {
+  name = nomad_namespace.test.name
+}
+`, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "required_extra_claims.namespace", "${job.namespace}"),
+					resource.TestCheckResourceAttr("data.nomad_namespace.test", "optional_extra_claims.class", "class:${node.class}"),
+				),
+			},
+		},
+	})
+}
+
 func TestDataSourceNamespace_nodePoolConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
