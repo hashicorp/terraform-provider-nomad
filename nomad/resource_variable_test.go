@@ -12,13 +12,81 @@ import (
 
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
+func TestResourceVariable_importState(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		id        string
+		path      string
+		namespace string
+		wantError bool
+	}{
+		{
+			name:      "default namespace",
+			id:        "example/secret@default",
+			path:      "example/secret",
+			namespace: "default",
+		},
+		{
+			name:      "custom namespace",
+			id:        "example/secret@production",
+			path:      "example/secret",
+			namespace: "production",
+		},
+		{
+			name:      "single segment path",
+			id:        "secret@default",
+			path:      "secret",
+			namespace: "default",
+		},
+		{name: "empty ID", wantError: true},
+		{name: "missing separator", id: "example/secret", wantError: true},
+		{name: "missing path", id: "@default", wantError: true},
+		{name: "missing namespace", id: "example/secret@", wantError: true},
+		{name: "empty components", id: "@", wantError: true},
+		{name: "extra separator", id: "example/secret@default@extra", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := resourceVariable()
+			d := schema.TestResourceDataRaw(t, r.Schema, nil)
+			d.SetId(tc.id)
+
+			results, err := r.Importer.StateContext(t.Context(), d, nil)
+			if tc.wantError {
+				if err == nil || !strings.Contains(err.Error(), "<path>@<namespace>") {
+					t.Fatalf("expected an import ID format error, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != 1 || results[0] != d {
+				t.Fatalf("expected a single imported resource, got %#v", results)
+			}
+			if got := d.Id(); got != tc.id {
+				t.Errorf("expected ID %q, got %q", tc.id, got)
+			}
+			if got := d.Get("path"); got != tc.path {
+				t.Errorf("expected path %q, got %q", tc.path, got)
+			}
+			if got := d.Get("namespace"); got != tc.namespace {
+				t.Errorf("expected namespace %q, got %q", tc.namespace, got)
+			}
+		})
+	}
+}
+
 func TestResourceVariable_basic(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-nomad-test")
+	path := acctest.RandomWithPrefix("tf-nomad-test") + "/secret"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -27,6 +95,46 @@ func TestResourceVariable_basic(t *testing.T) {
 			{
 				Config: testResourceVariable_initialConfig(api.DefaultNamespace, path),
 				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, path),
+			},
+			{
+				ResourceName:      "nomad_variable.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+
+		CheckDestroy: testResourceVariable_checkDestroy(api.DefaultNamespace, path),
+	})
+}
+
+func TestResourceVariable_importBlock(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-nomad-test") + "/secret"
+	config := testResourceVariable_initialConfig(api.DefaultNamespace, path)
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "1.4.0") },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_5_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check:  testResourceVariable_initialCheck(api.DefaultNamespace, path),
+			},
+			{
+				Config:          config,
+				ResourceName:    "nomad_variable.test",
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithID,
+				ImportPlanChecks: resource.ImportPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("nomad_variable.test", plancheck.ResourceActionNoop),
+						plancheck.ExpectKnownValue("nomad_variable.test", tfjsonpath.New("id"), knownvalue.StringExact(path+"@"+api.DefaultNamespace)),
+						plancheck.ExpectKnownValue("nomad_variable.test", tfjsonpath.New("path"), knownvalue.StringExact(path)),
+						plancheck.ExpectKnownValue("nomad_variable.test", tfjsonpath.New("namespace"), knownvalue.StringExact(api.DefaultNamespace)),
+					},
+				},
 			},
 		},
 
@@ -71,6 +179,11 @@ func TestResourceVariable_namespaceChange(t *testing.T) {
 			{
 				Config: testResourceVariable_initialConfigWithNamespace("var-test-namespace", newPath),
 				Check:  testResourceVariable_initialCheck("var-test-namespace", newPath),
+			},
+			{
+				ResourceName:      "nomad_variable.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 
