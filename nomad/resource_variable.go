@@ -4,6 +4,7 @@
 package nomad
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func resourceVariable() *schema.Resource {
 		Exists: resourceVariableExists,
 
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceVariableImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -80,6 +81,22 @@ func resourceVariable() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceVariableImport(_ context.Context, d *schema.ResourceData, _ any) ([]*schema.ResourceData, error) {
+	parts := strings.Split(d.Id(), "@")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("invalid variable import ID %q: expected <path>@<namespace> with a non-empty path and namespace", d.Id())
+	}
+
+	if err := d.Set("path", parts[0]); err != nil {
+		return nil, err
+	}
+	if err := d.Set("namespace", parts[1]); err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func resourceVariableWrite(d *schema.ResourceData, meta any) error {
