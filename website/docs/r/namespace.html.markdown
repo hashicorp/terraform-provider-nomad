@@ -63,6 +63,8 @@ The following arguments are supported:
 - `description` `(string: "")` - A description of the namespace.
 - `quota` `(string: "")` - A resource quota to attach to the namespace.
 - `meta` `(map[string]string: <optional>)` -  Specifies arbitrary KV metadata to associate with the namespace.
+- `required_extra_claims` `(map[string]string)` - Additional workload identity claims provided as extra workload identity claims for every workload in this namespace.
+- `optional_extra_claims` `(map[string]string)` - Additional workload identity claims provided as optional extra workload identity claims for workloads in this namespace. The extra identity claims are only added if the jobspec includes them in its identity block.
 - `capabilities` `(block: <optional>)` - A block of capabilities for the namespace. Can't
   be repeated. See below for the structure of this block.
 - `node_pool_config` `(block: <optional>)` - A block with node pool configuration for the namespace (Nomad Enterprise only).

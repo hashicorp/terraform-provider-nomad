@@ -33,6 +33,22 @@ func dataSourceNamespace() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"required_extra_claims": {
+				Description: "Additional workload identity claims provided as extra workload identity claims for every workload in this namespace.",
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"optional_extra_claims": {
+				Description: "Additional workload identity claims provided as optional extra workload identity claims for workloads in this namespace. The extra identity claims are only added if the jobspec includes them in its identity block.",
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"capabilities": {
 				Type:     schema.TypeSet,
 				Computed: true,
@@ -139,6 +155,12 @@ func namespaceDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if err = d.Set("meta", ns.Meta); err != nil {
 		return fmt.Errorf("Failed to set 'meta': %v", err)
+	}
+	if err = d.Set("required_extra_claims", ns.RequiredExtraClaims); err != nil {
+		return fmt.Errorf("Failed to set 'required_extra_claims': %v", err)
+	}
+	if err = d.Set("optional_extra_claims", ns.OptionalExtraClaims); err != nil {
+		return fmt.Errorf("Failed to set 'optional_extra_claims': %v", err)
 	}
 	if err = d.Set("capabilities", flattenNamespaceCapabilities(ns.Capabilities)); err != nil {
 		return fmt.Errorf("Failed to set 'capabilities': %v", err)
