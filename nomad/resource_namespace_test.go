@@ -55,6 +55,43 @@ func TestResourceNamespace_basic(t *testing.T) {
 	})
 }
 
+func TestResourceNamespace_extraClaims(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-nomad-test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "2.0.3") },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceNamespace_extraClaimsConfig(name, true),
+				Check: testResourceNamespace_extraClaimsCheck(name,
+					map[string]string{"namespace": "${job.namespace}"},
+					map[string]string{
+						"class":      "class:${node.class}",
+						"datacenter": "dc:${node.datacenter}",
+					},
+				),
+			},
+			{
+				Config: testResourceNamespace_extraClaimsConfig(name, false),
+				Check: testResourceNamespace_extraClaimsCheck(name,
+					map[string]string{
+						"namespace": "${job.namespace}",
+						"service":   "${task.name}",
+					},
+					nil,
+				),
+			},
+			{
+				ResourceName:      "nomad_namespace.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+
+		CheckDestroy: testResourceNamespace_checkDestroy(name),
+	})
+}
+
 func TestResourceNamespace_refresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
@@ -124,6 +161,27 @@ func TestResourceNamespace_deleteDefault(t *testing.T) {
 			{
 				Config: testResourceNamespace_initialConfig(name),
 				Check:  testResourceNamespace_initialCheck(name),
+			},
+		},
+
+		CheckDestroy: testResourceNamespace_checkResetDefault(),
+	})
+}
+
+func TestResourceNamespace_deleteDefaultExtraClaims(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t); testCheckMinVersion(t, "2.0.3") },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceNamespace_extraClaimsConfig(api.DefaultNamespace, true),
+				Check: testResourceNamespace_extraClaimsCheck(api.DefaultNamespace,
+					map[string]string{"namespace": "${job.namespace}"},
+					map[string]string{
+						"class":      "class:${node.class}",
+						"datacenter": "dc:${node.datacenter}",
+					},
+				),
 			},
 		},
 
@@ -231,6 +289,34 @@ resource "nomad_namespace" "test" {
   }
 }
 `, name)
+}
+
+func testResourceNamespace_extraClaimsConfig(name string, includeOptional bool) string {
+	requiredClaims := `    namespace = "$${job.namespace}"
+`
+	if !includeOptional {
+		requiredClaims += `    service = "$${task.name}"
+`
+	}
+
+	optionalClaims := ""
+	if includeOptional {
+		optionalClaims = `
+  optional_extra_claims = {
+    class      = "class:$${node.class}"
+    datacenter = "dc:$${node.datacenter}"
+  }
+`
+	}
+
+	return fmt.Sprintf(`
+resource "nomad_namespace" "test" {
+  name = "%s"
+
+  required_extra_claims = {
+%s  }
+%s}
+`, name, requiredClaims, optionalClaims)
 }
 
 func testResourceNamespace_configWithQuota(name, quota string) string {
@@ -387,6 +473,33 @@ func testResourceNamespace_checkResetDefault() resource.TestCheckFunc {
 		}
 		if namespace.Description != defaultNamespace.Description || namespace.Quota != defaultNamespace.Quota {
 			return fmt.Errorf("default namespace %q not reset.", defaultNamespace.Name)
+		}
+		if len(namespace.RequiredExtraClaims) != 0 || len(namespace.OptionalExtraClaims) != 0 {
+			return fmt.Errorf("default namespace %q extra claims not reset.", defaultNamespace.Name)
+		}
+
+		return nil
+	}
+}
+
+func testResourceNamespace_extraClaimsCheck(name string, required, optional map[string]string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["nomad_namespace.test"]
+		if resourceState == nil {
+			return errors.New("resource not found in state")
+		}
+
+		client := testProvider.Meta().(ProviderConfig).client
+		namespace, _, err := client.Namespaces().Info(name, nil)
+		if err != nil {
+			return fmt.Errorf("error reading back namespace %q: %w", name, err)
+		}
+
+		if diff := cmp.Diff(required, namespace.RequiredExtraClaims); diff != "" {
+			return fmt.Errorf("required extra claims mismatch (-want +got):\n%s", diff)
+		}
+		if diff := cmp.Diff(optional, namespace.OptionalExtraClaims); diff != "" {
+			return fmt.Errorf("optional extra claims mismatch (-want +got):\n%s", diff)
 		}
 
 		return nil

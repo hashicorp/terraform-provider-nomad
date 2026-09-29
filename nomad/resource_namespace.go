@@ -54,6 +54,24 @@ func resourceNamespace() *schema.Resource {
 				},
 			},
 
+			"required_extra_claims": {
+				Description: "Additional workload identity claims provided as extra workload identity claims for every workload in this namespace.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
+			"optional_extra_claims": {
+				Description: "Additional workload identity claims provided as optional extra workload identity claims for workloads in this namespace. The extra identity claims are only added if the jobspec includes them in its identity block.",
+				Optional:    true,
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+
 			"capabilities": {
 				Description: "Capabilities of the namespace.",
 				Optional:    true,
@@ -223,9 +241,19 @@ func resourceNamespaceConsulConfig() *schema.Resource {
 func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(ProviderConfig).client
 
-	m := make(map[string]string)
+	metadata := make(map[string]string)
 	for name, value := range d.Get("meta").(map[string]interface{}) {
-		m[name] = value.(string)
+		metadata[name] = value.(string)
+	}
+
+	requiredExtraClaims := make(map[string]string)
+	for name, value := range d.Get("required_extra_claims").(map[string]interface{}) {
+		requiredExtraClaims[name] = value.(string)
+	}
+
+	optionalExtraClaims := make(map[string]string)
+	for name, value := range d.Get("optional_extra_claims").(map[string]interface{}) {
+		optionalExtraClaims[name] = value.(string)
 	}
 
 	capabilities, err := expandNamespaceCapabilities(d)
@@ -252,7 +280,9 @@ func resourceNamespaceWrite(d *schema.ResourceData, meta interface{}) error {
 		Name:                  d.Get("name").(string),
 		Description:           d.Get("description").(string),
 		Quota:                 d.Get("quota").(string),
-		Meta:                  m,
+		Meta:                  metadata,
+		RequiredExtraClaims:   requiredExtraClaims,
+		OptionalExtraClaims:   optionalExtraClaims,
 		Capabilities:          capabilities,
 		NodePoolConfiguration: npConfig,
 		VaultConfiguration:    vaultConfig,
@@ -281,6 +311,8 @@ func resourceNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
 			log.Printf("[DEBUG] Can't delete default namespace, clearing attributes instead")
 			d.Set("description", "Default shared namespace")
 			d.Set("quota", "")
+			d.Set("required_extra_claims", map[string]string{})
+			d.Set("optional_extra_claims", map[string]string{})
 			err = resourceNamespaceWrite(d, meta)
 		} else {
 			// make sure there are no quota specs associated with that namespace
@@ -334,6 +366,8 @@ func resourceNamespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", namespace.Description)
 	d.Set("quota", namespace.Quota)
 	d.Set("meta", namespace.Meta)
+	d.Set("required_extra_claims", namespace.RequiredExtraClaims)
+	d.Set("optional_extra_claims", namespace.OptionalExtraClaims)
 	d.Set("capabilities", flattenNamespaceCapabilities(namespace.Capabilities))
 	d.Set("node_pool_config", flattenNamespaceNodePoolConfig(namespace.NodePoolConfiguration))
 	d.Set("vault_config", flattenNamespaceVaultConfig(namespace.VaultConfiguration))
