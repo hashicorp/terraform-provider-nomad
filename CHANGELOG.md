@@ -9,6 +9,7 @@ IMPROVEMENTS:
 * resource/nomad_job: add `preserve_resources` argument to preserve task resources during job updates. ([#632](https://github.com/hashicorp/terraform-provider-nomad/pull/632))
 * provider: update Go to 1.27.1 ([#651](https://github.com/hashicorp/terraform-provider-nomad/pull/651))
 * provider: update Nomad to 2.0.7 ([#651](https://github.com/hashicorp/terraform-provider-nomad/pull/651))
+* resource/nomad_namespace: add support for `required_extra_claims` and `optional_extra_claims`.  ([#643](https://github.com/hashicorp/terraform-provider-nomad/pull/643))
 
 BUG FIXES:
 * data source/nomad_variable: Fix panic when reading a variable due to `items_wo_version` not being in the data source schema. ([#625](https://github.com/hashicorp/terraform-provider-nomad/pull/625))
