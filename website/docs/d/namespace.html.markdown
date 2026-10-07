@@ -29,6 +29,8 @@ The following attributes are exported:
 * `description` `(string)` - The description of the namespace.
 * `quota` `(string)` - The quota associated with the namespace.
 * `meta` `(map[string]string)` -  Arbitrary KV metadata associated with the namespace.
+* `required_extra_claims` `(map[string]string)` - Additional workload identity claims provided as extra workload identity claims for every workload in this namespace.
+* `optional_extra_claims` `(map[string]string)` - Additional workload identity claims provided as optional extra workload identity claims for workloads in this namespace. The extra identity claims are only added if the jobspec includes them in its identity block.
 * `capabilities` `(block)` - Capabilities of the namespace
   * `enabled_task_drivers` `([]string)` - Task drivers enabled for the namespace.
   * `disabled_task_drivers` `([]string)` - Task drivers disabled for the namespace.
