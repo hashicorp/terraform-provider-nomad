@@ -97,6 +97,11 @@ The following arguments are supported:
 - `node_id` `(string: <optional>)` - A specific node where you would like the
   volume to be created.
 
+- `force_destroy` `(bool: false)` - If `true`, the volume is deleted with
+  `force=true`, which allows removing a volume whose node is unknown or no
+  longer available. The value must be applied to state before the resource is
+  destroyed.
+
 - `node_pool` `(string: <optional>)` - A specific node pool where you would like
   the volume to be created. If you also provide `node_id`, the node must be in the
   provided `node_pool`.

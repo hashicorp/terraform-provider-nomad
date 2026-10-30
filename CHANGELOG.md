@@ -9,6 +9,8 @@ IMPROVEMENTS:
 * resource/nomad_job: add `preserve_resources` argument to preserve task resources during job updates. ([#632](https://github.com/hashicorp/terraform-provider-nomad/pull/632))
 * provider: update Go to 1.27.2 ([#651](https://github.com/hashicorp/terraform-provider-nomad/pull/653))
 * provider: update Nomad to 2.0.7 ([#651](https://github.com/hashicorp/terraform-provider-nomad/pull/651))
+* resource/nomad_dynamic_host_volume: add `force_destroy` argument to delete volumes with `force=true`, e.g. when the node is unknown.
+* resource/nomad_dynamic_host_volume_registration: add `force_destroy` argument to delete volumes with `force=true`, e.g. when the node is unknown.
 * resource/nomad_namespace: add support for `required_extra_claims` and `optional_extra_claims`.  ([#643](https://github.com/hashicorp/terraform-provider-nomad/pull/643))
 
 BUG FIXES:
