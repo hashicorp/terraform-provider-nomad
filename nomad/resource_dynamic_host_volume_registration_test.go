@@ -217,3 +217,20 @@ func testResourceDynamicHostVolume_getNodeID(t *testing.T) string {
 	}
 	return nodes[0].ID
 }
+
+func TestResourceDynamicHostVolumeRegistrationForceDestroySchema(t *testing.T) {
+\ttestCases := []struct {
+\t\tname     string
+\t\tforceDestroy bool
+\t\texpectForce bool
+\t}{\n\t\t{name: "force_destroy omitted", false, false},
+\t\t{name: "force_destroy false", false, false},
+\t\t{name: "force_destroy true", true, true},
+\t\t}\n\n\tfor _, tc := range testCases {\n\t\tt.Run(tc.name, func(t *testing.T) {\n\t\t\tconfig := testResourceDynamicHostVolumeRegistration_config(name, "node-id")
+\t\t\tif tc.forceDestroy {\n\t\t\t\tconfig += fmt.Sprintf("  force_destroy = true\n")
+\t\t\t} else {\n\t\t\t\tconfig += fmt.Sprintf("  force_destroy = false\n")
+\t\t\t}\n\t\t\tconfig += "}\n"
+\t\t\tr := testAccCheckResourceSchema(t, "nomad_dynamic_host_volume_registration.test", config)
+\t\t\tmust.Eq(t, tc.expectForce, r.Tested(t))
+\t\t})
+\t}\n}\nEOF

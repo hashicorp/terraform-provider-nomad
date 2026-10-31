@@ -85,6 +85,11 @@ func resourceDynamicHostVolumeRegistration() *schema.Resource {
 				ValidateFunc: validation.All(
 					validation.IsUUID,
 				),
+				"force_destroy": {
+					Type:     schema.TypeBool,
+					Optional: true,
+					Default:  false,
+				},
 			},
 			"parameters": {
 				Description: "Parameters",

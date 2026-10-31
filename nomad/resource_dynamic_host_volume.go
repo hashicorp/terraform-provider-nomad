@@ -120,6 +120,11 @@ func resourceDynamicHostVolume() *schema.Resource {
 				ValidateFunc: validation.All(
 					validation.IsUUID,
 				),
+				"force_destroy": {
+					Type:     schema.TypeBool,
+					Optional: true,
+					Default:  false,
+				},
 			},
 			"node_pool": {
 				Description: "Node pool",
@@ -268,8 +273,9 @@ func resourceDynamicHostVolumeDelete(d *schema.ResourceData, meta any) error {
 	ns, id := getDynamicHostVolumeNamespacedID(d)
 	log.Printf("[DEBUG] Deleting dynamic host volume %q", id)
 
+	forceDestroy := d.Get("force_destroy").(bool)
 	_, _, err := client.HostVolumes().Delete(
-		&api.HostVolumeDeleteRequest{ID: id},
+		&api.HostVolumeDeleteRequest{ID: id, Force: forceDestroy},
 		&api.WriteOptions{Namespace: ns},
 	)
 	if err != nil {
