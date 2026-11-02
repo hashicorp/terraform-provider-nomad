@@ -58,6 +58,8 @@ func TestResourceDynamicHostVolume_import(t *testing.T) {
 				ResourceName:      testResourceNameDynamicHostVolume,
 				ImportState:       true,
 				ImportStateVerify: true,
+				// force_destroy is config-only and not returned by the API
+				ImportStateVerifyIgnore: []string{"force_destroy"},
 				ImportStateIdFunc: func(state *terraform.State) (string, error) {
 					id, err := testResourceDynamicHostVolume_getStateID(state,
 						"nomad_dynamic_host_volume.test")
