@@ -43,6 +43,32 @@ func TestDynamicHostVolumeCapacityDiffSuppress(t *testing.T) {
 	}
 }
 
+func TestResourceDynamicHostVolumeForceDestroySchema(t *testing.T) {
+	testCases := []struct {
+		name     string
+		forceDestroy bool
+		expectForce bool
+	}{
+		{name: "force_destroy omitted", false, false},
+		{name: "force_destroy false", false, false},
+		{name: "force_destroy true", true, true},
+		}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := testResourceDynamicHostVolume_config("test")
+			if tc.forceDestroy {
+				config += fmt.Sprintf("  force_destroy = true\n")
+			} else {
+				config += fmt.Sprintf("  force_destroy = false\n")
+			}
+			config += "}\n"
+			r := testAccCheckResourceSchema(t, "nomad_dynamic_host_volume.test", config)
+			must.Eq(t, tc.expectForce, r.Tested(t))
+		})
+	}
+}
+
 func TestResourceDynamicHostVolume_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-nomad-test")
 	resource.Test(t, resource.TestCase{
