@@ -70,6 +70,13 @@ func resourceJob() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 
+			"skip_modify_index_check": {
+				Description: "If true does not check modify index during job updates. This disables drift detection in nomad itself. Only use this if you only apply job changes via terraform.",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+
 			"deregister_on_destroy": {
 				Description: "If true, the job will be deregistered on destroy.",
 				Optional:    true,
@@ -974,7 +981,8 @@ func resourceJobCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta in
 			return fmt.Errorf("invalid modify_index in state: %s", err)
 		}
 
-		if resp != nil && resp.JobModifyIndex != wantModifyIndex {
+		skipIndexCheck := d.Get("skip_modify_index_check").(bool)
+		if resp != nil && resp.JobModifyIndex != wantModifyIndex && !skipIndexCheck {
 			// Should rarely happen, but might happen if there was a concurrent
 			// other process writing to Nomad since our Read call.
 			return fmt.Errorf("job modify index has changed since last refresh")
