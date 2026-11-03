@@ -136,6 +136,13 @@ func resourceDynamicHostVolume() *schema.Resource {
 				Optional: true,
 			},
 
+			"force_destroy": {
+				Description: "If true, the volume is deleted with force=true, which allows removing volumes whose node is unknown or no longer available. Must be applied before the resource is destroyed.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+			},
+
 			// computed attributes
 			"id": {
 				Description: "Volume ID",
@@ -269,7 +276,7 @@ func resourceDynamicHostVolumeDelete(d *schema.ResourceData, meta any) error {
 	log.Printf("[DEBUG] Deleting dynamic host volume %q", id)
 
 	_, _, err := client.HostVolumes().Delete(
-		&api.HostVolumeDeleteRequest{ID: id},
+		&api.HostVolumeDeleteRequest{ID: id, Force: d.Get("force_destroy").(bool)},
 		&api.WriteOptions{Namespace: ns},
 	)
 	if err != nil {

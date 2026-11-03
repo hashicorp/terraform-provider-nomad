@@ -95,6 +95,13 @@ func resourceDynamicHostVolumeRegistration() *schema.Resource {
 				Optional: true,
 			},
 
+			"force_destroy": {
+				Description: "If true, the volume is deleted with force=true, which allows removing volumes whose node is unknown or no longer available. Must be applied before the resource is destroyed.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+			},
+
 			// computed attributes. some of these will always be empty for
 			// register, but this allows import
 			"id": {

@@ -43,6 +43,11 @@ The following arguments are supported:
 - `node_id` `(string: <required>)` - A specific node where the volume is
   mounted.
 
+- `force_destroy` `(bool: false)` - If `true`, the volume is deleted with
+  `force=true`, which allows removing a volume whose node is unknown or no
+  longer available. The value must be applied to state before the resource is
+  destroyed.
+
 - `parameters` `(map<string|string>: <optional>)` - A key-value map of strings
   passed directly to the plugin to configure the volume. The details of these
   parameters are specific to the plugin.
